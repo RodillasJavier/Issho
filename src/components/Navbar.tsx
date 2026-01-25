@@ -1,17 +1,21 @@
 import { useState } from "react";
 import { Link } from "react-router";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../hooks/useAuth";
 
 export const Navbar = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const { signOut, user } = useAuth();
+  const displayName = user?.email ? user.email.split("@")[0] : null;
 
   return (
     <nav className="fixed top-0 w-full bg-[rgba(10,10,10,.8)] z-40 backdrop-blur-lg border-b border-white/10 shadow-lg">
       <div className="max-w-5xl mx-auto px-4">
         <div className="flex justify-between items-center h-16">
-          <Link to="/" className="font-mono text-xl font-bold text-rose-400">
+          <Link to="/" className="font-mono text-xl font-bold white">
             Issho
+            <span className="text-rose-400">
+              {displayName ? `.${displayName}` : ""}
+            </span>
           </Link>
 
           {/* Desktop Nav */}
@@ -68,7 +72,7 @@ export const Navbar = () => {
             )}
           </div>
 
-          {/* Mobile Nav Button */}
+          {/* Hamburger Menu */}
           <div className="md:hidden">
             <button
               onClick={() => {

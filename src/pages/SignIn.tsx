@@ -1,7 +1,7 @@
 /* src/pages/SignIn.tsx */
 import { useState } from "react";
 import { Link, useNavigate } from "react-router";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../hooks/useAuth";
 
 export const SignIn = () => {
   const [email, setEmail] = useState("");

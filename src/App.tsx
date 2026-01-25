@@ -1,5 +1,7 @@
 import { Route, Routes } from "react-router";
 import { Home } from "./pages/Home";
+import { SignIn } from "./pages/SignIn";
+import { SignUp } from "./pages/SignUp";
 import { Navbar } from "./components/Navbar";
 
 function App() {
@@ -10,6 +12,8 @@ function App() {
       <div className="container mx-auto px-4 py-6">
         <Routes>
           <Route path="/" element={<Home />} />
+          <Route path="/signin" element={<SignIn />} />
+          <Route path="/signup" element={<SignUp />} />
         </Routes>
       </div>
     </div>

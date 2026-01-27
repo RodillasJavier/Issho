@@ -60,14 +60,20 @@ export const CreatePost = () => {
     }
   };
 
+  // #region Render
   return (
-    <form onSubmit={handleSubmit}>
-      <div>
+    <form
+      onSubmit={handleSubmit}
+      className="flex flex-col w-full max-w-5xl bg-neutral-900 p-6 rounded-md space-y-4"
+    >
+      <div className="flex flex-col space-y-2">
         {""}
         <label htmlFor="">Title</label>
 
         <input
           type="text"
+          className="border border-neutral-800 px-3 py-2 rounded-md focus:outline-none"
+          placeholder="Enter the title for your post here..."
           id="title"
           required
           onChange={(event) => {
@@ -76,12 +82,14 @@ export const CreatePost = () => {
         />
       </div>
 
-      <div>
+      <div className="flex flex-col space-y-2">
         {""}
         <label htmlFor="">Content</label>
 
         <textarea
           id="content"
+          className="border border-neutral-800 px-3 py-2 rounded-md focus:outline-none"
+          placeholder="Enter the content for your post here..."
           required
           rows={5}
           onChange={(event) => {
@@ -90,12 +98,13 @@ export const CreatePost = () => {
         />
       </div>
 
-      <div>
+      <div className="flex flex-col space-y-2">
         {""}
         <label htmlFor="">Upload Image</label>
 
         <input
           type="file"
+          className="border border-neutral-800 px-3 py-2 rounded-md focus:outline-none"
           id="image"
           accept="image/*"
           required
@@ -103,7 +112,13 @@ export const CreatePost = () => {
         />
       </div>
 
-      <button type="submit">Create Post</button>
+      <button
+        type="submit"
+        className="text-white hover:text-rose-900/50 bg-rose-500 px-3 py-2 rounded-md focus:outline-none cursor-pointer hover:bg-rose-300 border border-rose-500 hover:border-rose-500 transition-colors"
+      >
+        Create Post
+      </button>
     </form>
   );
+  // #endregion Render
 };

@@ -4,6 +4,7 @@ import { SignIn } from "./pages/SignIn";
 import { SignUp } from "./pages/SignUp";
 import { CreatePostPage } from "./pages/CreatePostPage";
 import { Navbar } from "./components/Navbar";
+import { PostPage } from "./pages/PostPage";
 
 function App() {
   return (
@@ -16,6 +17,7 @@ function App() {
           <Route path="/signin" element={<SignIn />} />
           <Route path="/signup" element={<SignUp />} />
           <Route path="/create" element={<CreatePostPage />} />
+          <Route path="/post/:id" element={<PostPage />} />
         </Routes>
       </div>
     </div>

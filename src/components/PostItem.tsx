@@ -9,10 +9,10 @@ interface PostItemProps {
 export const PostItem = ({ post }: PostItemProps) => {
   return (
     <div className="relative group">
-      <div className="absolute -inset-1 bg-gradient-to-r from-rose-950 to-rose-100 blur-sm opacity-0 group-hover:opacity-20 transition duration-250 cursor-pointer" />
+      <div className="absolute -inset-1 bg-gradient-to-r from-rose-950 to-rose-400 blur-sm opacity-0 group-hover:opacity-25 transition duration-250" />
 
-      <Link to={`/posts/${post.id}`}>
-        <div className="w-sm h-sm bg-gray p-4 gap-2 border border-neutral-700 rounded-md text-white flex flex-col overflow-hidden transition-colors duration-250 group-hover:border-rose-400">
+      <Link to={`/post/${post.id}`} className="relative z-10">
+        <div className="w-sm h-sm p-4 gap-2 bg-neutral-950 border border-neutral-800 rounded-md text-white flex flex-col overflow-hidden transition-colors duration-250 group-hover:border-rose-400/50 group-hover:bg-transparent cursor-pointer">
           {/* Header */}
           <div className="flex flex-col flex-1">
             <div className="text-md font-semibold">{post.title}</div>

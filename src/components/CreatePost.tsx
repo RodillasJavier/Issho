@@ -38,7 +38,7 @@ export const CreatePost = () => {
   const [content, setContent] = useState<string>("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
-  const { mutate } = useMutation({
+  const { mutate, isPending, isError, error } = useMutation({
     mutationFn: (data: { post: PostInput; imageFile: File }) => {
       return createPost(data.post, data.imageFile);
     },
@@ -116,8 +116,14 @@ export const CreatePost = () => {
         type="submit"
         className="text-white hover:text-rose-900/50 bg-rose-500 px-3 py-2 rounded-md focus:outline-none cursor-pointer hover:bg-rose-300 border border-rose-500 hover:border-rose-500 transition-colors"
       >
-        Create Post
+        {isPending ? "Creating..." : "Create Post"}
       </button>
+
+      {isError && (
+        <p className="text-red-500">
+          Error creating post, {error?.message}. Please try again.
+        </p>
+      )}
     </form>
   );
   // #endregion Render

@@ -8,13 +8,12 @@ export interface Post {
   content: string;
   image_url: string;
   created_at: string;
+  like_count?: number;
+  comment_count?: number;
 }
 
 const fetchPosts = async (): Promise<Post[]> => {
-  const { data, error } = await supabase
-    .from("posts")
-    .select("*")
-    .order("created_at", { ascending: false });
+  const { data, error } = await supabase.rpc("get_posts_with_counts");
 
   if (error) {
     throw new Error(error.message);
@@ -37,8 +36,6 @@ export const PostList = () => {
   if (error) {
     return <div>Error loading posts: {error.message}</div>;
   }
-
-  console.log(data);
 
   return (
     <div className="flex flex-wrap gap-6 justify-center">

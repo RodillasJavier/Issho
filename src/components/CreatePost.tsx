@@ -1,10 +1,13 @@
 import { useState, type ChangeEvent } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import supabase from "../supabase-client";
+import type { Anime } from "./AnimeList";
+import { useNavigate } from "react-router";
 
 interface PostInput {
   title: string;
   content: string;
+  anime_id: number | null;
 }
 
 const createPost = async (post: PostInput, imageFile: File) => {
@@ -33,14 +36,37 @@ const createPost = async (post: PostInput, imageFile: File) => {
   return data;
 };
 
+const fetchAllAnime = async (): Promise<Anime[]> => {
+  const { data, error } = await supabase
+    .from("anime")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data;
+};
+
 export const CreatePost = () => {
   const [title, setTitle] = useState<string>("");
   const [content, setContent] = useState<string>("");
+  const [animeId, setAnimeId] = useState<number | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const navigate = useNavigate();
+
+  const { data: allAnime } = useQuery<Anime[], Error>({
+    queryKey: ["anime"],
+    queryFn: fetchAllAnime,
+  });
 
   const { mutate, isPending, isError, error } = useMutation({
     mutationFn: (data: { post: PostInput; imageFile: File }) => {
       return createPost(data.post, data.imageFile);
+    },
+    onSuccess: () => {
+      navigate("/");
     },
   });
 
@@ -51,7 +77,15 @@ export const CreatePost = () => {
       return;
     }
 
-    mutate({ post: { title, content }, imageFile: selectedFile });
+    mutate({
+      post: { title, content, anime_id: animeId },
+      imageFile: selectedFile,
+    });
+  };
+
+  const handleAnimeChange = (event: ChangeEvent<HTMLSelectElement>) => {
+    const value = event.target.value;
+    setAnimeId(value ? Number(value) : null);
   };
 
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -95,6 +129,22 @@ export const CreatePost = () => {
             setContent(event.target.value);
           }}
         />
+      </div>
+
+      <div className="flex flex-col space-y-2">
+        <label>Select Anime</label>
+
+        <select id="anime" onChange={handleAnimeChange}>
+          <option disabled selected>
+            -- Select Anime --
+          </option>
+
+          {allAnime?.map((anime, key) => (
+            <option key={key} value={anime.id}>
+              {anime.name}
+            </option>
+          ))}
+        </select>
       </div>
 
       <div className="flex flex-col space-y-2">

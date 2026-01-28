@@ -5,8 +5,9 @@ import { SignUp } from "./pages/SignUp";
 import { CreatePostPage } from "./pages/CreatePostPage";
 import { Navbar } from "./components/Navbar";
 import { PostPage } from "./pages/PostPage";
-import { AnimePage } from "./pages/AnimePage";
+import { AnimeListPage } from "./pages/AnimeListPage";
 import { CreateAnimePage } from "./pages/CreateAnimePage";
+import { AnimePage } from "./pages/AnimePage";
 
 function App() {
   return (
@@ -16,12 +17,19 @@ function App() {
       <div className="container mx-auto px-4 py-6">
         <Routes>
           <Route path="/" element={<Home />} />
+
+          {/* Auth */}
           <Route path="/signin" element={<SignIn />} />
           <Route path="/signup" element={<SignUp />} />
-          <Route path="/create" element={<CreatePostPage />} />
+
+          {/* Posts */}
+          <Route path="/post/create" element={<CreatePostPage />} />
           <Route path="/post/:id" element={<PostPage />} />
-          <Route path="/anime" element={<AnimePage />} />
+
+          {/* Anime */}
+          <Route path="/anime" element={<AnimeListPage />} />
           <Route path="/anime/create" element={<CreateAnimePage />} />
+          <Route path="/anime/:id" element={<AnimePage />} />
         </Routes>
       </div>
     </div>

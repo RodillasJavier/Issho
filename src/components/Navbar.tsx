@@ -28,17 +28,17 @@ export const Navbar = () => {
             </Link>
 
             <Link
-              to="/create"
+              to="/post/create"
               className="text-gray-300 hover:text-white transition-colors"
             >
               Create
             </Link>
 
             <Link
-              to="/anime/create"
+              to="/anime"
               className="text-gray-300 hover:text-white transition-colors"
             >
-              New Anime
+              Anime
             </Link>
 
             {/* Desktop Auth Buttons */}
@@ -119,17 +119,17 @@ export const Navbar = () => {
             </Link>
 
             <Link
-              to="/create"
+              to="/post/create"
               className="block text-center px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-700"
             >
               Create
             </Link>
 
             <Link
-              to="/anime/create"
+              to="/anime"
               className="block text-center px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-700"
             >
-              New Anime
+              Anime
             </Link>
 
             {/* Mobile Auth Buttons */}

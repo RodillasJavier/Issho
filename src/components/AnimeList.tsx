@@ -20,7 +20,7 @@ const fetchAllAnime = async (): Promise<Anime[]> => {
     throw new Error(error.message);
   }
 
-  return data;
+  return data as Anime[];
 };
 
 export const AnimeList = () => {
@@ -45,10 +45,11 @@ export const AnimeList = () => {
           key={key}
           className="group bg-neutral-950 rounded p-2 hover:scale-105 transition transition-duration-1000"
         >
-          <Link to={`/anime/:${anime.id}`}>
+          <Link to={`/anime/${anime.id}`}>
             <h3 className="bg-clip-text font-semibold text-3xl group-hover:text-rose-400 transition transition 1000">
               {anime.name}
             </h3>
+
             <p className="text-neutral-500 group-hover:text-neutral-400 transition transition 1000">
               {anime.description}
             </p>

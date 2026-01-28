@@ -4,7 +4,9 @@ import { PostList } from "../components/PostList";
 export const Home = () => {
   return (
     <div className="flex flex-col gap-4">
-      <h2 className="font-mono text-3xl">Recent Activity</h2>
+      <h2 className="text-5xl font-semibold bg-gradient-to-r from-rose-200 to-rose-800 bg-clip-text text-transparent">
+        Recent Activity
+      </h2>
 
       <div>
         <PostList />

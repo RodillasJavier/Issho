@@ -5,6 +5,8 @@ import { SignUp } from "./pages/SignUp";
 import { CreatePostPage } from "./pages/CreatePostPage";
 import { Navbar } from "./components/Navbar";
 import { PostPage } from "./pages/PostPage";
+import { AnimePage } from "./pages/AnimePage";
+import { CreateAnimePage } from "./pages/CreateAnimePage";
 
 function App() {
   return (
@@ -18,6 +20,8 @@ function App() {
           <Route path="/signup" element={<SignUp />} />
           <Route path="/create" element={<CreatePostPage />} />
           <Route path="/post/:id" element={<PostPage />} />
+          <Route path="/anime" element={<AnimePage />} />
+          <Route path="/anime/create" element={<CreateAnimePage />} />
         </Routes>
       </div>
     </div>

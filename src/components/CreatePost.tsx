@@ -67,7 +67,6 @@ export const CreatePost = () => {
       className="flex flex-col w-full max-w-5xl bg-neutral-900 p-6 rounded-md space-y-4"
     >
       <div className="flex flex-col space-y-2">
-        {""}
         <label htmlFor="">Title</label>
 
         <input

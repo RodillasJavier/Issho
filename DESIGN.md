@@ -15,5 +15,4 @@
 - Votes (Like/Dislike) on entries. Functions like Reddit voting system.
     - Comments on entries.
         - Nested comments (replies to comments)
-        - Votes (Like/Dislike) on comments. Functions like Reddit voting system.
 - Animes retrieved from external API ([Jikan API](https://docs.api.jikan.moe/))

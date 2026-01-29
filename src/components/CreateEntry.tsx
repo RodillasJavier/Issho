@@ -6,27 +6,20 @@
 import { useState, type ChangeEvent } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import supabase from "../supabase-client";
-import type { EntryType, Anime } from "../types/database.types";
 import { useNavigate } from "react-router";
+import {
+  ENTRY_TYPE_LABELS,
+  ENTRY_TYPE_PLACEHOLDERS,
+} from "../utils/entryTypes";
 
 // #region Types & Constants
+import type { EntryType, Anime } from "../types/database.types";
+
 interface EntryInput {
   entry_type: EntryType;
   anime_id: string | null;
   content: string;
 }
-
-const ENTRY_TYPE_LABELS = {
-  review: "Review",
-  rating: "Rating (1-10)",
-  status_update: "Status Update",
-};
-
-const ENTRY_TYPE_PLACEHOLDERS = {
-  review: "Write your review here...",
-  rating: "Enter a rating from 1 to 10",
-  status_update: "Share your thoughts on this anime...",
-};
 // #endregion Types
 
 // #region Component Logic

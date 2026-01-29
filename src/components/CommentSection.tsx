@@ -1,30 +1,30 @@
+/**
+ * src/components/CommentSection.tsx
+ *
+ * Component for displaying and adding comments to an entry.
+ */
 import { useState } from "react";
 import { useAuth } from "../hooks/useAuth";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import supabase from "../supabase-client";
 import { CommentItem } from "./CommentItem";
 
+// #region Types
+import type { Comment } from "../types/database.types";
+
 interface CommentSectionProps {
-  postId: number;
+  entryId: string;
 }
 
 interface NewComment {
   content: string;
-  parent_comment_id?: number | null;
+  parent_comment_id?: string | null;
 }
-
-export interface Comment {
-  id: number;
-  post_id: number;
-  parent_comment_id: number | null;
-  content: string;
-  user_id: string;
-  created_at: string;
-}
+// #endregion Types
 
 const createComment = async (
   newComment: NewComment,
-  postId: number,
+  entryId: string,
   userId?: string
 ) => {
   if (!userId) {
@@ -32,7 +32,7 @@ const createComment = async (
   }
 
   const { error } = await supabase.from("comments").insert({
-    post_id: postId,
+    entry_id: entryId,
     content: newComment.content,
     parent_comment_id: newComment.parent_comment_id || null,
     user_id: userId,
@@ -43,11 +43,11 @@ const createComment = async (
   }
 };
 
-const fetchComments = async (postId: number): Promise<Comment[]> => {
+const fetchComments = async (entryId: string): Promise<Comment[]> => {
   const { data, error } = await supabase
     .from("comments")
     .select("*")
-    .eq("post_id", postId)
+    .eq("entry_id", entryId)
     .order("created_at", { ascending: true });
 
   if (error) {
@@ -57,7 +57,7 @@ const fetchComments = async (postId: number): Promise<Comment[]> => {
   return data as Comment[];
 };
 
-export const CommentSection = ({ postId }: CommentSectionProps) => {
+export const CommentSection = ({ entryId }: CommentSectionProps) => {
   const [newCommentText, setNewCommentText] = useState<string>("");
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -67,15 +67,15 @@ export const CommentSection = ({ postId }: CommentSectionProps) => {
     isLoading,
     error,
   } = useQuery<Comment[], Error>({
-    queryKey: ["comments", postId],
-    queryFn: () => fetchComments(postId),
+    queryKey: ["comments", entryId],
+    queryFn: () => fetchComments(entryId),
   });
 
   const { mutate, isPending, isError } = useMutation({
     mutationFn: (newComment: NewComment) =>
-      createComment(newComment, postId, user?.id),
+      createComment(newComment, entryId, user?.id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["comments", postId] });
+      queryClient.invalidateQueries({ queryKey: ["comments", entryId] });
     },
   });
 
@@ -100,7 +100,7 @@ export const CommentSection = ({ postId }: CommentSectionProps) => {
   const buildCommentTree = (
     flatComments: Comment[]
   ): (Comment & { children: Comment[] })[] => {
-    const map = new Map<number, Comment & { children: Comment[] }>();
+    const map = new Map<string, Comment & { children: Comment[] }>();
     const roots: (Comment & { children: Comment[] })[] = [];
 
     flatComments.forEach((comment) => {
@@ -109,7 +109,7 @@ export const CommentSection = ({ postId }: CommentSectionProps) => {
 
     flatComments.forEach((comment) => {
       if (comment.parent_comment_id) {
-        const parent = map.get(comment.parent_comment_id!);
+        const parent = map.get(comment.parent_comment_id);
 
         if (parent) {
           parent.children.push(map.get(comment.id)!);
@@ -166,8 +166,10 @@ export const CommentSection = ({ postId }: CommentSectionProps) => {
 
       {/* Comments Display Section */}
       <div className="flex flex-col gap-2">
-        {commentTree.map((comment, key) => {
-          return <CommentItem key={key} comment={comment} postId={postId} />;
+        {commentTree.map((comment) => {
+          return (
+            <CommentItem key={comment.id} comment={comment} entryId={entryId} />
+          );
         })}
       </div>
     </div>

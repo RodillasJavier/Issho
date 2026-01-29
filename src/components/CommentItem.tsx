@@ -1,20 +1,29 @@
+/**
+ * src/components/CommentItem.tsx
+ *
+ * Component for displaying a single comment and its replies (if any).
+ */
 import { useState } from "react";
-import type { Comment } from "./CommentSection";
 import { useAuth } from "../hooks/useAuth";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import supabase from "../supabase-client";
+
+// #region Types
+import type { Comment } from "../types/database.types";
 
 interface CommentItemProps {
   comment: Comment & {
     children?: Comment[];
   };
-  postId: number;
+  entryId: string;
 }
+// #endregion Types
 
+// #region Component Logic
 const createReply = async (
   replyContent: string,
-  postId: number,
-  parentCommentId: number,
+  entryId: string,
+  parentCommentId: string,
   userId?: string
 ) => {
   if (!userId) {
@@ -22,7 +31,7 @@ const createReply = async (
   }
 
   const { error } = await supabase.from("comments").insert({
-    post_id: postId,
+    entry_id: entryId,
     content: replyContent,
     parent_comment_id: parentCommentId,
     user_id: userId,
@@ -33,7 +42,7 @@ const createReply = async (
   }
 };
 
-export const CommentItem = ({ comment, postId }: CommentItemProps) => {
+export const CommentItem = ({ comment, entryId }: CommentItemProps) => {
   const [showReply, setShowReply] = useState<boolean>(false);
   const [replyText, setReplyText] = useState<string>("");
   const [isCollapsed, setIsCollapsed] = useState<boolean>(true);
@@ -43,9 +52,9 @@ export const CommentItem = ({ comment, postId }: CommentItemProps) => {
 
   const { mutate, isPending, isError } = useMutation({
     mutationFn: (replyContent: string) =>
-      createReply(replyContent, postId, comment.id, user?.id),
+      createReply(replyContent, entryId, comment.id, user?.id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["comments", postId] });
+      queryClient.invalidateQueries({ queryKey: ["comments", entryId] });
       setReplyText("");
       setShowReply(false);
     },
@@ -60,7 +69,9 @@ export const CommentItem = ({ comment, postId }: CommentItemProps) => {
 
     mutate(replyText);
   };
+  // #endregion Component Logic
 
+  // #region Render
   return (
     <div className="flex flex-col gap-2 bg-neutral-950 rounded py-2 px-3 border-l-2 border-l-neutral-600">
       <div className="space-y-1">
@@ -140,8 +151,8 @@ export const CommentItem = ({ comment, postId }: CommentItemProps) => {
 
           {!isCollapsed && (
             <div className="space-y-2">
-              {comment.children.map((child, key) => (
-                <CommentItem key={key} comment={child} postId={postId} />
+              {comment.children.map((child) => (
+                <CommentItem key={child.id} comment={child} entryId={entryId} />
               ))}
             </div>
           )}
@@ -150,3 +161,4 @@ export const CommentItem = ({ comment, postId }: CommentItemProps) => {
     </div>
   );
 };
+// #endregion Render

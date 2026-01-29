@@ -4,28 +4,17 @@
  * Component that displays a single entry item in a list or feed.
  */
 import { Link } from "react-router";
-import type { Entry } from "../types/database.types";
+import { getEntryTypeLabel } from "../utils/entryTypes";
 
 // #region Types
+import type { Entry } from "../types/database.types";
+
 interface EntryItemProps {
   entry: Entry;
 }
 // #endregion
 
 // #region Component Logic
-const getEntryTypeLabel = (type: string) => {
-  switch (type) {
-    case "review":
-      return "📝 Review";
-    case "rating":
-      return "⭐ Rating";
-    case "status_update":
-      return "📺 Status Update";
-    default:
-      return type;
-  }
-};
-
 export const EntryItem = ({ entry }: EntryItemProps) => {
   // #endregion
 

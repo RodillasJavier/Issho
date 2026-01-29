@@ -1,66 +1,73 @@
+/**
+ * src/components/LikeButton.tsx
+ *
+ * Component for liking or disliking an entry.
+ */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import supabase from "../supabase-client";
 import { useAuth } from "../hooks/useAuth";
 
+// #region Types
 interface LikeButtonProps {
-  postId: number;
+  entryId: string;
 }
 
 interface Vote {
-  id: number;
-  post_id: number;
+  id: string;
+  entry_id: string;
   user_id: string;
   vote: number;
 }
+// #endregion Types
 
-const vote = async (voteValue: number, postId: number, userId: string) => {
+// #region Component Logic
+const vote = async (voteValue: number, entryId: string, userId: string) => {
   const { data: existingVote } = await supabase
     .from("votes")
     .select("*")
-    .eq("post_id", postId)
+    .eq("entry_id", entryId)
     .eq("user_id", userId)
     .maybeSingle();
 
   if (existingVote) {
     if (existingVote.vote === voteValue) {
+      // Remove vote if clicking the same vote again
       const { error } = await supabase
         .from("votes")
         .delete()
         .eq("id", existingVote.id);
 
-      if (error) {
-        throw new Error(error.message);
-      }
+      if (error) throw new Error(error.message);
+
+      return;
     }
 
-    if (existingVote.vote !== voteValue) {
-      const { error } = await supabase
-        .from("votes")
-        .update({ vote: voteValue })
-        .eq("id", existingVote.id);
+    // Update vote if changing vote value
+    const { error } = await supabase
+      .from("votes")
+      .update({ vote: voteValue })
+      .eq("id", existingVote.id);
 
-      if (error) {
-        throw new Error(error.message);
-      }
-    }
+    if (error) throw new Error(error.message);
+
+    return;
   }
 
   if (!existingVote) {
+    // Create new vote (only if no existing vote)
     const { error } = await supabase
       .from("votes")
-      .insert({ post_id: postId, user_id: userId, vote: voteValue });
+      .insert({ entry_id: entryId, user_id: userId, vote: voteValue });
 
-    if (error) {
-      throw new Error(error.message);
-    }
+    if (error) throw new Error(error.message);
   }
 };
 
-const fetchVotes = async (postId: number): Promise<Vote[]> => {
+const fetchVotes = async (entryId: string): Promise<Vote[]> => {
   const { data, error } = await supabase
     .from("votes")
     .select("*")
-    .eq("post_id", postId);
+    .eq("entry_id", entryId);
 
   if (error) {
     throw new Error(error.message);
@@ -69,7 +76,7 @@ const fetchVotes = async (postId: number): Promise<Vote[]> => {
   return data as Vote[];
 };
 
-export const LikeButton = ({ postId }: LikeButtonProps) => {
+export const LikeButton = ({ entryId }: LikeButtonProps) => {
   const { user } = useAuth();
 
   const queryClient = useQueryClient();
@@ -79,8 +86,8 @@ export const LikeButton = ({ postId }: LikeButtonProps) => {
     isLoading,
     error,
   } = useQuery<Vote[], Error>({
-    queryKey: ["votes", postId],
-    queryFn: () => fetchVotes(postId),
+    queryKey: ["votes", entryId],
+    queryFn: () => fetchVotes(entryId),
   });
 
   const { mutate } = useMutation({
@@ -88,15 +95,15 @@ export const LikeButton = ({ postId }: LikeButtonProps) => {
       if (!user) {
         throw new Error("You must be logged in to vote!");
       }
-
-      return vote(voteValue, postId, user?.id);
+      return vote(voteValue, entryId, user.id);
     },
-
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["votes", postId] });
+      queryClient.invalidateQueries({ queryKey: ["votes", entryId] });
     },
   });
+  // #endregion Component Logic
 
+  // #region Render
   if (isLoading) {
     return <div>Loading votes...</div>;
   }
@@ -128,3 +135,4 @@ export const LikeButton = ({ postId }: LikeButtonProps) => {
     </div>
   );
 };
+// #endregion Render

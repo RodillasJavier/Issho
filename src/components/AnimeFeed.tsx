@@ -1,22 +1,24 @@
-import type { Post } from "./PostList";
+/**
+ * src/components/AnimeFeed.tsx
+ *
+ * Component that displays a feed of entries related to a specific anime.
+ */
+import type { Entry } from "../types/database.types";
 import supabase from "../supabase-client";
 import { useQuery } from "@tanstack/react-query";
-import { PostItem } from "./PostItem";
+import { EntryItem } from "./EntryItem";
 
+// #region Types
 interface AnimeFeedProps {
-  animeId: number;
+  animeId: string;
 }
+// #endregion
 
-interface PostWithAnime extends Post {
-  anime: {
-    name: string;
-  };
-}
-
-const fetchAnimePost = async (animeId: number): Promise<PostWithAnime[]> => {
+// #region Component Logic
+const fetchAnimeEntries = async (animeId: string): Promise<Entry[]> => {
   const { data, error } = await supabase
-    .from("posts")
-    .select("*, anime(name)")
+    .from("entries")
+    .select("*, anime(name, cover_image_url)")
     .eq("anime_id", animeId)
     .order("created_at", { ascending: false });
 
@@ -24,39 +26,42 @@ const fetchAnimePost = async (animeId: number): Promise<PostWithAnime[]> => {
     throw new Error(error.message);
   }
 
-  return data as PostWithAnime[];
+  return data as Entry[];
 };
 
 export const AnimeFeed = ({ animeId }: AnimeFeedProps) => {
-  const { data, isLoading, error } = useQuery<PostWithAnime[], Error>({
-    queryKey: ["animePost", animeId],
-    queryFn: () => fetchAnimePost(animeId),
+  const { data, isLoading, error } = useQuery<Entry[], Error>({
+    queryKey: ["animeEntries", animeId],
+    queryFn: () => fetchAnimeEntries(animeId),
   });
+  // #endregion
 
+  // #region Render
   if (isLoading) {
-    return <div>Loading anime...</div>;
+    return <div>Loading entries...</div>;
   }
 
   if (error) {
     console.error(error);
-    return <div>Error loading anime: {error.message}</div>;
+    return <div>Error loading entries: {error.message}</div>;
   }
-  //   <h2 className="text-5xl font-semibold text-center bg-gradient-to-r from-rose-200 to-rose-800 bg-clip-text text-transparent"></h2>;
+
   return (
     <div className="flex flex-col gap-2">
       <h2 className="text-5xl font-semibold text-center bg-gradient-to-r from-rose-200 to-rose-800 bg-clip-text text-transparent">
-        {data && data[0].anime.name}
+        {data && data[0]?.anime?.name}
       </h2>
 
       {data && data.length > 0 ? (
-        <div>
-          {data.map((post, key) => (
-            <PostItem key={key} post={post} />
+        <div className="flex flex-wrap gap-6 justify-center">
+          {data.map((entry) => (
+            <EntryItem key={entry.id} entry={entry} />
           ))}
         </div>
       ) : (
-        <p>No posts from this community yet.</p>
+        <p>No activity for this anime yet.</p>
       )}
     </div>
   );
 };
+// #endregion Render

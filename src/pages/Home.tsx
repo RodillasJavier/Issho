@@ -1,5 +1,5 @@
 /* src/pages/Home.tsx */
-import { PostList } from "../components/PostList";
+import { EntryList } from "../components/EntryList";
 
 export const Home = () => {
   return (
@@ -9,7 +9,7 @@ export const Home = () => {
       </h2>
 
       <div>
-        <PostList />
+        <EntryList />
       </div>
     </div>
   );

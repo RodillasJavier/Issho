@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import supabase from "../supabase-client";
 import { LikeButton } from "./LikeButton";
 import { CommentSection } from "./CommentSection";
-import { getEntryTypeLabel } from "../utils/entryTypes";
+import { getEntryTypeLabel } from "../constants/entryTypes";
 
 // #region Types
 import type { Entry } from "../types/database.types";

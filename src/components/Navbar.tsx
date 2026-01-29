@@ -41,6 +41,15 @@ export const Navbar = () => {
               Anime
             </Link>
 
+            {user && (
+              <Link
+                to="/my-list"
+                className="text-gray-300 hover:text-white transition-colors"
+              >
+                My List
+              </Link>
+            )}
+
             {/* Desktop Auth Buttons */}
             {user ? (
               <button
@@ -131,6 +140,15 @@ export const Navbar = () => {
             >
               Anime
             </Link>
+
+            {user && (
+              <Link
+                to="/my-list"
+                className="block text-center px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-700"
+              >
+                My List
+              </Link>
+            )}
 
             {/* Mobile Auth Buttons */}
             {user ? (

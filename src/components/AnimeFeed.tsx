@@ -3,10 +3,17 @@
  *
  * Component that displays a feed of entries related to a specific anime.
  */
+import { useState } from "react";
 import type { Entry } from "../types/database.types";
 import supabase from "../supabase-client";
 import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "../hooks/useAuth";
 import { EntryItem } from "./EntryItem";
+
+import { AddToListButton } from "./AddToListButton";
+import { EditListEntryModal } from "./EditListEntryModal";
+
+import { getUserAnimeEntry } from "../api/userAnimeList";
 
 // #region Types
 interface AnimeFeedProps {
@@ -30,9 +37,18 @@ const fetchAnimeEntries = async (animeId: string): Promise<Entry[]> => {
 };
 
 export const AnimeFeed = ({ animeId }: AnimeFeedProps) => {
+  const { user } = useAuth();
+  const [showEditModal, setShowEditModal] = useState(false);
+
   const { data, isLoading, error } = useQuery<Entry[], Error>({
     queryKey: ["animeEntries", animeId],
     queryFn: () => fetchAnimeEntries(animeId),
+  });
+
+  const { data: listEntry } = useQuery({
+    queryKey: ["userAnimeList", animeId, user?.id],
+    queryFn: () => getUserAnimeEntry(animeId, user!.id),
+    enabled: !!user,
   });
   // #endregion
 
@@ -52,6 +68,16 @@ export const AnimeFeed = ({ animeId }: AnimeFeedProps) => {
         {data && data[0]?.anime?.name}
       </h2>
 
+      {/* Add to List Button */}
+      {user && (
+        <div className="flex justify-center my-4">
+          <AddToListButton
+            animeId={animeId}
+            onEditClick={() => setShowEditModal(true)}
+          />
+        </div>
+      )}
+
       {data && data.length > 0 ? (
         <div className="flex flex-wrap gap-6 justify-center">
           {data.map((entry) => (
@@ -60,6 +86,14 @@ export const AnimeFeed = ({ animeId }: AnimeFeedProps) => {
         </div>
       ) : (
         <p>No activity for this anime yet.</p>
+      )}
+
+      {/* Edit Modal */}
+      {showEditModal && listEntry && (
+        <EditListEntryModal
+          entry={listEntry}
+          onClose={() => setShowEditModal(false)}
+        />
       )}
     </div>
   );

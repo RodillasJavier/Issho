@@ -4,7 +4,7 @@
  * Component that displays a single entry item in a list or feed.
  */
 import { Link } from "react-router";
-import { getEntryTypeLabel } from "../utils/entryTypes";
+import { getEntryTypeLabel } from "../constants/entryTypes";
 
 // #region Types
 import type { Entry } from "../types/database.types";

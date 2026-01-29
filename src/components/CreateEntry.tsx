@@ -10,7 +10,7 @@ import { useNavigate } from "react-router";
 import {
   ENTRY_TYPE_LABELS,
   ENTRY_TYPE_PLACEHOLDERS,
-} from "../utils/entryTypes";
+} from "../constants/entryTypes";
 
 // #region Types & Constants
 import type { EntryType, Anime } from "../types/database.types";

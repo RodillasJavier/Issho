@@ -176,99 +176,173 @@ The application was built following a tutorial with a `posts` table, but the sch
 ### Missing Features
 1. **Jikan API Integration** - Anime data not yet pulled from external API
 2. **User Anime List Management** - UI for `user_anime_entries` table
-3. **Entry Type Differentiation** - UI should handle reviews, ratings, and status updates differently
-4. **Vote Count Display** - Aggregate vote counts for entries
-5. **Comment Votes** - Comments can't be voted on yet (would need a `comment_votes` table)
-6. **Rating Validation** - Ensure ratings are 1-10
+3. **Rating Validation** - Ensure ratings are 1-10
+4. **Spoiler Support** - UI for marking and displaying spoiler comments
 
 ---
 
 ## Implementation Plan for MVP
 
-### Phase 1: Fix Current Functionality (Priority: HIGH)
+### Phase 1: Fix Current Functionality ✅ (COMPLETED)
 **Goal:** Get the app working with the current schema
 
-1. **Update Database Terminology** ✅ (Schema already updated)
+1. ✅ **Update Database Terminology** 
    - ✅ Schema uses `entries` instead of `posts`
 
-2. **Update Frontend Components**
-   - [ ] Rename all "post" files to "entry"
-     - [ ] `PostList.tsx` → `EntryList.tsx`
-     - [ ] `PostItem.tsx` → `EntryItem.tsx`
-     - [ ] `PostDetail.tsx` → `EntryDetail.tsx`
-     - [ ] `CreatePost.tsx` → `CreateEntry.tsx`
-     - [ ] `CreatePostPage.tsx` → `CreateEntryPage.tsx`
-     - [ ] `PostPage.tsx` → `EntryPage.tsx`
+2. ✅ **Update Frontend Components**
+   - ✅ Rename all "post" files to "entry"
+     - ✅ `PostList.tsx` → `EntryList.tsx`
+     - ✅ `PostItem.tsx` → `EntryItem.tsx`
+     - ✅ `PostDetail.tsx` → `EntryDetail.tsx`
+     - ✅ `CreatePost.tsx` → `CreateEntry.tsx`
+     - ✅ `CreatePostPage.tsx` → `CreateEntryPage.tsx`
+     - ✅ `PostPage.tsx` → `EntryPage.tsx`
    
-   - [ ] Update all database queries from `posts` to `entries`
-     - [ ] `AnimeFeed.tsx`
-     - [ ] `EntryList.tsx` (renamed from PostList)
-     - [ ] `EntryItem.tsx` (renamed from PostItem)
-     - [ ] `EntryDetail.tsx` (renamed from PostDetail)
+   - ✅ Update all database queries from `posts` to `entries`
+     - ✅ `AnimeFeed.tsx`
+     - ✅ `EntryList.tsx`
+     - ✅ `EntryItem.tsx`
+     - ✅ `EntryDetail.tsx`
    
-   - [ ] Update all TypeScript types/interfaces
-     - [ ] Rename `Post` interface to `Entry`
-     - [ ] Add `entry_type` field to Entry interface
-     - [ ] Update all imports
+   - ✅ Update all TypeScript types/interfaces
+     - ✅ Rename `Post` interface to `Entry`
+     - ✅ Add `entry_type` field to Entry interface
+     - ✅ Update all imports
 
-   - [ ] Update routes in App.tsx
-     - [ ] `/post/*` → `/entry/*`
-     - [ ] Update all navigation links
+   - ✅ Update routes in App.tsx
+     - ✅ `/post/*` → `/entry/*`
+     - ✅ Update all navigation links
 
-3. **Add Entry Type Support**
-   - [ ] Update `CreateEntry` form to include entry type selection
-   - [ ] Add conditional rendering based on entry type
-     - [ ] Review: Show full content text
-     - [ ] Rating: Show numeric input (1-10)
-     - [ ] Status Update: Show status dropdown
+3. ✅ **Add Entry Type Support**
+   - ✅ Update `CreateEntry` form to include entry type selection
+   - ✅ Add conditional rendering based on entry type
+     - ✅ Review: Show full content text
+     - ✅ Rating: Show numeric input (1-10)
+     - ✅ Status Update: Show status dropdown
    
-   - [ ] Update `EntryItem` to display differently based on type
-     - [ ] Review entries: Show title + preview
-     - [ ] Rating entries: Show score prominently
-     - [ ] Status updates: Show status badge
+   - ✅ Update `EntryItem` to display differently based on type
+     - ✅ Entry type labels with emojis
+     - ✅ Created shared utility for entry type display
 
-4. **Fix Voting System**
-   - [ ] Update `LikeButton` to work with entries
-   - [ ] Add vote count display
-   - [ ] Implement upvote/downvote logic (update if exists, insert if new)
-   - [ ] Add visual feedback for user's vote
+4. ✅ **Fix Voting System**
+   - ✅ Update `LikeButton` to work with entries
+   - ✅ Add vote count display
+   - ✅ Implement upvote/downvote logic (update if exists, insert if new)
+   - ✅ Add visual feedback for user's vote
 
-5. **Fix Comments System**
-   - [ ] Update `CommentSection` to reference entry_id instead of post_id
-   - [ ] Verify nested comments work correctly
-   - [ ] Add spoiler toggle/warning for spoiler comments
+5. ✅ **Fix Comments System**
+   - ✅ Update `CommentSection` to reference entry_id
+   - ✅ Verify nested comments work correctly with tree structure
+   - ✅ Comment replies functional
 
-**Success Criteria:** Users can create entries (reviews/ratings/status updates), vote on them, and comment on them.
+**Success Criteria:** ✅ Users can create entries (reviews/ratings/status updates), vote on them, and comment on them.
 
 ---
 
-### Phase 2: User Anime Lists (Priority: HIGH)
+### Phase 2: User Anime Lists (Priority: HIGH) 🔄 **IN PROGRESS**
 **Goal:** Allow users to track their personal anime lists
 
-1. **Create User List Components**
-   - [ ] `MyAnimeList.tsx` - Display user's anime list
-   - [ ] `AnimeListItem.tsx` - Single anime in user's list
-   - [ ] `AddToListButton.tsx` - Button to add anime to list
-   - [ ] `EditListEntry.tsx` - Modal/form to edit list entry
+**Overview:** 
+Phase 2 focuses on implementing the personal anime list feature using the existing `user_anime_entries` table. Users will be able to:
+- Add anime to their personal list with a status (not_started, watching, completed, dropped)
+- Update their status as they watch
+- Add personal ratings (1-10) and private review notes
+- View their entire collection organized by status
 
-2. **Add User List Page**
-   - [ ] Create `/my-list` route
-   - [ ] Add link in Navbar
-   - [ ] Fetch user's anime entries from `user_anime_entries`
+**Database Status:**
+- ✅ `user_anime_entries` table exists with proper RLS policies
+- ✅ Status enum: not_started, watching, completed, dropped
+- ✅ Supports rating (integer, 1-10) and review (text) fields
+- ✅ Auto-timestamps with created_at and updated_at
 
-3. **Implement List Management**
-   - [ ] Add anime to list with status
-   - [ ] Update status (dropdown or buttons)
-   - [ ] Add/edit personal rating
-   - [ ] Add/edit personal review (private notes)
-   - [ ] Remove from list
+**Implementation Tasks:**
 
-4. **Add List Status Indicators**
-   - [ ] Show on anime detail page if user has it in list
-   - [ ] Display current status badge
-   - [ ] Quick status update from detail page
+1. **Create Core Components**
+   - [ ] `MyAnimeList.tsx` - Main page component displaying user's list
+     - Grid/list view of user's anime
+     - Filter tabs by status (All, Watching, Completed, etc.)
+     - Stats summary (total anime, avg rating, etc.)
+   
+   - [ ] `MyAnimeListItem.tsx` - Individual anime card in user's list
+     - Display anime cover, name, status badge
+     - Quick status change dropdown
+     - Personal rating display
+     - Edit/delete buttons
+     - Link to anime detail page
+   
+   - [ ] `AddToListButton.tsx` - Button component for adding anime to list
+     - Display on anime detail page
+     - Show "Add to List" if not in list
+     - Show current status badge if already in list
+     - Click opens status picker modal
+   
+   - [ ] `EditListEntryModal.tsx` - Modal for editing list entry
+     - Status dropdown (not_started, watching, completed, dropped)
+     - Rating input (1-10 scale)
+     - Personal review textarea (private notes)
+     - Save/Cancel buttons
+     - Delete from list option
 
-**Success Criteria:** Users can maintain their personal anime list with status, ratings, and private reviews.
+2. **Create Data Layer Functions**
+   - [ ] `src/api/userAnimeList.ts` - API functions for user anime list
+     ```typescript
+     - fetchUserAnimeList(userId: string, status?: AnimeStatus)
+     - addUserAnimeEntry(animeId: string, userId: string, status: AnimeStatus)
+     - updateUserAnimeEntry(entryId: string, updates: Partial<UserAnimeEntry>)
+     - removeUserAnimeEntry(entryId: string)
+     - getUserAnimeEntry(animeId: string, userId: string)
+     ```
+
+3. **Add Page Route**
+   - [ ] Create `/my-list` page
+   - [ ] Add route to `App.tsx`
+   - [ ] Add "My List" link to Navbar (only when authenticated)
+   - [ ] Add protected route wrapper
+
+4. **Enhance Anime Detail Page**
+   - [ ] Add `AddToListButton` component
+   - [ ] Check if anime is in user's list on load
+   - [ ] Display current status if in list
+   - [ ] Allow quick status updates
+
+5. **Database Constraints & Validation**
+   - [ ] Create unique constraint: one entry per user per anime
+     ```sql
+     ALTER TABLE user_anime_entries 
+     ADD CONSTRAINT user_anime_unique 
+     UNIQUE (user_id, anime_id);
+     ```
+   - [ ] Add check constraint for rating range (1-10)
+     ```sql
+     ALTER TABLE user_anime_entries
+     ADD CONSTRAINT rating_range 
+     CHECK (rating >= 1 AND rating <= 10);
+     ```
+   - [ ] Add trigger to auto-update updated_at timestamp
+
+6. **UI/UX Enhancements**
+   - [ ] Status badge component with color coding
+     - Not Started: Gray
+     - Watching: Blue
+     - Completed: Green
+     - Dropped: Red
+   - [ ] Loading states for all operations
+   - [ ] Success/error toast notifications
+   - [ ] Optimistic updates for status changes
+   - [ ] Empty state when list is empty
+
+**Success Criteria:** 
+- Users can add anime to their personal list with a status
+- Users can view their list filtered by status
+- Users can update status, rating, and personal notes
+- Users can remove anime from their list
+- Anime detail page shows if user has it in their list
+
+**Technical Notes:**
+- Use TanStack Query for data fetching and caching
+- Invalidate queries after mutations for instant UI updates
+- Use modal/drawer for edit forms (better UX on mobile)
+- Consider adding pagination for large lists (>50 anime)
 
 ---
 

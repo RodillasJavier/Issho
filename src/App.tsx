@@ -1,10 +1,15 @@
+/**
+ * src/App.tsx
+ *
+ * Main application component that sets up routing and layout.
+ */
 import { Route, Routes } from "react-router";
 import { Home } from "./pages/Home";
 import { SignIn } from "./pages/SignIn";
 import { SignUp } from "./pages/SignUp";
-import { CreatePostPage } from "./pages/CreatePostPage";
+import { CreateEntryPage } from "./pages/CreateEntryPage";
 import { Navbar } from "./components/Navbar";
-import { PostPage } from "./pages/PostPage";
+import { EntryPage } from "./pages/EntryPage";
 import { AnimeListPage } from "./pages/AnimeListPage";
 import { CreateAnimePage } from "./pages/CreateAnimePage";
 import { AnimePage } from "./pages/AnimePage";
@@ -22,9 +27,9 @@ function App() {
           <Route path="/signin" element={<SignIn />} />
           <Route path="/signup" element={<SignUp />} />
 
-          {/* Posts */}
-          <Route path="/post/create" element={<CreatePostPage />} />
-          <Route path="/post/:id" element={<PostPage />} />
+          {/* Entries */}
+          <Route path="/entry/create" element={<CreateEntryPage />} />
+          <Route path="/entry/:id" element={<EntryPage />} />
 
           {/* Anime */}
           <Route path="/anime" element={<AnimeListPage />} />

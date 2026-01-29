@@ -28,7 +28,7 @@ export const Navbar = () => {
             </Link>
 
             <Link
-              to="/post/create"
+              to="/entry/create"
               className="text-gray-300 hover:text-white transition-colors"
             >
               Create
@@ -119,7 +119,7 @@ export const Navbar = () => {
             </Link>
 
             <Link
-              to="/post/create"
+              to="/entry/create"
               className="block text-center px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-700"
             >
               Create

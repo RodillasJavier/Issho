@@ -1,24 +1,25 @@
-/* src/components/AnimeList.tsx */
+/**
+ * src/components/AnimeList.tsx
+ *
+ * Component to display a list of animes.
+ */
 import { useQuery } from "@tanstack/react-query";
 import supabase from "../supabase-client";
 import { Link } from "react-router";
 
-export interface Anime {
-  id: number;
-  name: string;
-  description: string;
-  created_at: string;
-}
+// #region Types
+import type { Anime } from "../types/database.types";
 
+// #endregion Types
+
+// #region Component Logic
 const fetchAllAnime = async (): Promise<Anime[]> => {
   const { data, error } = await supabase
     .from("anime")
     .select("*")
     .order("created_at", { ascending: false });
 
-  if (error) {
-    throw new Error(error.message);
-  }
+  if (error) throw new Error(error.message);
 
   return data as Anime[];
 };
@@ -28,7 +29,9 @@ export const AnimeList = () => {
     queryKey: ["anime"],
     queryFn: fetchAllAnime,
   });
+  // #endregion Component Logic
 
+  // #region Render
   if (isLoading) {
     return <div>Loading anime...</div>;
   }
@@ -59,3 +62,4 @@ export const AnimeList = () => {
     </div>
   );
 };
+// #endregion Render

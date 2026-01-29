@@ -6,7 +6,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "../hooks/useAuth";
-import { fetchUserAnimeList, getUserListStats } from "../api/userAnimeList";
+import { fetchUserAnimeList, getUserListStats } from "../services/supabase/userAnimeList";
 import { MyAnimeListItem } from "../components/MyAnimeListItem";
 import type { AnimeStatus } from "../types/database.types";
 import { STATUS_LABELS, STATUS_COLORS } from "../constants/animeStatus";

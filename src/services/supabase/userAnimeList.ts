@@ -3,8 +3,8 @@
  *
  * API functions for managing user anime lists.
  */
-import supabase from "../supabase-client";
-import type { UserAnimeEntry, AnimeStatus } from "../types/database.types";
+import supabase from "../../supabase-client";
+import type { UserAnimeEntry, AnimeStatus } from "../../types/database.types";
 
 /**
  * Fetch all anime entries for a user, optionally filtered by status

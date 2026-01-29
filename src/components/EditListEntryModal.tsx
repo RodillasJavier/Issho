@@ -8,7 +8,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   updateUserAnimeEntry,
   removeUserAnimeEntry,
-} from "../api/userAnimeList";
+} from "../services/supabase/userAnimeList";
 
 // #region Types
 import type { UserAnimeEntry, AnimeStatus } from "../types/database.types";

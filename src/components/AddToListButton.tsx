@@ -10,7 +10,7 @@ import {
   getUserAnimeEntry,
   addUserAnimeEntry,
   updateUserAnimeEntry,
-} from "../api/userAnimeList";
+} from "../services/supabase/userAnimeList";
 import { STATUS_LABELS, STATUS_COLORS } from "../constants/animeStatus";
 import type { AnimeStatus } from "../types/database.types";
 

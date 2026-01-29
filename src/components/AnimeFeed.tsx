@@ -9,11 +9,9 @@ import supabase from "../supabase-client";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "../hooks/useAuth";
 import { EntryItem } from "./EntryItem";
-
 import { AddToListButton } from "./AddToListButton";
 import { EditListEntryModal } from "./EditListEntryModal";
-
-import { getUserAnimeEntry } from "../api/userAnimeList";
+import { getUserAnimeEntry } from "../services/supabase/userAnimeList";
 
 // #region Types
 interface AnimeFeedProps {

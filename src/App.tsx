@@ -13,6 +13,7 @@ import { EntryPage } from "./pages/EntryPage";
 import { AnimeListPage } from "./pages/AnimeListPage";
 import { CreateAnimePage } from "./pages/CreateAnimePage";
 import { AnimePage } from "./pages/AnimePage";
+import { MyListPage } from "./pages/MyListPage";
 
 function App() {
   return (
@@ -35,6 +36,9 @@ function App() {
           <Route path="/anime" element={<AnimeListPage />} />
           <Route path="/anime/create" element={<CreateAnimePage />} />
           <Route path="/anime/:id" element={<AnimePage />} />
+
+          {/* User List */}
+          <Route path="/my-list" element={<MyListPage />} />
         </Routes>
       </div>
     </div>

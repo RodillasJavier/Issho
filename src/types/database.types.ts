@@ -12,11 +12,28 @@ export interface Anime {
   id: string;
   created_at: string;
   name: string;
-  description: string;
+  name_japanese: string | null; // Romanized or Japanese title
+  description: string | null;
   episode_count: number | null;
-  cover_image_url: string;
+  cover_image_url: string | null;
   year: number | null;
-  external_id: string;
+  external_id: number | null; // MAL ID from Jikan
+  genres: string | null;
+  status: string | null; // "Finished Airing", "Currently Airing", etc.
+  mal_url: string | null;
+}
+
+export interface AnimeInsert {
+  name: string;
+  name_japanese?: string | null;
+  external_id?: number | null;
+  cover_image_url?: string | null;
+  description?: string | null;
+  episode_count?: number | null;
+  year?: number | null;
+  genres?: string | null;
+  status?: string | null;
+  mal_url?: string | null;
 }
 
 export interface Entry {
@@ -26,7 +43,10 @@ export interface Entry {
   anime_id: string;
   entry_type: EntryType;
   user_id: string;
+  rating_value: number | null; // For "rating" entries (1-10)
+  status_value: AnimeStatus | null; // For "status_update" entries
   anime?: Anime; // When joined
+  profile?: Profile; // When joined
   vote_count?: number; // When aggregated
   comment_count?: number; // When aggregated
   user_vote?: number; // User's vote (-1, 0, 1)
@@ -47,6 +67,7 @@ export interface Comment {
   user_id: string;
   parent_comment_id: string | null;
   content: string;
+  profile?: Profile; // When joined
   is_spoiler: boolean;
   children?: Comment[]; // When nested
 }
@@ -61,4 +82,19 @@ export interface UserAnimeEntry {
   review: string | null;
   updated_at: string;
   anime?: Anime; // When joined
+}
+
+export interface Profile {
+  id: string;
+  username: string;
+  avatar_url: string | null;
+  bio: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProfileUpdate {
+  username?: string;
+  bio?: string;
+  avatar_url?: string | null;
 }

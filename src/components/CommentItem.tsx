@@ -7,6 +7,7 @@ import { useState } from "react";
 import { useAuth } from "../hooks/useAuth";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import supabase from "../supabase-client";
+import { UserInfo } from "./UserInfo";
 
 // #region Types
 import type { Comment } from "../types/database.types";
@@ -75,6 +76,13 @@ export const CommentItem = ({ comment, entryId }: CommentItemProps) => {
   return (
     <div className="flex flex-col gap-2 bg-neutral-950 rounded py-2 px-3 border-l-2 border-l-neutral-600">
       <div className="space-y-1">
+        {comment.profile && (
+          <UserInfo
+            username={comment.profile.username}
+            avatarUrl={comment.profile.avatar_url}
+            size="sm"
+          />
+        )}
         <div className="text-sm text-neutral-600">
           {new Date(comment.created_at).toLocaleString()}
         </div>

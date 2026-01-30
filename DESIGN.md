@@ -16,3 +16,6 @@
     - Comments on entries.
         - Nested comments (replies to comments)
 - Animes retrieved from external API ([Jikan API](https://docs.api.jikan.moe/))
+
+## Notes
+- review `upload avatar` method in `profiles.ts` to understand how url generation works with Supabase Storage.

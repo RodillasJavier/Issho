@@ -5,6 +5,8 @@
  */
 import { Link } from "react-router";
 import { getEntryTypeLabel } from "../constants/entryTypes";
+import { STATUS_LABELS } from "../constants/animeStatus";
+import { UserInfo } from "./UserInfo";
 
 // #region Types
 import type { Entry } from "../types/database.types";
@@ -25,6 +27,16 @@ export const EntryItem = ({ entry }: EntryItemProps) => {
 
       <Link to={`/entry/${entry.id}`} className="relative z-10">
         <div className="w-sm h-sm p-4 gap-2 bg-neutral-950 border border-neutral-800 rounded-md text-white flex flex-col overflow-hidden transition-colors duration-250 group-hover:border-rose-400/50 group-hover:bg-transparent cursor-pointer">
+          {/* User Info */}
+          {entry.profile && (
+            <UserInfo
+              username={entry.profile.username}
+              avatarUrl={entry.profile.avatar_url}
+              size="sm"
+              linkToProfile={false}
+            />
+          )}
+
           {/* Header */}
           <div className="flex flex-col flex-1">
             <div className="text-xs text-rose-400 font-semibold mb-1">
@@ -37,7 +49,7 @@ export const EntryItem = ({ entry }: EntryItemProps) => {
           </div>
 
           {/* Body */}
-          <div className="flex-1">
+          <div className="flex-1 space-y-2">
             {entry.anime?.cover_image_url && (
               <img
                 src={entry.anime.cover_image_url}
@@ -45,6 +57,28 @@ export const EntryItem = ({ entry }: EntryItemProps) => {
                 className="w-full rounded-sm object-cover max-h-64"
               />
             )}
+
+            {/* Display each field on separate lines */}
+            <div className="space-y-1">
+              {/* Status */}
+              {entry.status_value && (
+                <p className="text-gray-300 italic">
+                  Marked as {STATUS_LABELS[entry.status_value]}
+                </p>
+              )}
+
+              {/* Rating */}
+              {entry.rating_value && (
+                <p className="text-gray-300 italic">
+                  Rated {entry.rating_value}/10
+                </p>
+              )}
+
+              {/* Review content */}
+              {entry.content && (
+                <p className="text-gray-300">{entry.content}</p>
+              )}
+            </div>
           </div>
 
           <div className="flex flex-row py-1 px-2 w-fit gap-2 rounded border border-neutral-800 bg-neutral-900">

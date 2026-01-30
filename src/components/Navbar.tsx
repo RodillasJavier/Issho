@@ -1,11 +1,19 @@
 import { useState } from "react";
 import { Link } from "react-router";
+import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "../hooks/useAuth";
+import { getProfileById } from "../services/supabase/profiles";
 
 export const Navbar = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const { signOut, user } = useAuth();
   const displayName = user?.email ? user.email.split("@")[0] : null;
+
+  const { data: profile } = useQuery({
+    queryKey: ["profile", user?.id],
+    queryFn: () => getProfileById(user!.id),
+    enabled: !!user?.id,
+  });
 
   return (
     <nav className="fixed top-0 w-full bg-[rgba(10,10,10,.8)] z-40 backdrop-blur-lg border-b border-white/10 shadow-lg">
@@ -41,23 +49,25 @@ export const Navbar = () => {
               Anime
             </Link>
 
-            {user && (
-              <Link
-                to="/my-list"
-                className="text-gray-300 hover:text-white transition-colors"
-              >
-                My List
-              </Link>
-            )}
-
             {/* Desktop Auth Buttons */}
             {user ? (
-              <button
-                onClick={signOut}
-                className="px-4 py-2 rounded-md bg-gray-700 text-white hover:bg-gray-600 transition-colors cursor-pointer"
-              >
-                Sign Out
-              </button>
+              <div className="flex items-center space-x-8">
+                {profile && (
+                  <Link
+                    to={`/profile/${profile.username}`}
+                    className="text-gray-300 hover:text-white transition-colors"
+                  >
+                    Profile
+                  </Link>
+                )}
+
+                <button
+                  onClick={signOut}
+                  className="px-4 py-2 rounded-md bg-gray-700 text-white hover:bg-gray-600 transition-colors cursor-pointer"
+                >
+                  Sign Out
+                </button>
+              </div>
             ) : (
               <div className="flex items-center space-x-3">
                 <Link
@@ -141,23 +151,25 @@ export const Navbar = () => {
               Anime
             </Link>
 
-            {user && (
-              <Link
-                to="/my-list"
-                className="block text-center px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-700"
-              >
-                My List
-              </Link>
-            )}
-
             {/* Mobile Auth Buttons */}
             {user ? (
-              <button
-                onClick={signOut}
-                className="block text-center w-full px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-700"
-              >
-                Sign Out
-              </button>
+              <div className="space-y-2">
+                {profile && (
+                  <Link
+                    to={`/profile/${profile.username}`}
+                    className="block text-center px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-700"
+                  >
+                    Profile
+                  </Link>
+                )}
+
+                <button
+                  onClick={signOut}
+                  className="block text-center w-full px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-700"
+                >
+                  Sign Out
+                </button>
+              </div>
             ) : (
               <>
                 <Link

@@ -40,6 +40,47 @@ Issho is a community-driven platform for anime watchers to track, rate, and disc
 - **Routing**: React Router
 - **External API**: Jikan API
 
+### Jikan API
+
+The [Jikan API](https://jikan.moe/) is used to fetch anime data from MyAnimeList. See the [Jikan API Documentation](https://docs.api.jikan.moe/) for more details.
+
+Jikan provides a RESTful API that allows us to search for anime, retrieving detailed information such as:
+  - Titles (we collect both English and Japanese titles)
+  - Synopses
+  - Episode counts
+  - Airing status
+  - Cover images
+  - Year of release
+
+#### Implementation Details
+
+**Base Configuration**
+- Base URL: `https://api.jikan.moe/v4`
+- Primary endpoint: `/anime` for search and retrieval
+- Response format: JSON with nested objects and pagination metadata
+
+**Rate Limiting Strategy**
+The Jikan API has the following limits:
+- Daily Limit: unlimited requests
+- Rate Limit: 60 requests per minute
+- Burst Limit: 3 requests per second
+
+To prevent rate limit violations, we implemented:
+- **Client-side throttling** with a 1-second delay between requests
+- **Last request timestamp tracking** to enforce minimum intervals
+
+**Error Handling**
+- HTTP status code validation (400, 404, 500 errors)
+- Graceful degradation when Jikan API is unavailable
+
+**Content Filtering**
+- `sfw: true` parameter to exclude adult content (Rx-rated anime)
+- Client-side validation before database insertion
+
+**Performance Optimizations**
+- Pagination support (max 25 results per request per Jikan limit)
+- Results sorted by popularity for better user experience
+
 ## Installation
 
 1. Clone the repository:

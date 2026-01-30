@@ -46,7 +46,12 @@ const createComment = async (
 const fetchComments = async (entryId: string): Promise<Comment[]> => {
   const { data, error } = await supabase
     .from("comments")
-    .select("*")
+    .select(
+      `
+      *,
+      profile:profiles!user_id(id, username, avatar_url)
+    `
+    )
     .eq("entry_id", entryId)
     .order("created_at", { ascending: true });
 

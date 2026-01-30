@@ -4,6 +4,8 @@ import supabase from "../supabase-client";
 import { LikeButton } from "./LikeButton";
 import { CommentSection } from "./CommentSection";
 import { getEntryTypeLabel } from "../constants/entryTypes";
+import { STATUS_LABELS } from "../constants/animeStatus";
+import { UserInfo } from "./UserInfo";
 
 // #region Types
 import type { Entry } from "../types/database.types";
@@ -17,7 +19,13 @@ interface EntryDetailProps {
 const fetchEntryById = async (id: string): Promise<Entry> => {
   const { data, error } = await supabase
     .from("entries")
-    .select("*, anime(name, cover_image_url, description)")
+    .select(
+      `
+      *,
+      anime(name, cover_image_url, description),
+      profile:profiles!user_id(id, username, avatar_url)
+    `
+    )
     .eq("id", id)
     .single();
 
@@ -45,6 +53,15 @@ export const EntryDetail = ({ entryId }: EntryDetailProps) => {
 
   return (
     <div className="flex flex-col gap-2">
+      {/* User Info */}
+      {data?.profile && (
+        <UserInfo
+          username={data.profile.username}
+          avatarUrl={data.profile.avatar_url}
+          size="md"
+        />
+      )}
+
       <div className="text-sm text-rose-400 font-semibold">
         {data && getEntryTypeLabel(data.entry_type)}
       </div>
@@ -63,7 +80,30 @@ export const EntryDetail = ({ entryId }: EntryDetailProps) => {
 
       <span className="border border-neutral-700 mt-2" />
 
-      <p className="text-md text-white">{data?.content}</p>
+      <div className="flex flex-col gap-2">
+        {data?.status_value && (
+          <p className="text-md text-white">
+            Marked as{" "}
+            <span className="font-semibold text-rose-400">
+              {STATUS_LABELS[data.status_value]}
+            </span>
+          </p>
+        )}
+
+        {data?.rating_value && (
+          <p className="text-md text-white">
+            Rated{" "}
+            <span className="font-semibold text-rose-400">
+              {data.rating_value}/10
+            </span>
+          </p>
+        )}
+
+        {data?.content && (
+          <p className="text-md text-white leading-relaxed">{data.content}</p>
+        )}
+      </div>
+
       <p className="text-sm text-neutral-400">
         Posted on {data && new Date(data.created_at).toLocaleDateString()}
       </p>

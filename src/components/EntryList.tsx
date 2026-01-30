@@ -19,6 +19,20 @@ interface EntryWithCounts {
   created_at: string;
   vote_count: number;
   comment_count: number;
+  rating_value: number | null;
+  status_value: string | null;
+}
+
+interface AnimeData {
+  id: string;
+  name: string;
+  cover_image_url: string | null;
+}
+
+interface ProfileData {
+  id: string;
+  username: string;
+  avatar_url: string | null;
 }
 // #endregion Types
 
@@ -34,25 +48,36 @@ const fetchEntries = async (): Promise<Entry[]> => {
     return [];
   }
 
-  // Fetch anime data separately and join in memory
+  // Fetch anime and profile data separately and join in memory
   const entryIds = (entriesWithCounts as EntryWithCounts[]).map(
     (entry) => entry.anime_id
   );
+  const userIds = [
+    ...new Set(
+      (entriesWithCounts as EntryWithCounts[]).map((entry) => entry.user_id)
+    ),
+  ];
 
   const { data: animeData } = await supabase
     .from("anime")
     .select("id, name, cover_image_url")
     .in("id", entryIds);
 
-  // Map anime data to entries
-  const entriesWithAnime = (entriesWithCounts as EntryWithCounts[]).map(
+  const { data: profileData } = await supabase
+    .from("profiles")
+    .select("id, username, avatar_url")
+    .in("id", userIds);
+
+  // Map anime and profile data to entries
+  const entriesWithData = (entriesWithCounts as EntryWithCounts[]).map(
     (entry) => ({
       ...entry,
-      anime: animeData?.find((a) => a.id === entry.anime_id),
+      anime: animeData?.find((a: AnimeData) => a.id === entry.anime_id),
+      profile: profileData?.find((p: ProfileData) => p.id === entry.user_id),
     })
   );
 
-  return entriesWithAnime as Entry[];
+  return entriesWithData as Entry[];
 };
 
 export const EntryList = () => {
@@ -72,7 +97,7 @@ export const EntryList = () => {
   }
 
   return (
-    <div className="flex flex-wrap gap-6 justify-center">
+    <div className="flex flex-row flex-wrap gap-6 justify-center">
       {data?.map((entry) => (
         <EntryItem entry={entry} key={entry.id} />
       ))}

@@ -26,12 +26,17 @@ Issho is an anime social platform where users can share reviews, ratings, and st
 Stores anime information (from Jikan API or user-created)
 - `id` (uuid, PK) - Auto-generated
 - `created_at` (timestamptz) - Auto-set
-- `name` (text) - Anime title
+- `updated_at` (timestamptz) - Auto-set, tracks data freshness
+- `name` (text) - Anime title (prefers English)
+- `name_japanese` (text, nullable) - Japanese/romanized title
 - `description` (text) - Anime description
 - `episode_count` (integer, nullable) - Number of episodes
 - `cover_image_url` (text) - URL to cover image
 - `year` (integer, nullable) - Release year
-- `external_id` (text, unique) - ID from Jikan API
+- `external_id` (integer, unique, nullable) - MAL ID from Jikan API
+- `genres` (text, nullable) - Comma-separated genre names
+- `status` (text, nullable) - Airing status ("Finished Airing", etc.)
+- `mal_url` (text, nullable) - Link to MyAnimeList page
 
 **RLS Policies:**
 - SELECT: Public read access
@@ -41,17 +46,20 @@ Stores anime information (from Jikan API or user-created)
 Personal anime lists - each user's private tracking of their anime
 - `id` (uuid, PK) - Auto-generated
 - `created_at` (timestamptz) - Auto-set
-- `user_id` (uuid) - Auto-set to auth.uid()
+- `user_id` (uuid, FK → profiles.id) - CASCADE delete
 - `anime_id` (uuid, FK → anime.id)
 - `status` (Anime Status) - Default: 'not_started'
 - `rating` (integer, nullable) - Personal rating (1-10)
 - `review` (text, nullable) - Personal review
 - `updated_at` (timestamptz) - Auto-set
 
+**Unique Constraint:** (user_id, anime_id) - One entry per user per anime
+
 **RLS Policies:**
 - SELECT: Users can only view their own entries
 - INSERT: Users can only insert with their own user_id
 - UPDATE: Users can only update their own entries
+- DELETE: Users can only delete their own entries
 
 #### `entries`
 Public posts/entries about anime (reviews, ratings, status updates)
@@ -60,31 +68,38 @@ Public posts/entries about anime (reviews, ratings, status updates)
 - `content` (text, nullable) - Entry content/description
 - `anime_id` (uuid, FK → anime.id)
 - `entry_type` (Entry Types) - Type of entry
-- `user_id` (uuid) - Auto-set to auth.uid()
+- `user_id` (uuid, FK → profiles.id) - CASCADE delete
+- `rating_value` (integer, nullable) - For rating entries (1-10)
+- `status_value` (Anime Status, nullable) - For status_update entries
 
 **RLS Policies:**
 - SELECT: Public read access
 - INSERT: Authenticated users only
+- UPDATE: Users can only update their own entries
+- DELETE: Users can only delete their own entries
 
 #### `votes`
 Votes on entries (upvote/downvote system)
 - `id` (uuid, PK) - Auto-generated
 - `created_at` (timestamptz) - Auto-set
 - `entry_id` (uuid, FK → entries.id)
-- `user_id` (uuid) - Auto-set to auth.uid()
+- `user_id` (uuid, FK → profiles.id) - CASCADE delete
 - `vote` (integer) - +1 for upvote, -1 for downvote
+
+**Unique Constraint:** (entry_id, user_id) - One vote per user per entry
 
 **RLS Policies:**
 - SELECT: Public read access
 - INSERT: Users can only insert with their own user_id
 - UPDATE: Users can only update their own votes
+- DELETE: Users can only delete their own votes
 
 #### `comments`
 Nested comments on entries
 - `id` (uuid, PK) - Auto-generated
 - `created_at` (timestamptz) - Auto-set
 - `entry_id` (uuid, FK → entries.id)
-- `user_id` (uuid) - Auto-set to auth.uid()
+- `user_id` (uuid, FK → profiles.id) - CASCADE delete
 - `parent_comment_id` (uuid, nullable, FK → comments.id) - For nested replies
 - `content` (text) - Comment text
 - `is_spoiler` (boolean) - Default: false
@@ -92,7 +107,23 @@ Nested comments on entries
 **RLS Policies:**
 - SELECT: Public read access
 - INSERT: Authenticated users only
+- UPDATE: Users can only update their own comments
 - DELETE: Users can only delete their own comments
+
+#### `profiles`
+User profile information (linked to auth.users)
+- `id` (uuid, PK, FK → auth.users.id) - User ID from Supabase Auth
+- `username` (text, unique) - User's display name
+- `avatar_url` (text, nullable) - URL to avatar in Supabase Storage
+- `bio` (text, nullable) - User biography (max 500 chars)
+- `created_at` (timestamptz) - Auto-set
+- `updated_at` (timestamptz) - Auto-set
+
+**RLS Policies:**
+- SELECT: Public read access
+- INSERT: Authenticated users can only create their own profile
+- UPDATE: Users can only update their own profile
+- DELETE: Users can only delete their own profile
 
 ### Installed Extensions
 - `pgcrypto` (for UUID generation)
@@ -124,27 +155,37 @@ Nested comments on entries
 ## Current Application Structure
 
 ### Pages
-- `/` - Home (likely feed of all entries)
+- `/` - Home (anime feed with all entries)
 - `/signin` - Sign in page
 - `/signup` - Sign up page
-- `/post/create` - Create post page (needs updating to "entry")
-- `/post/:id` - Post detail page (needs updating to "entry")
-- `/anime` - Anime list page
-- `/anime/create` - Create anime page
+- `/entry/create` - Create entry page
+- `/entry/:id` - Entry detail page
+- `/anime` - Anime list page (browse local database)
+- `/anime/create` - Create anime page (manual import)
 - `/anime/:id` - Anime detail page
+- `/profile/:username` - User profile and anime list (unified)
+- `/profile/edit` - Edit own profile
 
 ### Components
-- `AnimeFeed` - Display posts for a specific anime (needs update)
-- `AnimeList` - List of anime
+- `AnimeFeed` - Display entries for a specific anime
+- `AnimeList` - Browse anime with search functionality
+- `AnimeSearch` - Search Jikan API and import anime
+- `AnimeListStats` - Reusable stats cards for filtering
 - `CommentItem` - Single comment display
 - `CommentSection` - Comments display with nesting
-- `CreateAnime` - Form to create anime
-- `CreatePost` - Form to create post (needs update to "entry")
-- `LikeButton` - Voting button
+- `CreateAnime` - Form to create anime manually
+- `CreateEntry` - Form to create entry (review/rating/status)
+- `EntryDetail` - Entry detail view
+- `EntryItem` - Single entry display
+- `EntryList` - List of entries
+- `LikeButton` - Voting button (upvote/downvote)
+- `AddToListButton` - Add anime to personal list
+- `MyAnimeListItem` - Anime card in user's list
+- `EditListEntryModal` - Edit personal list entry
+- `UserAvatar` - Avatar display with fallback
+- `UserInfo` - Username/avatar combination
+- `EditProfileForm` - Profile editing form
 - `Navbar` - Navigation bar
-- `PostDetail` - Post detail view (needs update)
-- `PostItem` - Single post display (needs update)
-- `PostList` - List of posts (needs update)
 
 ### Context
 - `AuthContext` - Auth context definition
@@ -289,37 +330,141 @@ Implemented personal anime list feature using the `user_anime_entries` table. Us
 
 ---
 
-### Phase 3: Jikan API Integration (Priority: MEDIUM) 🔄 **IN PROGRESS**
+### Phase 3: Jikan API Integration ✅ **COMPLETED**
 **Goal:** Populate anime database from external API
 
-1. **Set Up Jikan API Client**
-   - [ ] Create `src/services/jikanApi.ts`
-   - [ ] Add search functionality
-   - [ ] Add fetch anime details by ID
-   - [ ] Handle rate limiting (Jikan has limits)
+**Overview:**
+Fully integrated Jikan API (unofficial MyAnimeList API) for fetching anime data. Users can now:
+- ✅ Search for anime from both local database and Jikan API
+- ✅ Import anime from Jikan with one click
+- ✅ Browse anime with SFW content filtering
+- ✅ Auto-refresh stale anime data after 7 days
 
-2. **Update Anime Search**
-   - [ ] Replace/enhance `AnimeList` with search
-   - [ ] Show results from Jikan API
-   - [ ] Allow user to add anime from search results to database
+**API Client:**
+- ✅ `src/services/jikanApi.ts` - Complete Jikan API wrapper
+  - Rate limiting: 1000ms delay between requests (3/sec limit)
+  - HTTP status code validation
+  - TypeScript interfaces for all API responses
+  - `searchAnime()` - Search with pagination and SFW filter
+  - `getAnimeById()` - Fetch full anime details
 
-3. **Anime Import Flow**
-   - [ ] When user searches for anime, check if exists in DB
-   - [ ] If not in DB, fetch from Jikan and insert
-   - [ ] Store `external_id` from Jikan for future reference
-   - [ ] Show anime details from Jikan
+**Anime Import System:**
+- ✅ `src/api/animeImport.ts` - Smart import logic
+  - Checks if anime exists before importing
+  - Maps Jikan data to database schema
+  - Prefers English titles, stores Japanese as alternate
+  - Stores essential data (title, description, episodes, year, genres, status)
+  - Auto-refreshes data older than 7 days
+- ✅ `src/api/animeSearch.ts` - Combined search
+  - Searches both local DB and Jikan API simultaneously
+  - Uses `Promise.allSettled` for graceful degradation
+  - Returns partial results if one source fails
 
-4. **Enhance Anime Detail Page**
-   - [ ] Display full anime info from Jikan
-   - [ ] Show genres, studios, air dates
-   - [ ] Add anime trailer/PV if available
-   - [ ] Link to MAL/Jikan page
+**Components:**
+- ✅ `AnimeSearch.tsx` - Dual-source search with import
+  - Integrated search bar with icon and clear button
+  - Shows local results and Jikan results separately
+  - One-click import from Jikan to database
+  - Defensive error handling
+- ✅ `AnimeList.tsx` - Browse local anime with search
+  - Client-side search across name, description, genres
+  - Search bar with results count
+  - Matches styling across components
 
-**Success Criteria:** Users can search for anime from Jikan API and automatically add them to the database.
+**Data Quality:**
+- ✅ SFW content filtering (excludes adult content)
+- ✅ Auto-refresh after 7 days using `updated_at` timestamp
+- ✅ Duplicate prevention via `external_id` unique constraint
+- ✅ Graceful handling of missing data (nullable fields)
+
+**Error Handling:**
+- ✅ Rate limit compliance
+- ✅ HTTP error validation (400, 404, 500)
+- ✅ Graceful degradation when Jikan unavailable
+- ✅ Promise.allSettled prevents cascade failures
+
+**Performance:**
+- ✅ Rate limiting prevents API throttling
+- ✅ Smart caching: only refresh old data
+- ✅ Pagination support (25 results/request)
+- ✅ Results sorted by popularity
+
+**Success Criteria Met:** ✅ Users can search for anime from Jikan API, automatically add them to the database, and data stays fresh through auto-refresh. API integration is robust with proper error handling and rate limiting.
 
 ---
 
-### Phase 4: Enhanced UX (Priority: MEDIUM)
+### Phase 4: User Profiles ✅ **COMPLETED**
+**Goal:** Implement user profile system with customization and social features
+
+**Overview:**
+Implemented comprehensive user profile system with authentication integration. Users can now:
+- ✅ View their own profile and other users' profiles
+- ✅ Customize username, bio, and avatar
+- ✅ See profile stats (anime count, average rating)
+- ✅ Access unified list view showing anime collection with filtering
+- ✅ Navigate seamlessly between profiles and lists
+
+**Database:**
+- ✅ `profiles` table with username, bio, avatar_url
+- ✅ Foreign key constraints from entries/comments/votes/user_anime_entries to profiles
+- ✅ Cascade delete for data integrity
+- ✅ Supabase Storage integration for avatar uploads
+
+**Components Created:**
+- ✅ `UserProfilePage.tsx` - Unified profile and list view
+  - Shows profile banner with avatar, username, bio
+  - Displays clickable stat cards (Total, Watching, Completed, etc.)
+  - Shows filtered anime list based on selected status
+  - Edit pencil icon for own profile only
+- ✅ `EditProfileForm.tsx` - Form component for profile editing
+  - Custom file input button with hover effects
+  - Username validation (3-20 chars, alphanumeric)
+  - Bio with character count (500 max)
+  - Avatar preview before upload
+- ✅ `EditProfilePage.tsx` - Page wrapper with auth and loading
+- ✅ `AnimeListStats.tsx` - Reusable stats cards component
+  - Color-coded cards for each status
+  - Active filter highlighting
+  - Gradient average rating card
+- ✅ `UserAvatar.tsx` - Avatar display component with fallback
+- ✅ `UserInfo.tsx` - Username/avatar combination component
+
+**API Layer:**
+- ✅ `src/services/supabase/profiles.ts` - Profile CRUD operations
+  - `getProfileById()` - Fetch profile by user ID
+  - `getProfileByUsername()` - Fetch profile by username
+  - `updateProfile()` - Update username and bio
+  - `updateAvatar()` - Upload avatar to Supabase Storage
+  - `deleteAvatar()` - Remove avatar from storage
+
+**Routing & Navigation:**
+- ✅ Removed `/my-list` route (merged with profile)
+- ✅ Changed `/user/:username` to `/profile/:username`
+- ✅ `/profile/edit` route for editing own profile
+- ✅ Navbar "Profile" link navigates to own profile
+- ✅ Auto-redirect to new username after profile update
+
+**Data Management:**
+- ✅ Auto-refresh anime data from Jikan API after 7 days
+- ✅ `updated_at` field added to anime table
+- ✅ Migration to track anime data freshness
+- ✅ Prevents stale data while respecting rate limits
+
+**UI/UX Features:**
+- ✅ Unified design language across profile pages
+- ✅ "{username}'s List" possessive title
+- ✅ Edit pencil icon (only visible on own profile)
+- ✅ Custom file input with proper hover isolation
+- ✅ Avatar preview during upload
+- ✅ Form validation with helpful error messages
+- ✅ Responsive grid layout
+- ✅ Component splitting for better maintainability
+
+**Success Criteria Met:** ✅ All objectives achieved and tested. Profile system fully functional with clean component architecture.
+
+---
+
+### Phase 5: Enhanced UX (Priority: MEDIUM)
 **Goal:** Improve user experience and visual polish
 
 1. **Better Entry Display**
@@ -422,12 +567,17 @@ export type AnimeStatus = 'not_started' | 'watching' | 'completed' | 'dropped';
 export interface Anime {
   id: string;
   created_at: string;
+  updated_at: string;
   name: string;
-  description: string;
+  name_japanese: string | null;
+  description: string | null;
   episode_count: number | null;
-  cover_image_url: string;
+  cover_image_url: string | null;
   year: number | null;
-  external_id: string;
+  external_id: number | null;
+  genres: string | null;
+  status: string | null;
+  mal_url: string | null;
 }
 
 export interface Entry {
@@ -437,8 +587,12 @@ export interface Entry {
   anime_id: string;
   entry_type: EntryType;
   user_id: string;
+  rating_value: number | null;
+  status_value: AnimeStatus | null;
   anime?: Anime; // When joined
+  profile?: Profile; // When joined
   vote_count?: number; // When aggregated
+  comment_count?: number; // When aggregated
   user_vote?: number; // User's vote (-1, 0, 1)
 }
 
@@ -458,7 +612,17 @@ export interface Comment {
   parent_comment_id: string | null;
   content: string;
   is_spoiler: boolean;
-  replies?: Comment[]; // When nested
+  profile?: Profile; // When joined
+  children?: Comment[]; // When nested
+}
+
+export interface Profile {
+  id: string;
+  username: string;
+  avatar_url: string | null;
+  bio: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface UserAnimeEntry {

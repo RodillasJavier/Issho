@@ -3,6 +3,7 @@
  *
  * Component to display a list of animes.
  */
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import supabase from "../supabase-client";
 import { Link } from "react-router";
@@ -25,13 +26,27 @@ const fetchAllAnime = async (): Promise<Anime[]> => {
 };
 
 export const AnimeList = () => {
+  const [searchQuery, setSearchQuery] = useState("");
+
   const { data, isLoading, error } = useQuery<Anime[], Error>({
     queryKey: ["anime"],
     queryFn: fetchAllAnime,
   });
+
+  // Filter anime based on search query
+  const filteredAnime = data?.filter((anime) => {
+    const query = searchQuery.toLowerCase();
+
+    return (
+      anime.name.toLowerCase().includes(query) ||
+      anime.name_japanese?.toLowerCase().includes(query) ||
+      anime.description?.toLowerCase().includes(query) ||
+      anime.genres?.toLowerCase().includes(query)
+    );
+  });
   // #endregion Component Logic
 
-  // #region Render
+  // #endregion Render
   if (isLoading) {
     return <div>Loading anime...</div>;
   }
@@ -42,23 +57,137 @@ export const AnimeList = () => {
   }
 
   return (
-    <div className="flex flex-col w-full gap-2 cursor-pointer">
-      {data?.map((anime, key) => (
-        <div
-          key={key}
-          className="group bg-neutral-950 rounded p-2 hover:scale-105 transition transition-duration-1000"
-        >
-          <Link to={`/anime/${anime.id}`}>
-            <h3 className="bg-clip-text font-semibold text-3xl group-hover:text-rose-400 transition transition 1000">
-              {anime.name}
-            </h3>
+    <div className="flex flex-col gap-6 w-full">
+      {/* Search Bar */}
+      <div className="relative">
+        <input
+          type="text"
+          placeholder="Search anime by title, description, or genre..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="w-full px-4 py-3 pl-12 bg-neutral-900 border border-neutral-700 rounded-lg text-white placeholder-neutral-500 focus:border-rose-500 focus:outline-none"
+        />
 
-            <p className="text-neutral-500 group-hover:text-neutral-400 transition transition 1000">
-              {anime.description}
-            </p>
-          </Link>
+        <svg
+          className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-500"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+          />
+        </svg>
+
+        {searchQuery && (
+          <button
+            onClick={() => setSearchQuery("")}
+            className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-white"
+          >
+            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+              <path
+                fillRule="evenodd"
+                d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                clipRule="evenodd"
+              />
+            </svg>
+          </button>
+        )}
+      </div>
+
+      {/* Results Count */}
+      {searchQuery && (
+        <div className="text-sm text-neutral-400">
+          Found {filteredAnime?.length || 0} anime
         </div>
-      ))}
+      )}
+
+      {/* Results */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 w-full">
+        {filteredAnime?.map((anime) => (
+          <Link
+            key={anime.id}
+            to={`/anime/${anime.id}`}
+            className="group block"
+          >
+            <div className="bg-white/5 backdrop-blur-sm rounded-lg overflow-hidden border border-white/10 hover:border-white/30 transition-all">
+              {/* Cover Image */}
+              {anime.cover_image_url ? (
+                <img
+                  src={anime.cover_image_url}
+                  alt={anime.name}
+                  className="w-full aspect-[2/3] object-cover"
+                />
+              ) : (
+                <div className="w-full aspect-[2/3] bg-neutral-800 flex items-center justify-center text-neutral-600">
+                  No Image
+                </div>
+              )}
+
+              {/* Content */}
+              <div className="p-4 space-y-2">
+                {/* Title */}
+                <h3 className="font-semibold text-lg line-clamp-2 group-hover:text-rose-400 transition-colors">
+                  {anime.name}
+                </h3>
+
+                {/* Metadata Row */}
+                <div className="flex flex-wrap gap-2 text-xs">
+                  {anime.year && (
+                    <span className="px-2 py-0.5 bg-white/10 rounded">
+                      {anime.year}
+                    </span>
+                  )}
+
+                  {anime.status && (
+                    <span className="px-2 py-0.5 bg-white/10 rounded">
+                      {anime.status}
+                    </span>
+                  )}
+
+                  {anime.episode_count && (
+                    <span className="px-2 py-0.5 bg-white/10 rounded">
+                      {anime.episode_count} eps
+                    </span>
+                  )}
+                </div>
+
+                {/* Genres */}
+                {anime.genres && (
+                  <div className="flex flex-wrap gap-1">
+                    {anime.genres
+                      .split(", ")
+                      .slice(0, 3)
+                      .map((genre) => (
+                        <span
+                          key={genre}
+                          className="px-2 py-0.5 bg-rose-500/20 text-rose-300 rounded text-xs"
+                        >
+                          {genre}
+                        </span>
+                      ))}
+                  </div>
+                )}
+
+                {/* Description */}
+                {anime.description && (
+                  <p className="text-sm text-gray-400 line-clamp-3">
+                    {anime.description}
+                  </p>
+                )}
+              </div>
+            </div>
+          </Link>
+        ))}
+      </div>
+
+      <h2 className="text-center text-xl pt-10 text-neutral-400">
+        Can't find what you're looking for? Try searching for it and adding it
+        to the database!
+      </h2>
     </div>
   );
 };

@@ -28,14 +28,14 @@ export const MyAnimeListItem = ({ entry }: MyAnimeListItemProps) => {
       <div className="relative group">
         <div className="absolute -inset-1 bg-gradient-to-r from-rose-950 to-rose-400 blur-sm opacity-0 group-hover:opacity-25 transition duration-250" />
 
-        <div className="relative z-10 bg-neutral-950 border border-neutral-800 rounded-md overflow-hidden transition-colors duration-250 group-hover:border-rose-400/50">
+        <div className="relative h-full z-10 bg-neutral-950 border border-neutral-800 rounded-md overflow-hidden transition-colors duration-250 group-hover:border-rose-400/50">
           {/* Image Container */}
           <Link to={`/anime/${entry.anime_id}`} className="block">
             {entry.anime?.cover_image_url ? (
               <img
                 src={entry.anime.cover_image_url}
                 alt={entry.anime.name}
-                className="w-full h-64 object-cover"
+                className="w-full h-full object-cover"
               />
             ) : (
               <div className="w-full h-64 bg-neutral-800 flex items-center justify-center text-neutral-600">
@@ -45,7 +45,7 @@ export const MyAnimeListItem = ({ entry }: MyAnimeListItemProps) => {
           </Link>
 
           {/* Content */}
-          <div className="p-4 space-y-3">
+          <div className="px-4 py-3 space-y-3">
             {/* Title */}
             <Link
               to={`/anime/${entry.anime_id}`}
@@ -55,6 +55,33 @@ export const MyAnimeListItem = ({ entry }: MyAnimeListItemProps) => {
                 {entry.anime?.name || "Unknown Anime"}
               </h3>
             </Link>
+
+            {/* Metadata Row */}
+            {(entry.anime?.year || entry.anime?.episode_count) && (
+              <div className="flex gap-1 text-xs text-gray-400">
+                {entry.anime?.year && <span>{entry.anime.year}</span>}
+                {entry.anime?.episode_count && (
+                  <span>• {entry.anime.episode_count} eps</span>
+                )}
+              </div>
+            )}
+
+            {/* Genres */}
+            {entry.anime?.genres && (
+              <div className="flex flex-wrap gap-1">
+                {entry.anime.genres
+                  .split(", ")
+                  .slice(0, 2)
+                  .map((genre) => (
+                    <span
+                      key={genre}
+                      className="px-2 py-0.5 bg-rose-500/20 text-rose-300 rounded text-xs"
+                    >
+                      {genre}
+                    </span>
+                  ))}
+              </div>
+            )}
 
             {/* Status Badge */}
             <div className="flex items-center gap-2 justify-between">
@@ -83,7 +110,7 @@ export const MyAnimeListItem = ({ entry }: MyAnimeListItemProps) => {
             )}
 
             {/* Action Buttons */}
-            <div className="flex gap-2 pt-2">
+            <div className="flex gap-2">
               <button
                 onClick={() => setShowEditModal(true)}
                 className="flex-1 px-3 py-2 bg-neutral-800 hover:bg-neutral-700 rounded text-sm transition-colors cursor-pointer"

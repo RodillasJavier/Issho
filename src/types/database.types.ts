@@ -11,6 +11,7 @@ export type AnimeStatus = "not_started" | "watching" | "completed" | "dropped";
 export interface Anime {
   id: string;
   created_at: string;
+  updated_at: string;
   name: string;
   name_japanese: string | null; // Romanized or Japanese title
   description: string | null;

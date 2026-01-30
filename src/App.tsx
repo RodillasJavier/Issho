@@ -4,16 +4,18 @@
  * Main application component that sets up routing and layout.
  */
 import { Route, Routes } from "react-router";
+import { Navbar } from "./components/Navbar";
 import { Home } from "./pages/Home";
 import { SignIn } from "./pages/SignIn";
 import { SignUp } from "./pages/SignUp";
 import { CreateEntryPage } from "./pages/CreateEntryPage";
-import { Navbar } from "./components/Navbar";
 import { EntryPage } from "./pages/EntryPage";
 import { AnimeListPage } from "./pages/AnimeListPage";
 import { CreateAnimePage } from "./pages/CreateAnimePage";
 import { AnimePage } from "./pages/AnimePage";
 import { MyListPage } from "./pages/MyListPage";
+import { UserProfilePage } from "./pages/UserProfilePage";
+import { EditProfilePage } from "./pages/EditProfilePage";
 
 function App() {
   return (
@@ -39,6 +41,10 @@ function App() {
 
           {/* User List */}
           <Route path="/my-list" element={<MyListPage />} />
+
+          {/* User Profiles */}
+          <Route path="/user/:username" element={<UserProfilePage />} />
+          <Route path="/profile/edit" element={<EditProfilePage />} />
         </Routes>
       </div>
     </div>

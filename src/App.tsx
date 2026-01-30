@@ -13,7 +13,6 @@ import { EntryPage } from "./pages/EntryPage";
 import { AnimeListPage } from "./pages/AnimeListPage";
 import { CreateAnimePage } from "./pages/CreateAnimePage";
 import { AnimePage } from "./pages/AnimePage";
-import { MyListPage } from "./pages/MyListPage";
 import { UserProfilePage } from "./pages/UserProfilePage";
 import { EditProfilePage } from "./pages/EditProfilePage";
 
@@ -39,11 +38,8 @@ function App() {
           <Route path="/anime/create" element={<CreateAnimePage />} />
           <Route path="/anime/:id" element={<AnimePage />} />
 
-          {/* User List */}
-          <Route path="/my-list" element={<MyListPage />} />
-
           {/* User Profiles */}
-          <Route path="/user/:username" element={<UserProfilePage />} />
+          <Route path="/profile/:username" element={<UserProfilePage />} />
           <Route path="/profile/edit" element={<EditProfilePage />} />
         </Routes>
       </div>

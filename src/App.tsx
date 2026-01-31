@@ -15,6 +15,7 @@ import { CreateAnimePage } from "./pages/CreateAnimePage";
 import { AnimePage } from "./pages/AnimePage";
 import { UserProfilePage } from "./pages/UserProfilePage";
 import { EditProfilePage } from "./pages/EditProfilePage";
+import { FriendsPage } from "./pages/FriendsPage";
 
 function App() {
   return (
@@ -40,6 +41,7 @@ function App() {
 
           {/* User Profiles */}
           <Route path="/profile/:username" element={<UserProfilePage />} />
+          <Route path="/profile/:username/friends" element={<FriendsPage />} />
           <Route path="/profile/edit" element={<EditProfilePage />} />
         </Routes>
       </div>

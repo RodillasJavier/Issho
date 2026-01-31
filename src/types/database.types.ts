@@ -99,3 +99,26 @@ export interface ProfileUpdate {
   bio?: string;
   avatar_url?: string | null;
 }
+
+export type FriendshipStatus = "pending" | "accepted" | "rejected";
+
+export interface Friendship {
+  id: string;
+  requester_id: string;
+  addressee_id: string;
+  status: FriendshipStatus;
+  created_at: string;
+  updated_at: string;
+
+  // When joined with profiles
+  requester?: Profile;
+  addressee?: Profile;
+}
+
+export interface FriendshipStatusInfo {
+  friendship: Friendship | null;
+  isFriend: boolean;
+  isPending: boolean;
+  isRequester: boolean; // true if current user sent the request
+  isAddressee: boolean; // true if current user received the request
+}

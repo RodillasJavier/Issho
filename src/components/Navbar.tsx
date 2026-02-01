@@ -7,7 +7,6 @@ import { getProfileById } from "../services/supabase/profiles";
 export const Navbar = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const { signOut, user } = useAuth();
-  const displayName = user?.email ? user.email.split("@")[0] : null;
 
   const { data: profile } = useQuery({
     queryKey: ["profile", user?.id],
@@ -22,7 +21,7 @@ export const Navbar = () => {
           <Link to="/" className="font-mono text-xl font-bold white">
             Issho
             <span className="text-rose-400">
-              {displayName ? `.${displayName}` : ""}
+              {profile?.username ? `.${profile.username}` : ""}
             </span>
           </Link>
 
@@ -63,9 +62,23 @@ export const Navbar = () => {
 
                 <button
                   onClick={signOut}
-                  className="px-4 py-2 rounded-md bg-gray-700 text-white hover:bg-gray-600 transition-colors cursor-pointer"
+                  className="text-neutral-400 hover:text-white hover:scale-110 transition cursor-pointer"
+                  aria-label="Sign out"
+                  title="Sign out"
                 >
-                  Sign Out
+                  <svg
+                    className="w-6 h-6"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                    />
+                  </svg>
                 </button>
               </div>
             ) : (
@@ -165,8 +178,21 @@ export const Navbar = () => {
 
                 <button
                   onClick={signOut}
-                  className="block text-center w-full px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-700"
+                  className="flex items-center justify-center gap-2 w-full px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-700"
                 >
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                    />
+                  </svg>
                   Sign Out
                 </button>
               </div>

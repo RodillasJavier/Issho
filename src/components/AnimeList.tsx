@@ -138,83 +138,83 @@ export const AnimeList = () => {
       {/* Results */}
       {paginatedAnime && paginatedAnime.length > 0 ? (
         <>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 w-full">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 w-full">
             {paginatedAnime.map((anime) => (
-          <Link
-            key={anime.id}
-            to={`/anime/${anime.id}`}
-            className="group block"
-          >
-            <div className="bg-white/5 backdrop-blur-sm rounded-lg overflow-hidden border border-white/10 hover:border-white/30 transition-all">
-              {/* Cover Image */}
-              {anime.cover_image_url ? (
-                <img
-                  src={anime.cover_image_url}
-                  alt={anime.name}
-                  className="w-full aspect-[2/3] object-cover"
-                />
-              ) : (
-                <div className="w-full aspect-[2/3] bg-neutral-800 flex items-center justify-center text-neutral-600">
-                  No Image
-                </div>
-              )}
-
-              {/* Content */}
-              <div className="p-4 space-y-2">
-                {/* Title */}
-                <h3 className="font-semibold text-lg line-clamp-2 group-hover:text-rose-400 transition-colors">
-                  {anime.name}
-                </h3>
-
-                {/* Metadata Row */}
-                <div className="flex flex-wrap gap-2 text-xs">
-                  {anime.year && (
-                    <span className="px-2 py-0.5 bg-white/10 rounded">
-                      {anime.year}
-                    </span>
+              <Link
+                key={anime.id}
+                to={`/anime/${anime.id}`}
+                className="group block"
+              >
+                <div className="bg-white/5 backdrop-blur-sm rounded-lg overflow-hidden border border-white/10 hover:border-white/30 transition-all">
+                  {/* Cover Image */}
+                  {anime.cover_image_url ? (
+                    <img
+                      src={anime.cover_image_url}
+                      alt={anime.name}
+                      className="w-full aspect-[2/3] object-cover"
+                    />
+                  ) : (
+                    <div className="w-full aspect-[2/3] bg-neutral-800 flex items-center justify-center text-neutral-600">
+                      No Image
+                    </div>
                   )}
 
-                  {anime.status && (
-                    <span className="px-2 py-0.5 bg-white/10 rounded">
-                      {anime.status}
-                    </span>
-                  )}
+                  {/* Content */}
+                  <div className="p-4 space-y-2">
+                    {/* Title */}
+                    <h3 className="font-semibold text-lg line-clamp-2 group-hover:text-rose-400 transition-colors">
+                      {anime.name}
+                    </h3>
 
-                  {anime.episode_count && (
-                    <span className="px-2 py-0.5 bg-white/10 rounded">
-                      {anime.episode_count} eps
-                    </span>
-                  )}
-                </div>
-
-                {/* Genres */}
-                {anime.genres && (
-                  <div className="flex flex-wrap gap-1">
-                    {anime.genres
-                      .split(", ")
-                      .slice(0, 3)
-                      .map((genre) => (
-                        <span
-                          key={genre}
-                          className="px-2 py-0.5 bg-rose-500/20 text-rose-300 rounded text-xs"
-                        >
-                          {genre}
+                    {/* Metadata Row */}
+                    <div className="flex flex-wrap gap-2 text-xs">
+                      {anime.year && (
+                        <span className="px-2 py-0.5 bg-white/10 rounded">
+                          {anime.year}
                         </span>
-                      ))}
-                  </div>
-                )}
+                      )}
 
-                {/* Description */}
-                {anime.description && (
-                  <p className="text-sm text-gray-400 line-clamp-3">
-                    {anime.description}
-                  </p>
-                )}
-              </div>
-            </div>
-          </Link>
-        ))}
-      </div>
+                      {anime.status && (
+                        <span className="px-2 py-0.5 bg-white/10 rounded">
+                          {anime.status}
+                        </span>
+                      )}
+
+                      {anime.episode_count && (
+                        <span className="px-2 py-0.5 bg-white/10 rounded">
+                          {anime.episode_count} eps
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Genres */}
+                    {anime.genres && (
+                      <div className="flex flex-wrap gap-1">
+                        {anime.genres
+                          .split(", ")
+                          .slice(0, 3)
+                          .map((genre) => (
+                            <span
+                              key={genre}
+                              className="px-2 py-0.5 bg-rose-500/20 text-rose-300 rounded text-xs"
+                            >
+                              {genre}
+                            </span>
+                          ))}
+                      </div>
+                    )}
+
+                    {/* Description */}
+                    {anime.description && (
+                      <p className="text-sm text-gray-400 line-clamp-3">
+                        {anime.description}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
 
           {/* Pagination Controls */}
           {totalFiltered > ITEMS_PER_PAGE && (

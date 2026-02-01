@@ -106,19 +106,19 @@ export const UserProfilePage = () => {
       {/* Profile Header */}
       <div className="flex items-center justify-between gap-4 p-6 bg-neutral-950 border border-neutral-800 rounded-lg relative">
         <div className="flex flex-row items-center gap-4">
-        <UserAvatar
-          username={profile.username}
-          avatarUrl={profile.avatar_url}
-          size="lg"
-          linkToProfile={false}
-        />
+          <UserAvatar
+            username={profile.username}
+            avatarUrl={profile.avatar_url}
+            size="lg"
+            linkToProfile={false}
+          />
 
-        <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-2">
             <h1 className="text-4xl font-semibold text-rose-400">
-            {profile.username}'s List
-          </h1>
+              {profile.username}'s List
+            </h1>
 
-          {profile.bio && <p className="text-gray-300">{profile.bio}</p>}
+            {profile.bio && <p className="text-gray-300">{profile.bio}</p>}
 
             {/* Friends Button */}
             <Link
@@ -179,11 +179,11 @@ export const UserProfilePage = () => {
           <div>Loading anime list...</div>
         ) : animeList && animeList.length > 0 ? (
           <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {animeList.map((entry) => (
-              <MyAnimeListItem key={entry.id} entry={entry} />
-            ))}
-          </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {animeList.map((entry) => (
+                <MyAnimeListItem key={entry.id} entry={entry} />
+              ))}
+            </div>
 
             {/* Pagination Controls */}
             <div className="flex justify-center items-center gap-4 py-4">

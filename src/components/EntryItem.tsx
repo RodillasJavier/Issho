@@ -13,11 +13,12 @@ import type { Entry } from "../types/database.types";
 
 interface EntryItemProps {
   entry: Entry;
+  anonymized?: boolean;
 }
 // #endregion
 
 // #region Component Logic
-export const EntryItem = ({ entry }: EntryItemProps) => {
+export const EntryItem = ({ entry, anonymized = false }: EntryItemProps) => {
   // #endregion
 
   // #region Render
@@ -28,13 +29,22 @@ export const EntryItem = ({ entry }: EntryItemProps) => {
       <Link to={`/entry/${entry.id}`} className="relative z-10">
         <div className="w-sm h-sm p-4 gap-2 bg-neutral-950 border border-neutral-800 rounded-md text-white flex flex-col overflow-hidden transition-colors duration-250 group-hover:border-rose-400/50 group-hover:bg-transparent cursor-pointer">
           {/* User Info */}
-          {entry.profile && (
-            <UserInfo
-              username={entry.profile.username}
-              avatarUrl={entry.profile.avatar_url}
-              size="sm"
-              linkToProfile={false}
-            />
+          {anonymized ? (
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center text-xs">
+                ?
+              </div>
+              <span className="text-sm text-gray-400">Anonymous User</span>
+            </div>
+          ) : (
+            entry.profile && (
+              <UserInfo
+                username={entry.profile.username}
+                avatarUrl={entry.profile.avatar_url}
+                size="sm"
+                linkToProfile={false}
+              />
+            )
           )}
 
           {/* Header */}

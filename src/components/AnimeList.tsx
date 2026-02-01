@@ -11,6 +11,8 @@ import { Link } from "react-router";
 // #region Types
 import type { Anime } from "../types/database.types";
 
+const ITEMS_PER_PAGE = 20;
+
 // #endregion Types
 
 // #region Component Logic
@@ -27,6 +29,7 @@ const fetchAllAnime = async (): Promise<Anime[]> => {
 
 export const AnimeList = () => {
   const [searchQuery, setSearchQuery] = useState("");
+  const [pageNumber, setPageNumber] = useState(0);
 
   const { data, isLoading, error } = useQuery<Anime[], Error>({
     queryKey: ["anime"],
@@ -44,6 +47,33 @@ export const AnimeList = () => {
       anime.genres?.toLowerCase().includes(query)
     );
   });
+
+  // Paginate filtered results
+  const totalFiltered = filteredAnime?.length || 0;
+  const startIndex = pageNumber * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const paginatedAnime = filteredAnime?.slice(startIndex, endIndex);
+  const hasMore = endIndex < totalFiltered;
+
+  const handleSearchChange = (query: string) => {
+    setSearchQuery(query);
+    setPageNumber(0); // Reset to first page when search changes
+  };
+
+  const handlePrevPage = () => {
+    if (pageNumber > 0) {
+      setPageNumber(pageNumber - 1);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
+
+  const handleNextPage = () => {
+    if (hasMore) {
+      setPageNumber(pageNumber + 1);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
+
   // #endregion Component Logic
 
   // #endregion Render
@@ -64,7 +94,7 @@ export const AnimeList = () => {
           type="text"
           placeholder="Search anime by title, description, or genre..."
           value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
+          onChange={(e) => handleSearchChange(e.target.value)}
           className="w-full px-4 py-3 pl-12 bg-neutral-900 border border-neutral-700 rounded-lg text-white placeholder-neutral-500 focus:border-rose-500 focus:outline-none"
         />
 
@@ -84,7 +114,7 @@ export const AnimeList = () => {
 
         {searchQuery && (
           <button
-            onClick={() => setSearchQuery("")}
+            onClick={() => handleSearchChange("")}
             className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-white"
           >
             <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
@@ -101,13 +131,15 @@ export const AnimeList = () => {
       {/* Results Count */}
       {searchQuery && (
         <div className="text-sm text-neutral-400">
-          Found {filteredAnime?.length || 0} anime
+          Found {totalFiltered} anime
         </div>
       )}
 
       {/* Results */}
+      {paginatedAnime && paginatedAnime.length > 0 ? (
+        <>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 w-full">
-        {filteredAnime?.map((anime) => (
+            {paginatedAnime.map((anime) => (
           <Link
             key={anime.id}
             to={`/anime/${anime.id}`}
@@ -183,6 +215,36 @@ export const AnimeList = () => {
           </Link>
         ))}
       </div>
+
+          {/* Pagination Controls */}
+          {totalFiltered > ITEMS_PER_PAGE && (
+            <div className="flex justify-center items-center gap-4 py-4">
+              <button
+                onClick={handlePrevPage}
+                disabled={pageNumber === 0}
+                className="px-4 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-white hover:border-rose-500 disabled:opacity-50 disabled:cursor-not-allowed transition"
+              >
+                ← Prev
+              </button>
+
+              <span className="text-gray-400">
+                Page {pageNumber + 1} of{" "}
+                {Math.ceil(totalFiltered / ITEMS_PER_PAGE)}
+              </span>
+
+              <button
+                onClick={handleNextPage}
+                disabled={!hasMore}
+                className="px-4 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-white hover:border-rose-500 disabled:opacity-50 disabled:cursor-not-allowed transition"
+              >
+                Next →
+              </button>
+            </div>
+          )}
+        </>
+      ) : (
+        <div className="text-center text-gray-400 py-8">No anime found</div>
+      )}
 
       <h2 className="text-center text-xl pt-10 text-neutral-400">
         Can't find what you're looking for? Try searching for it and adding it

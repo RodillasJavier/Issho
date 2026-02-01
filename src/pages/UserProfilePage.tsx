@@ -12,12 +12,16 @@ import {
   fetchUserAnimeList,
   getUserListStats,
 } from "../services/supabase/userAnimeList";
+import { getFriends } from "../services/supabase/friendships";
 import { UserAvatar } from "../components/UserAvatar";
 import { MyAnimeListItem } from "../components/MyAnimeListItem";
 import { AnimeListStats } from "../components/AnimeListStats";
+import { FriendButton } from "../components/FriendButton";
 import type { AnimeStatus } from "../types/database.types";
 
 type FilterTab = "all" | AnimeStatus;
+
+const ITEMS_PER_PAGE = 20;
 
 // #region Component Logic
 
@@ -25,6 +29,7 @@ export const UserProfilePage = () => {
   const { username } = useParams<{ username: string }>();
   const { user } = useAuth();
   const [activeFilter, setActiveFilter] = useState<FilterTab>("all");
+  const [pageNumber, setPageNumber] = useState(0);
 
   const {
     data: profile,
@@ -37,21 +42,52 @@ export const UserProfilePage = () => {
   });
   const isOwnProfile = user?.id === profile?.id;
 
-  const { data: animeList, isLoading: listLoading } = useQuery({
-    queryKey: ["userAnimeList", profile?.id, activeFilter],
+  const { data: animeListData, isLoading: listLoading } = useQuery({
+    queryKey: ["userAnimeList", profile?.id, activeFilter, pageNumber],
     queryFn: () =>
       fetchUserAnimeList(
         profile!.id,
-        activeFilter === "all" ? undefined : activeFilter
+        activeFilter === "all" ? undefined : activeFilter,
+        pageNumber,
+        ITEMS_PER_PAGE
       ),
     enabled: !!profile?.id,
   });
+
+  const animeList = animeListData?.entries || [];
+  const hasMore = animeListData?.hasMore || false;
 
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ["userListStats", profile?.id],
     queryFn: () => getUserListStats(profile!.id),
     enabled: !!profile?.id,
   });
+
+  const { data: friends } = useQuery({
+    queryKey: ["friends", profile?.id],
+    queryFn: () => getFriends(profile!.id),
+    enabled: !!profile?.id,
+  });
+
+  const handleFilterChange = (filter: FilterTab) => {
+    setActiveFilter(filter);
+    setPageNumber(0); // Reset to first page when filter changes
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handlePrevPage = () => {
+    if (pageNumber > 0) {
+      setPageNumber(pageNumber - 1);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
+
+  const handleNextPage = () => {
+    if (hasMore) {
+      setPageNumber(pageNumber + 1);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
 
   // #endregion Component Logic
 
@@ -68,7 +104,8 @@ export const UserProfilePage = () => {
   return (
     <div className="flex flex-col gap-6">
       {/* Profile Header */}
-      <div className="flex items-center gap-4 p-6 bg-neutral-950 border border-neutral-800 rounded-lg relative">
+      <div className="flex items-center justify-between gap-4 p-6 bg-neutral-950 border border-neutral-800 rounded-lg relative">
+        <div className="flex flex-row items-center gap-4">
         <UserAvatar
           username={profile.username}
           avatarUrl={profile.avatar_url}
@@ -77,20 +114,39 @@ export const UserProfilePage = () => {
         />
 
         <div className="flex flex-col gap-2">
-          <h1 className="text-4xl font-semibold bg-gradient-to-r from-rose-200 to-rose-800 bg-clip-text text-transparent">
+            <h1 className="text-4xl font-semibold text-rose-400">
             {profile.username}'s List
           </h1>
+
           {profile.bio && <p className="text-gray-300">{profile.bio}</p>}
+
+            {/* Friends Button */}
+            <Link
+              to={`/profile/${profile.username}/friends`}
+              className="px-3 py-1 bg-rose-500 hover:bg-rose-950 border border-rose-500 text-white hover:text-rose-100 text-sm rounded transition w-fit flex items-center gap-2"
+            >
+              {isOwnProfile ? "Manage Friends" : "View Friends"} (
+              {friends ? friends.length : 0})
+            </Link>
+          </div>
         </div>
 
+        {/* Friend Button (when viewing another user) */}
+        {!isOwnProfile && user && (
+          <div className="absolute top-6 right-6">
+            <FriendButton targetUserId={profile.id} />
+          </div>
+        )}
+
+        {/* Edit Profile Button (when viewing own profile) */}
         {isOwnProfile && (
           <Link
             to="/profile/edit"
-            className="absolute top-6 right-6 p-2 text-neutral-400 hover:text-rose-400 transition-colors"
+            className="p-2 text-neutral-400 hover:text-rose-400 transition-colors"
             aria-label="Edit profile"
           >
             <svg
-              className="w-5 h-5"
+              className="w-8 h-8"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -111,7 +167,7 @@ export const UserProfilePage = () => {
         <AnimeListStats
           stats={stats}
           activeFilter={activeFilter}
-          onFilterChange={setActiveFilter}
+          onFilterChange={handleFilterChange}
         />
       )}
 
@@ -122,11 +178,34 @@ export const UserProfilePage = () => {
         {listLoading ? (
           <div>Loading anime list...</div>
         ) : animeList && animeList.length > 0 ? (
+          <>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {animeList.map((entry) => (
               <MyAnimeListItem key={entry.id} entry={entry} />
             ))}
           </div>
+
+            {/* Pagination Controls */}
+            <div className="flex justify-center items-center gap-4 py-4">
+              <button
+                onClick={handlePrevPage}
+                disabled={pageNumber === 0}
+                className="px-4 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-white hover:border-rose-500 disabled:opacity-50 disabled:cursor-not-allowed transition"
+              >
+                ← Prev
+              </button>
+
+              <span className="text-gray-400">Page {pageNumber + 1}</span>
+
+              <button
+                onClick={handleNextPage}
+                disabled={!hasMore}
+                className="px-4 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-white hover:border-rose-500 disabled:opacity-50 disabled:cursor-not-allowed transition"
+              >
+                Next →
+              </button>
+            </div>
+          </>
         ) : (
           <div className="text-gray-400">No anime in list yet</div>
         )}

@@ -17,6 +17,7 @@ interface CommentItemProps {
     children?: Comment[];
   };
   entryId: string;
+  anonymized?: boolean;
 }
 // #endregion Types
 
@@ -43,7 +44,11 @@ const createReply = async (
   }
 };
 
-export const CommentItem = ({ comment, entryId }: CommentItemProps) => {
+export const CommentItem = ({
+  comment,
+  entryId,
+  anonymized = false,
+}: CommentItemProps) => {
   const [showReply, setShowReply] = useState<boolean>(false);
   const [replyText, setReplyText] = useState<string>("");
   const [isCollapsed, setIsCollapsed] = useState<boolean>(true);
@@ -76,13 +81,24 @@ export const CommentItem = ({ comment, entryId }: CommentItemProps) => {
   return (
     <div className="flex flex-col gap-2 bg-neutral-950 rounded py-2 px-3 border-l-2 border-l-neutral-600">
       <div className="space-y-1">
-        {comment.profile && (
-          <UserInfo
-            username={comment.profile.username}
-            avatarUrl={comment.profile.avatar_url}
-            size="sm"
-          />
+        {anonymized ? (
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded-full bg-gray-600 flex items-center justify-center text-xs">
+              ?
+            </div>
+
+            <span className="text-xs text-gray-400">Anonymous User</span>
+          </div>
+        ) : (
+          comment.profile && (
+            <UserInfo
+              username={comment.profile.username}
+              avatarUrl={comment.profile.avatar_url}
+              size="sm"
+            />
+          )
         )}
+
         <div className="text-sm text-neutral-600">
           {new Date(comment.created_at).toLocaleString()}
         </div>
@@ -160,7 +176,12 @@ export const CommentItem = ({ comment, entryId }: CommentItemProps) => {
           {!isCollapsed && (
             <div className="space-y-2">
               {comment.children.map((child) => (
-                <CommentItem key={child.id} comment={child} entryId={entryId} />
+                <CommentItem
+                  key={child.id}
+                  comment={child}
+                  entryId={entryId}
+                  anonymized={anonymized}
+                />
               ))}
             </div>
           )}

@@ -1,13 +1,15 @@
 /* src/pages/EntryPage.tsx */
 import { EntryDetail } from "../components/EntryDetail";
 import { useParams } from "react-router";
+import { useAuth } from "../hooks/useAuth";
 
 export const EntryPage = () => {
   const { id } = useParams<{ id: string }>();
+  const { user } = useAuth();
 
   return (
     <div className="flex flex-col gap-4">
-      <EntryDetail entryId={id!} />
+      <EntryDetail entryId={id!} anonymized={!user} />
     </div>
   );
 };

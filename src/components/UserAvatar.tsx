@@ -10,7 +10,7 @@ import { Link } from "react-router";
 interface UserAvatarProps {
   username: string;
   avatarUrl: string | null;
-  size?: "sm" | "md" | "lg";
+  size?: "sm" | "md" | "lg" | "profile";
   linkToProfile?: boolean;
 }
 
@@ -18,6 +18,7 @@ const sizeClasses = {
   sm: "w-8 h-8 text-sm",
   md: "w-10 h-10 text-base",
   lg: "w-24 h-24 text-5xl",
+  profile: "w-16 h-16 md:w-24 md:h-24 text-2xl md:text-5xl", // Responsive: smaller on mobile, larger on desktop
 };
 
 // #endregion Types & Constants

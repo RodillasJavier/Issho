@@ -107,7 +107,7 @@ export const FriendButton = ({ targetUserId }: FriendButtonProps) => {
       <button
         onClick={() => unfriendMutation.mutate(friendship.id)}
         disabled={unfriendMutation.isPending}
-        className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition disabled:opacity-50"
+        className="px-4 py-2 bg-neutral-600 hover:bg-neutral-700 text-white text-sm rounded border border-neutral-600 transition disabled:opacity-50"
       >
         {unfriendMutation.isPending ? "Removing..." : "Unfriend"}
       </button>
@@ -120,7 +120,7 @@ export const FriendButton = ({ targetUserId }: FriendButtonProps) => {
       <button
         onClick={() => cancelRequestMutation.mutate(friendship.id)}
         disabled={cancelRequestMutation.isPending}
-        className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition disabled:opacity-50"
+        className="px-4 py-2 bg-neutral-600 hover:bg-neutral-700 text-white text-sm rounded border border-neutral-600 transition disabled:opacity-50"
       >
         {cancelRequestMutation.isPending ? "Canceling..." : "Request Pending"}
       </button>
@@ -130,18 +130,19 @@ export const FriendButton = ({ targetUserId }: FriendButtonProps) => {
   // Pending request received by current user - show accept/reject
   if (isPending && isAddressee && friendship) {
     return (
-      <div className="flex gap-2">
+      <div className="flex flex-row gap-2">
         <button
           onClick={() => acceptRequestMutation.mutate(friendship.id)}
           disabled={acceptRequestMutation.isPending}
-          className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg transition disabled:opacity-50"
+          className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-sm rounded border border-rose-600 transition disabled:opacity-50 whitespace-nowrap"
         >
           {acceptRequestMutation.isPending ? "Accepting..." : "Accept"}
         </button>
+
         <button
           onClick={() => rejectRequestMutation.mutate(friendship.id)}
           disabled={rejectRequestMutation.isPending}
-          className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition disabled:opacity-50"
+          className="px-4 py-2 bg-neutral-600 hover:bg-neutral-700 text-white text-sm rounded border border-neutral-600 transition disabled:opacity-50 whitespace-nowrap"
         >
           {rejectRequestMutation.isPending ? "Rejecting..." : "Reject"}
         </button>

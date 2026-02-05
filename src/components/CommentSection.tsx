@@ -14,6 +14,7 @@ import type { Comment } from "../types/database.types";
 
 interface CommentSectionProps {
   entryId: string;
+  anonymized?: boolean;
 }
 
 interface NewComment {
@@ -62,7 +63,10 @@ const fetchComments = async (entryId: string): Promise<Comment[]> => {
   return data as Comment[];
 };
 
-export const CommentSection = ({ entryId }: CommentSectionProps) => {
+export const CommentSection = ({
+  entryId,
+  anonymized = false,
+}: CommentSectionProps) => {
   const [newCommentText, setNewCommentText] = useState<string>("");
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -173,7 +177,12 @@ export const CommentSection = ({ entryId }: CommentSectionProps) => {
       <div className="flex flex-col gap-2">
         {commentTree.map((comment) => {
           return (
-            <CommentItem key={comment.id} comment={comment} entryId={entryId} />
+            <CommentItem
+              key={comment.id}
+              comment={comment}
+              entryId={entryId}
+              anonymized={anonymized}
+            />
           );
         })}
       </div>

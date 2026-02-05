@@ -12,6 +12,7 @@ import type { Entry } from "../types/database.types";
 
 interface EntryDetailProps {
   entryId: string;
+  anonymized?: boolean;
 }
 // #endregion Types
 
@@ -34,7 +35,10 @@ const fetchEntryById = async (id: string): Promise<Entry> => {
   return data as Entry;
 };
 
-export const EntryDetail = ({ entryId }: EntryDetailProps) => {
+export const EntryDetail = ({
+  entryId,
+  anonymized = false,
+}: EntryDetailProps) => {
   const { data, error, isLoading } = useQuery<Entry, Error>({
     queryKey: ["entry", entryId],
     queryFn: () => fetchEntryById(entryId),
@@ -54,12 +58,21 @@ export const EntryDetail = ({ entryId }: EntryDetailProps) => {
   return (
     <div className="flex flex-col gap-2">
       {/* User Info */}
-      {data?.profile && (
-        <UserInfo
-          username={data.profile.username}
-          avatarUrl={data.profile.avatar_url}
-          size="md"
-        />
+      {anonymized ? (
+        <div className="flex items-center gap-2">
+          <div className="w-10 h-10 rounded-full bg-gray-600 flex items-center justify-center text-sm">
+            ?
+          </div>
+          <span className="text-md text-gray-400">Anonymous User</span>
+        </div>
+      ) : (
+        data?.profile && (
+          <UserInfo
+            username={data.profile.username}
+            avatarUrl={data.profile.avatar_url}
+            size="md"
+          />
+        )
       )}
 
       <div className="text-sm text-rose-400 font-semibold">
@@ -111,7 +124,7 @@ export const EntryDetail = ({ entryId }: EntryDetailProps) => {
       <span className="border border-neutral-700 my-2" />
 
       <LikeButton entryId={entryId} />
-      <CommentSection entryId={entryId} />
+      <CommentSection entryId={entryId} anonymized={anonymized} />
     </div>
   );
 };

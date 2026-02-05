@@ -104,62 +104,72 @@ export const UserProfilePage = () => {
   return (
     <div className="flex flex-col gap-6">
       {/* Profile Header */}
-      <div className="flex items-center justify-between gap-4 p-6 bg-neutral-950 border border-neutral-800 rounded-lg relative">
-        <div className="flex flex-row items-center gap-4">
+      <div className="flex flex-col p-4 md:p-6 bg-neutral-950 border border-neutral-800 rounded-lg relative">
+        {/* Profile Info */}
+        <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4">
           <UserAvatar
             username={profile.username}
             avatarUrl={profile.avatar_url}
-            size="lg"
+            size="profile"
             linkToProfile={false}
           />
 
-          <div className="flex flex-col gap-2">
-            <h1 className="text-4xl font-semibold text-rose-400">
-              {profile.username}'s List
-            </h1>
+          <div className="flex flex-col gap-2 text-center sm:text-left w-full">
+            <div className="flex flex-row justify-between gap-2">
+              <div className="flex flex-col text-left">
+                <h1 className="text-2xl md:text-4xl font-semibold text-rose-400">
+                  {profile.username}'s List
+                </h1>
 
-            {profile.bio && <p className="text-gray-300">{profile.bio}</p>}
+                {profile.bio && (
+                  <p className="text-sm md:text-base text-gray-300">
+                    {profile.bio}
+                  </p>
+                )}
+              </div>
 
-            {/* Friends Button */}
-            <Link
-              to={`/profile/${profile.username}/friends`}
-              className="px-3 py-1 bg-rose-500 hover:bg-rose-950 border border-rose-500 text-white hover:text-rose-100 text-sm rounded transition w-fit flex items-center gap-2"
-            >
-              {isOwnProfile ? "Manage Friends" : "View Friends"} (
-              {friends ? friends.length : 0})
-            </Link>
+              {/* Edit Profile Button (when viewing own profile) */}
+              {isOwnProfile && (
+                <Link
+                  to="/profile/edit"
+                  className="p-2 text-neutral-400 hover:text-rose-400 transition-colors self-center sm:self-auto"
+                  aria-label="Edit profile"
+                >
+                  <svg
+                    className="w-6 h-6 md:w-8 md:h-8"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                    />
+                  </svg>
+                </Link>
+              )}
+            </div>
+
+            {/* Friends and Friend Action Buttons */}
+            <div className="flex flex-row flex-wrap items-center gap-2 justify-center sm:justify-start">
+              {/* Friends Link Button */}
+              <Link
+                to={`/profile/${profile.username}/friends`}
+                className="px-3 py-2 bg-rose-500 hover:bg-rose-950 border border-rose-500 text-white hover:text-rose-100 text-sm rounded transition flex items-center gap-2"
+              >
+                {isOwnProfile ? "Manage Friends" : "View Friends"} (
+                {friends ? friends.length : 0})
+              </Link>
+
+              {/* Friend Button (when viewing another user) */}
+              {!isOwnProfile && user && (
+                <FriendButton targetUserId={profile.id} />
+              )}
+            </div>
           </div>
         </div>
-
-        {/* Friend Button (when viewing another user) */}
-        {!isOwnProfile && user && (
-          <div className="absolute top-6 right-6">
-            <FriendButton targetUserId={profile.id} />
-          </div>
-        )}
-
-        {/* Edit Profile Button (when viewing own profile) */}
-        {isOwnProfile && (
-          <Link
-            to="/profile/edit"
-            className="p-2 text-neutral-400 hover:text-rose-400 transition-colors"
-            aria-label="Edit profile"
-          >
-            <svg
-              className="w-8 h-8"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-              />
-            </svg>
-          </Link>
-        )}
       </div>
 
       {/* Stats Cards */}

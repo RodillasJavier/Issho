@@ -145,6 +145,7 @@ export const Navbar = () => {
           <div className="px-2 pt-2 pb-3 space-y-1">
             <Link
               to="/"
+              onClick={() => setMenuOpen(false)}
               className="block text-center px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-700"
             >
               Home
@@ -152,6 +153,7 @@ export const Navbar = () => {
 
             <Link
               to="/entry/create"
+              onClick={() => setMenuOpen(false)}
               className="block text-center px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-700"
             >
               Create
@@ -159,6 +161,7 @@ export const Navbar = () => {
 
             <Link
               to="/anime"
+              onClick={() => setMenuOpen(false)}
               className="block text-center px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-700"
             >
               Anime
@@ -170,6 +173,7 @@ export const Navbar = () => {
                 {profile && (
                   <Link
                     to={`/profile/${profile.username}`}
+                    onClick={() => setMenuOpen(false)}
                     className="block text-center px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-700"
                   >
                     Profile
@@ -177,7 +181,10 @@ export const Navbar = () => {
                 )}
 
                 <button
-                  onClick={signOut}
+                  onClick={() => {
+                    setMenuOpen(false);
+                    signOut();
+                  }}
                   className="flex items-center justify-center gap-2 w-full px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-700"
                 >
                   <svg
@@ -200,6 +207,7 @@ export const Navbar = () => {
               <>
                 <Link
                   to="/signin"
+                  onClick={() => setMenuOpen(false)}
                   className="block px-4 py-2 text-center rounded-md text-rose-400 hover:text-white transition-colors"
                 >
                   Sign In
@@ -207,6 +215,7 @@ export const Navbar = () => {
 
                 <Link
                   to="/signup"
+                  onClick={() => setMenuOpen(false)}
                   className="block px-4 py-2 text-center rounded-md text-white hover:text-rose-400 bg-rose-500 hover:bg-rose-400/20 border-1 border-transparent hover:border-rose-400 transition:border transition-colors"
                 >
                   Sign Up

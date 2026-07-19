@@ -18,10 +18,16 @@ export interface Anime {
   episode_count: number | null;
   cover_image_url: string | null;
   year: number | null;
-  external_id: number | null; // MAL ID from Jikan
+  external_id: number | null; // Legacy MAL ID (superseded by anilist_id/mal_id)
   genres: string | null;
   status: string | null; // "Finished Airing", "Currently Airing", etc.
   mal_url: string | null;
+  anilist_id: number | null; // AniList media ID (external key going forward)
+  mal_id: number | null; // MyAnimeList ID, preserved from external_id
+  format: string | null; // AniList MediaFormat: TV, TV_SHORT, MOVIE, SPECIAL, OVA, ONA, MUSIC
+  anilist_url: string | null;
+  franchise_key: number | null; // AniList ID of the franchise's backbone root
+  franchise_title: string | null; // Denormalized root title for grouped display
 }
 
 export interface AnimeInsert {
@@ -35,6 +41,12 @@ export interface AnimeInsert {
   genres?: string | null;
   status?: string | null;
   mal_url?: string | null;
+  anilist_id?: number | null;
+  mal_id?: number | null;
+  format?: string | null;
+  anilist_url?: string | null;
+  franchise_key?: number | null;
+  franchise_title?: string | null;
 }
 
 export interface Entry {
@@ -83,6 +95,17 @@ export interface UserAnimeEntry {
   review: string | null;
   updated_at: string;
   anime?: Anime; // When joined
+}
+
+export interface UserFranchiseEntry {
+  id: string;
+  created_at: string;
+  user_id: string;
+  franchise_key: number; // Matches anime.franchise_key
+  status: AnimeStatus;
+  rating: number | null;
+  review: string | null;
+  updated_at: string;
 }
 
 export interface Profile {

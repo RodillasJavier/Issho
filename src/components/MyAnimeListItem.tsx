@@ -35,6 +35,8 @@ export const MyAnimeListItem = ({ entry }: MyAnimeListItemProps) => {
               <img
                 src={entry.anime.cover_image_url}
                 alt={entry.anime.name}
+                loading="lazy"
+                decoding="async"
                 className="w-full h-full object-cover"
               />
             ) : (

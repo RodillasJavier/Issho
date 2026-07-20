@@ -1,68 +1,87 @@
 /**
- * src/components/EditListEntryModal.tsx
+ * src/components/EditFranchiseEntryModal.tsx
  *
- * Modal component for editing a user's anime list entry.
+ * Modal for editing a user's series-level (franchise) entry. After the user
+ * marks a series completed, offers an optional, dismissible prompt to mark
+ * the individual seasons completed too — never applied automatically.
  */
 import { useState, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "../hooks/useAuth";
 import {
-  updateUserAnimeEntry,
-  removeUserAnimeEntry,
-} from "../services/supabase/userAnimeList";
+  updateUserFranchiseEntry,
+  removeUserFranchiseEntry,
+  markFranchiseSeasonsCompleted,
+} from "../services/supabase/userFranchiseList";
 import { STATUS_LABELS } from "../constants/animeStatus";
 
 // #region Types
-import type { UserAnimeEntry, AnimeStatus } from "../types/database.types";
+import type { UserFranchiseEntry, AnimeStatus } from "../types/database.types";
 
-interface EditListEntryModalProps {
-  entry: UserAnimeEntry;
+interface EditFranchiseEntryModalProps {
+  entry: UserFranchiseEntry;
+  franchiseTitle: string;
   onClose: () => void;
 }
 // #endregion Types
 
 // #region Component Logic
-export const EditListEntryModal = ({
+export const EditFranchiseEntryModal = ({
   entry,
+  franchiseTitle,
   onClose,
-}: EditListEntryModalProps) => {
+}: EditFranchiseEntryModalProps) => {
+  const { user } = useAuth();
   const [status, setStatus] = useState<AnimeStatus>(entry.status);
   const [rating, setRating] = useState<number | null>(entry.rating);
   const [review, setReview] = useState<string>(entry.review || "");
+  const [showSeasonsPrompt, setShowSeasonsPrompt] = useState(false);
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    // Prevent body scroll when modal is open
     document.body.style.overflow = "hidden";
 
     return () => {
-      // Allow body scroll when modal is closed
       document.body.style.overflow = "unset";
     };
   }, []);
 
+  const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey: ["userFranchiseList"] });
+  };
+
   const updateMutation = useMutation({
     mutationFn: () =>
-      updateUserAnimeEntry(entry.id, {
+      updateUserFranchiseEntry(entry.id, {
         status,
         rating: rating || null,
         review: review || null,
       }),
     onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ["userAnimeList", entry.anime_id],
-      });
-      queryClient.invalidateQueries({ queryKey: ["userAnimeList"] });
-      onClose();
+      invalidate();
+      // Offer (don't apply) the season sync only when newly marked completed
+      if (status === "completed" && entry.status !== "completed") {
+        setShowSeasonsPrompt(true);
+      } else {
+        onClose();
+      }
     },
   });
 
   const deleteMutation = useMutation({
-    mutationFn: () => removeUserAnimeEntry(entry.id),
+    mutationFn: () => removeUserFranchiseEntry(entry.id),
     onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ["userAnimeList", entry.anime_id],
-      });
+      invalidate();
+      onClose();
+    },
+  });
+
+  const markSeasonsMutation = useMutation({
+    mutationFn: () =>
+      markFranchiseSeasonsCompleted(entry.franchise_key, user!.id),
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["userAnimeList"] });
+      queryClient.invalidateQueries({ queryKey: ["userListStats"] });
       onClose();
     },
   });
@@ -73,24 +92,53 @@ export const EditListEntryModal = ({
   };
 
   const handleDelete = () => {
-    if (confirm("Remove this anime from your list?")) {
+    if (confirm("Remove this series from your list?")) {
       deleteMutation.mutate();
     }
   };
   // #endregion Component Logic
 
   // #region Render
+  if (showSeasonsPrompt) {
+    return (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="bg-neutral-900 rounded-lg max-w-md w-full border border-neutral-800 p-6 space-y-4">
+          <h2 className="text-xl font-bold text-white">Series completed 🎉</h2>
+          <p className="text-neutral-300">
+            Mark all seasons of{" "}
+            <span className="text-rose-300">{franchiseTitle}</span> in your list
+            as completed too?
+          </p>
+          <div className="flex justify-end gap-2">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 bg-neutral-800 hover:bg-neutral-700 rounded text-white text-sm transition-colors cursor-pointer"
+            >
+              No, leave them
+            </button>
+            <button
+              onClick={() => markSeasonsMutation.mutate()}
+              disabled={markSeasonsMutation.isPending}
+              className="px-4 py-2 bg-rose-500 hover:bg-rose-600 rounded text-white text-sm font-semibold transition-colors disabled:opacity-50 cursor-pointer"
+            >
+              {markSeasonsMutation.isPending
+                ? "Marking..."
+                : "Yes, mark seasons"}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-neutral-900 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-neutral-800">
         {/* Header */}
         <div className="flex justify-between items-start p-6 border-b border-neutral-800">
           <div>
-            <h2 className="text-3xl font-bold text-white">Edit List Entry</h2>
-
-            {entry.anime && (
-              <p className="text-lg text-neutral-400">{entry.anime.name}</p>
-            )}
+            <h2 className="text-3xl font-bold text-white">Edit Series Entry</h2>
+            <p className="text-lg text-neutral-400">{franchiseTitle}</p>
           </div>
         </div>
 
@@ -99,7 +147,7 @@ export const EditListEntryModal = ({
           {/* Status */}
           <div className="space-y-2">
             <label htmlFor="status" className="block text-sm font-medium">
-              Status
+              Series Status
             </label>
             <select
               id="status"
@@ -118,7 +166,7 @@ export const EditListEntryModal = ({
           {/* Rating */}
           <div className="space-y-2">
             <label htmlFor="rating" className="block text-sm font-medium">
-              Rating (1-10)
+              Series Rating (1-10)
             </label>
             <input
               id="rating"
@@ -137,13 +185,13 @@ export const EditListEntryModal = ({
           {/* Personal Review/Notes */}
           <div className="space-y-2">
             <label htmlFor="review" className="block text-sm font-medium">
-              Personal Notes
+              Series Notes
             </label>
             <textarea
               id="review"
               value={review}
               onChange={(e) => setReview(e.target.value)}
-              placeholder="Your personal thoughts and notes (private)..."
+              placeholder="Your thoughts on the series as a whole..."
               rows={5}
               className="w-full bg-neutral-950 border border-neutral-800 rounded px-3 py-2 focus:outline-none focus:border-rose-500"
             />

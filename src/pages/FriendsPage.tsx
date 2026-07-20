@@ -6,6 +6,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useParams, Link } from "react-router";
+import { X } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import { getProfileByUsername } from "../services/supabase/profiles";
 import {
@@ -118,9 +119,10 @@ export const FriendsPage = () => {
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery("")}
-                className="text-sm absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
+                aria-label="Clear search"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
               >
-                ✕
+                <X className="size-4" />
               </button>
             )}
           </div>

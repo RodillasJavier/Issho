@@ -9,6 +9,7 @@
  */
 import { useState } from "react";
 import { Link } from "react-router";
+import { Star } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "../hooks/useAuth";
 import { EditFranchiseEntryModal } from "./EditFranchiseEntryModal";
@@ -124,8 +125,9 @@ export const MyFranchiseListItem = ({
               )}
 
               {franchiseEntry?.rating && (
-                <span className="text-yellow-500 font-semibold">
-                  ⭐ {franchiseEntry.rating}/10
+                <span className="flex items-center gap-1 text-yellow-500 font-semibold">
+                  <Star className="size-4 fill-current" />
+                  {franchiseEntry.rating}/10
                 </span>
               )}
             </div>

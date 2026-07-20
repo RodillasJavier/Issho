@@ -4,9 +4,11 @@
  * Component that displays a single entry item in a list or feed.
  */
 import { Link } from "react-router";
+import { Star } from "lucide-react";
 import { getEntryTypeLabel } from "../constants/entryTypes";
 import { STATUS_LABELS, STATUS_COLORS } from "../constants/animeStatus";
 import { UserInfo } from "./UserInfo";
+import { EntryTypeIcon } from "./EntryTypeIcon";
 
 // #region Types
 import type { Entry } from "../types/database.types";
@@ -49,7 +51,8 @@ export const EntryItem = ({ entry, anonymized = false }: EntryItemProps) => {
 
           {/* Header */}
           <div className="flex flex-col flex-1">
-            <div className="text-[11px] text-rose-400 font-medium uppercase tracking-widest mb-1">
+            <div className="flex items-center gap-1 text-[11px] text-rose-400 font-medium uppercase tracking-widest mb-1">
+              <EntryTypeIcon type={entry.entry_type} className="size-3" />
               {getEntryTypeLabel(entry.entry_type)}
             </div>
 
@@ -84,8 +87,9 @@ export const EntryItem = ({ entry, anonymized = false }: EntryItemProps) => {
                   )}
 
                   {entry.rating_value && (
-                    <span className="text-yellow-500 text-sm font-semibold">
-                      ⭐ {entry.rating_value}/10
+                    <span className="flex items-center gap-1 text-yellow-500 text-sm font-semibold">
+                      <Star className="size-3.5 fill-current" />
+                      {entry.rating_value}/10
                     </span>
                   )}
                 </div>

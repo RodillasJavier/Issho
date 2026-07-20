@@ -7,6 +7,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import supabase from "../supabase-client";
 import { EntryItem } from "./EntryItem";
 import type { Entry } from "../types/database.types";
@@ -230,9 +231,10 @@ export const EntryList = ({
         <button
           onClick={handlePrevPage}
           disabled={pageNumber === 0}
-          className="px-4 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-white hover:border-rose-500 disabled:opacity-50 disabled:cursor-not-allowed transition"
+          className="flex items-center gap-1 px-4 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-white hover:border-rose-500 disabled:opacity-50 disabled:cursor-not-allowed transition"
         >
-          ← Prev
+          <ChevronLeft className="size-4" />
+          Prev
         </button>
 
         <span className="text-gray-400">Page {pageNumber + 1}</span>
@@ -240,9 +242,10 @@ export const EntryList = ({
         <button
           onClick={handleNextPage}
           disabled={!hasMore}
-          className="px-4 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-white hover:border-rose-500 disabled:opacity-50 disabled:cursor-not-allowed transition"
+          className="flex items-center gap-1 px-4 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-white hover:border-rose-500 disabled:opacity-50 disabled:cursor-not-allowed transition"
         >
-          Next →
+          Next
+          <ChevronRight className="size-4" />
         </button>
       </div>
     </div>

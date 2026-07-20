@@ -25,11 +25,11 @@ export const ENTRY_TYPE_PLACEHOLDERS: Record<EntryType, string> = {
 export const getEntryTypeLabel = (type: string): string => {
   switch (type) {
     case "review":
-      return "📝 Review";
+      return "Review";
     case "rating":
-      return "⭐ Rating";
+      return "Rating";
     case "status_update":
-      return "📺 Status Update";
+      return "Status Update";
     default:
       return type;
   }

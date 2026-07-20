@@ -5,6 +5,7 @@
  */
 import { useState } from "react";
 import { Link } from "react-router";
+import { Star } from "lucide-react";
 import { EditListEntryModal } from "./EditListEntryModal";
 import { STATUS_LABELS, STATUS_COLORS } from "../constants/animeStatus";
 
@@ -94,8 +95,9 @@ export const MyAnimeListItem = ({ entry }: MyAnimeListItemProps) => {
               </span>
 
               {entry.rating && (
-                <span className="text-yellow-500 font-semibold">
-                  ⭐ {entry.rating}/10
+                <span className="flex items-center gap-1 text-yellow-500 font-semibold">
+                  <Star className="size-4 fill-current" />
+                  {entry.rating}/10
                 </span>
               )}
             </div>

@@ -6,6 +6,7 @@
  */
 
 import { useQuery } from "@tanstack/react-query";
+import { ExternalLink } from "lucide-react";
 import { fetchAnime } from "../services/supabase/anime";
 import type { Anime } from "../types/database.types";
 
@@ -93,9 +94,10 @@ export function AnimeHeader({ animeId }: AnimeHeaderProps) {
                   href={anime.anilist_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="px-3 py-1 bg-blue-500/20 hover:bg-blue-500/30 rounded-full text-blue-300 hover:text-blue-200 transition-colors"
+                  className="flex items-center gap-1 px-3 py-1 bg-blue-500/20 hover:bg-blue-500/30 rounded-full text-blue-300 hover:text-blue-200 transition-colors"
                 >
-                  AniList ↗
+                  AniList
+                  <ExternalLink className="size-3.5" />
                 </a>
               )}
               {anime.mal_url && (
@@ -103,9 +105,10 @@ export function AnimeHeader({ animeId }: AnimeHeaderProps) {
                   href={anime.mal_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="px-3 py-1 bg-blue-500/20 hover:bg-blue-500/30 rounded-full text-blue-300 hover:text-blue-200 transition-colors"
+                  className="flex items-center gap-1 px-3 py-1 bg-blue-500/20 hover:bg-blue-500/30 rounded-full text-blue-300 hover:text-blue-200 transition-colors"
                 >
-                  MyAnimeList ↗
+                  MyAnimeList
+                  <ExternalLink className="size-3.5" />
                 </a>
               )}
             </div>

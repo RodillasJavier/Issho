@@ -4,6 +4,7 @@
  * Component for liking or disliking an entry.
  */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { ThumbsUp, ThumbsDown } from "lucide-react";
 import supabase from "../supabase-client";
 import { useAuth } from "../hooks/useAuth";
 
@@ -138,7 +139,10 @@ export const LikeButton = ({ entryId }: LikeButtonProps) => {
           className={buttonClasses(Number(userVote) === 1)}
           onClick={() => mutate(1)}
         >
-          <span>👍 Helpful</span>
+          <span className="flex items-center gap-1.5">
+            <ThumbsUp className="size-3.5" />
+            Helpful
+          </span>
           <span className="font-mono text-neutral-500">{likes}</span>
         </button>
 
@@ -147,7 +151,10 @@ export const LikeButton = ({ entryId }: LikeButtonProps) => {
           className={buttonClasses(Number(userVote) === -1)}
           onClick={() => mutate(-1)}
         >
-          <span>👎 Not helpful</span>
+          <span className="flex items-center gap-1.5">
+            <ThumbsDown className="size-3.5" />
+            Not helpful
+          </span>
           <span className="font-mono text-neutral-500">{dislikes}</span>
         </button>
       </div>

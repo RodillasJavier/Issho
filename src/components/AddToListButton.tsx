@@ -5,6 +5,7 @@
  */
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Check, ChevronDown } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import {
   getUserAnimeEntry,
@@ -96,9 +97,10 @@ export const AddToListButton = ({
         <div className="flex gap-2">
           <button
             onClick={() => setShowStatusPicker(!showStatusPicker)}
-            className={`px-4 py-2 rounded text-white text-sm font-semibold transition-colors ${STATUS_COLORS[listEntry.status]}`}
+            className={`flex items-center gap-1 px-4 py-2 rounded text-white text-sm font-semibold transition-colors ${STATUS_COLORS[listEntry.status]}`}
           >
-            {STATUS_LABELS[listEntry.status]} ▼
+            {STATUS_LABELS[listEntry.status]}
+            <ChevronDown className="size-4" />
           </button>
 
           {onEditClick && (
@@ -128,12 +130,14 @@ export const AddToListButton = ({
                 key={status}
                 onClick={() => handleStatusSelect(status)}
                 disabled={addMutation.isPending || updateMutation.isPending}
-                className={`w-full text-left px-4 py-2 text-sm hover:bg-neutral-800 transition-colors ${
+                className={`flex w-full items-center justify-between gap-2 text-left px-4 py-2 text-sm hover:bg-neutral-800 transition-colors ${
                   listEntry?.status === status ? "bg-neutral-800" : ""
                 }`}
               >
                 {STATUS_LABELS[status]}
-                {listEntry?.status === status && " ✓"}
+                {listEntry?.status === status && (
+                  <Check className="size-4 text-rose-400" />
+                )}
               </button>
             ))}
           </div>

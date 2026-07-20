@@ -6,6 +6,7 @@
  * the individual seasons completed too — never applied automatically.
  */
 import { useState, useEffect } from "react";
+import { PartyPopper } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "../hooks/useAuth";
 import {
@@ -103,7 +104,10 @@ export const EditFranchiseEntryModal = ({
     return (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
         <div className="bg-neutral-900 rounded-lg max-w-md w-full border border-neutral-800 p-6 space-y-4">
-          <h2 className="text-xl font-bold text-white">Series completed 🎉</h2>
+          <h2 className="flex items-center gap-2 text-xl font-bold text-white">
+            <PartyPopper className="size-5 text-rose-400" />
+            Series completed
+          </h2>
           <p className="text-neutral-300">
             Mark all seasons of{" "}
             <span className="text-rose-300">{franchiseTitle}</span> in your list

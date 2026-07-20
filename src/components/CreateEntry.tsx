@@ -5,6 +5,7 @@
  */
 import { useState, type ChangeEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Tv, Star, FileText } from "lucide-react";
 import supabase from "../supabase-client";
 import { useNavigate } from "react-router";
 import { useAuth } from "../hooks/useAuth";
@@ -183,8 +184,12 @@ export const CreateEntry = () => {
 
       {/* Status Selection */}
       <div className="flex flex-col space-y-2">
-        <label htmlFor="status" className="font-semibold">
-          📺 Status
+        <label
+          htmlFor="status"
+          className="flex items-center gap-1.5 font-semibold"
+        >
+          <Tv className="size-4" />
+          Status
         </label>
 
         <select
@@ -203,8 +208,12 @@ export const CreateEntry = () => {
 
       {/* Rating Input */}
       <div className="flex flex-col space-y-2">
-        <label htmlFor="rating" className="font-semibold">
-          ⭐ Rating (1-10)
+        <label
+          htmlFor="rating"
+          className="flex items-center gap-1.5 font-semibold"
+        >
+          <Star className="size-4" />
+          Rating (1-10)
         </label>
         <p className="text-xs text-neutral-500">
           Ratings save to your list and show live on your posts — a rating by
@@ -225,8 +234,12 @@ export const CreateEntry = () => {
 
       {/* Review Text */}
       <div className="flex flex-col space-y-2">
-        <label htmlFor="review" className="font-semibold">
-          📝 Review
+        <label
+          htmlFor="review"
+          className="flex items-center gap-1.5 font-semibold"
+        >
+          <FileText className="size-4" />
+          Review
         </label>
 
         <textarea

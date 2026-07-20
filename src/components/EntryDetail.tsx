@@ -10,12 +10,14 @@
  */
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router";
+import { Star } from "lucide-react";
 import supabase from "../supabase-client";
 import { LikeButton } from "./LikeButton";
 import { CommentSection } from "./CommentSection";
 import { getEntryTypeLabel } from "../constants/entryTypes";
 import { STATUS_LABELS, STATUS_COLORS } from "../constants/animeStatus";
 import { UserInfo } from "./UserInfo";
+import { EntryTypeIcon } from "./EntryTypeIcon";
 import {
   getUserAnimeEntry,
   countCompletedAnimeEntries,
@@ -145,7 +147,8 @@ export const EntryDetail = ({
             )
           )}
 
-          <p className="mt-2 text-[11px] font-medium uppercase tracking-widest text-rose-400">
+          <p className="mt-2 flex items-center gap-1 text-[11px] font-medium uppercase tracking-widest text-rose-400">
+            <EntryTypeIcon type={data.entry_type} className="size-3" />
             {getEntryTypeLabel(data.entry_type)}
           </p>
 
@@ -213,8 +216,9 @@ export const EntryDetail = ({
                     {STATUS_LABELS[authorFranchiseEntry.status]}
                   </span>
                   {authorFranchiseEntry.rating && (
-                    <span className="text-yellow-500 text-sm font-semibold">
-                      ⭐ {authorFranchiseEntry.rating}/10
+                    <span className="flex items-center gap-1 text-yellow-500 text-sm font-semibold">
+                      <Star className="size-3.5 fill-current" />
+                      {authorFranchiseEntry.rating}/10
                     </span>
                   )}
                 </>

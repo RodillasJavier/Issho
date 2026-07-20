@@ -6,6 +6,7 @@
  * expandable), and sign-in gating for anonymous viewers.
  */
 import { useState } from "react";
+import { Send } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import supabase from "../supabase-client";
@@ -217,9 +218,10 @@ export const CommentSection = ({
                 <button
                   type="submit"
                   disabled={!newCommentText.trim() || isPending}
-                  className="rounded-md bg-rose-500 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-rose-400 disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer"
+                  className="flex items-center gap-1.5 rounded-md bg-rose-500 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-rose-400 disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer"
                 >
-                  {isPending ? "Posting..." : "Post comment ➤"}
+                  {isPending ? "Posting..." : "Post comment"}
+                  {!isPending && <Send className="size-3.5" />}
                 </button>
               </div>
             </div>

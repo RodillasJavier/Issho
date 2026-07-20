@@ -117,21 +117,40 @@ export const LikeButton = ({ entryId }: LikeButtonProps) => {
   const dislikes = votes?.filter((v) => v.vote === -1).length || 0;
   const userVote = votes?.find((v) => v.user_id === user?.id)?.vote;
 
-  return (
-    <div className="flex items-center gap-4">
-      <button
-        className={`cursor-pointer p-2 rounded transition-colors duration-250 ${Number(userVote) === 1 ? "bg-green-500/50" : "bg-neutral-900"}`}
-        onClick={() => mutate(1)}
-      >
-        👍 {likes}
-      </button>
+  const buttonClasses = (active: boolean) =>
+    `flex items-center justify-between gap-2 rounded-lg border px-3 py-2.5 text-xs font-medium transition-colors cursor-pointer ${
+      active
+        ? "border-rose-400/50 bg-rose-400/10 text-rose-200"
+        : "border-neutral-800 bg-neutral-950 text-neutral-400 hover:border-neutral-700 hover:bg-neutral-800 hover:text-white"
+    }`;
 
-      <button
-        className={`cursor-pointer p-2 rounded transition-colors duration-250 ${Number(userVote) === -1 ? "bg-red-500/50" : "bg-neutral-900"}`}
-        onClick={() => mutate(-1)}
-      >
-        👎 {dislikes}
-      </button>
+  return (
+    <div>
+      <div className="mb-2.5 flex items-center justify-between">
+        <p className="text-[10px] font-semibold uppercase tracking-widest text-neutral-500">
+          Reaction
+        </p>
+        <p className="text-[11px] text-neutral-600">Was this helpful?</p>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <button
+          aria-pressed={Number(userVote) === 1}
+          className={buttonClasses(Number(userVote) === 1)}
+          onClick={() => mutate(1)}
+        >
+          <span>👍 Helpful</span>
+          <span className="font-mono text-neutral-500">{likes}</span>
+        </button>
+
+        <button
+          aria-pressed={Number(userVote) === -1}
+          className={buttonClasses(Number(userVote) === -1)}
+          onClick={() => mutate(-1)}
+        >
+          <span>👎 Not helpful</span>
+          <span className="font-mono text-neutral-500">{dislikes}</span>
+        </button>
+      </div>
     </div>
   );
 };

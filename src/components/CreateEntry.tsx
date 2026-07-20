@@ -60,12 +60,12 @@ const createEntries = async (input: EntryInput, userId: string) => {
     if (error) throw error;
   }
 
+  // Rating-only submissions just update the list — the post page shows the
+  // author's current rating live, so no rating post is created
+  if (!review && !status) return;
+
   // Create a single combined entry with all provided values
-  const entryType = review
-    ? "review"
-    : rating !== undefined
-      ? "rating"
-      : "status_update";
+  const entryType = review ? "review" : "status_update";
 
   const { error } = await supabase.from("entries").insert({
     user_id: userId,
@@ -111,6 +111,7 @@ export const CreateEntry = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["entries"] });
+      queryClient.invalidateQueries({ queryKey: ["animeEntries"] });
       queryClient.invalidateQueries({ queryKey: ["userAnimeList"] });
       navigate("/");
     },
@@ -205,6 +206,10 @@ export const CreateEntry = () => {
         <label htmlFor="rating" className="font-semibold">
           ⭐ Rating (1-10)
         </label>
+        <p className="text-xs text-neutral-500">
+          Ratings save to your list and show live on your posts — a rating by
+          itself doesn't create a post.
+        </p>
 
         <input
           type="number"

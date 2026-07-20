@@ -1,7 +1,8 @@
 /**
  * src/components/CommentItem.tsx
  *
- * Component for displaying a single comment and its replies (if any).
+ * Card for a single comment and its replies (if any): author, timestamp,
+ * content, a Reply action, and a collapsible nested reply thread.
  */
 import { useState } from "react";
 import { useAuth } from "../hooks/useAuth";
@@ -22,6 +23,18 @@ interface CommentItemProps {
 // #endregion Types
 
 // #region Component Logic
+const formatCommentDate = (createdAt: string): string => {
+  const date = new Date(createdAt);
+  return `${date.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  })} · ${date.toLocaleTimeString(undefined, {
+    hour: "numeric",
+    minute: "2-digit",
+  })}`;
+};
+
 const createReply = async (
   replyContent: string,
   entryId: string,
@@ -79,8 +92,9 @@ export const CommentItem = ({
 
   // #region Render
   return (
-    <div className="flex flex-col gap-2 bg-neutral-950 rounded py-2 px-3 border-l-2 border-l-neutral-600">
-      <div className="space-y-1">
+    <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4">
+      {/* Author + timestamp */}
+      <div className="flex items-start justify-between gap-3">
         {anonymized ? (
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 rounded-full bg-gray-600 flex items-center justify-center text-xs">
@@ -99,82 +113,80 @@ export const CommentItem = ({
           )
         )}
 
-        <div className="text-sm text-neutral-600">
-          {new Date(comment.created_at).toLocaleString()}
-        </div>
+        <span className="shrink-0 text-xs text-neutral-500">
+          {formatCommentDate(comment.created_at)}
+        </span>
+      </div>
 
-        <p>{comment.content}</p>
+      {/* Content */}
+      <p className="mt-3 text-sm leading-6 text-neutral-200">
+        {comment.content}
+      </p>
 
+      {/* Actions */}
+      {user && (
         <button
-          className="bg-neutral-900 hover:bg-neutral-800 rounded py-1 px-2 text-sm cursor-pointer transition transition-duration-250"
+          className="mt-3 rounded-md px-2 py-1 text-xs font-medium text-neutral-500 transition-colors hover:bg-neutral-800 hover:text-white cursor-pointer"
           onClick={() => {
             setShowReply((prev) => !prev);
           }}
         >
           {showReply ? "Cancel" : "Reply"}
         </button>
-      </div>
+      )}
 
+      {/* Reply composer */}
       {showReply && user && (
-        <form onSubmit={handleReplySubmit}>
+        <form
+          onSubmit={handleReplySubmit}
+          className="mt-2 rounded-lg border border-neutral-800 bg-black/30 p-3 transition-colors focus-within:border-rose-400/50"
+        >
           <textarea
             value={replyText}
             onChange={(e) => setReplyText(e.target.value)}
             rows={2}
             placeholder="Leave a reply..."
-            className="w-full text-sm bg-neutral-950 border border-neutral-900 focus:outline-none rounded px-2 py-1"
+            className="w-full resize-y bg-transparent text-sm leading-6 text-white outline-none placeholder:text-neutral-600"
           />
 
-          <button
-            type="submit"
-            disabled={!replyText}
-            className="cursor-pointer text-sm rounded bg-rose-500 hover:bg-rose-500/25 border border-rose-500/50 py-1 px-2 transition transition-duration-250"
-          >
-            {isPending ? "Posting..." : "Post Reply"}
-          </button>
+          <div className="mt-1 flex justify-end">
+            <button
+              type="submit"
+              disabled={!replyText || isPending}
+              className="rounded-md bg-rose-500 px-2.5 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-rose-400 disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer"
+            >
+              {isPending ? "Posting..." : "Post reply"}
+            </button>
+          </div>
 
-          {isError && <p>Error posting reply.</p>}
+          {isError && (
+            <p className="mt-1 text-xs text-red-400">Error posting reply.</p>
+          )}
         </form>
       )}
 
+      {/* Replies */}
       {comment.children && comment.children.length > 0 && (
-        <div>
-          <button onClick={() => setIsCollapsed((prev) => !prev)}>
-            {isCollapsed ? (
-              <div className="flex items-center">
-                <p className="text-sm text-neutral-400">Show Replies</p>
-
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  fill="currentColor"
-                  className="w-6 h-6 text-neutral-400"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M16.59 8.59L12 13.17 7.41 8.59 6 10l6 6 6-6-1.41-1.41z"
-                  />
-                </svg>
-              </div>
-            ) : (
-              <div className="flex items-center">
-                <p className="text-sm text-neutral-400">Hide Replies</p>
-
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 -960 960 960"
-                  fill="currentColor"
-                  className="w-6 h-6 text-neutral-400"
-                >
-                  <path d="m296-345-56-56 240-240 240 240-56 56-184-184-184 184Z" />
-                </svg>
-              </div>
-            )}
+        <div className="mt-3">
+          <button
+            onClick={() => setIsCollapsed((prev) => !prev)}
+            className="flex items-center gap-1 text-sm text-neutral-400 transition-colors hover:text-white cursor-pointer"
+          >
+            {isCollapsed
+              ? `Show replies (${comment.children.length})`
+              : "Hide replies"}
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+              className={`w-4 transition-transform ${isCollapsed ? "" : "rotate-180"}`}
+            >
+              <path d="M16.59 8.59L12 13.17 7.41 8.59 6 10l6 6 6-6-1.41-1.41z" />
+            </svg>
           </button>
 
           {!isCollapsed && (
-            <div className="space-y-2">
+            <div className="mt-2 space-y-2 border-l border-neutral-800 pl-3">
               {comment.children.map((child) => (
                 <CommentItem
                   key={child.id}

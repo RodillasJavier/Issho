@@ -5,7 +5,7 @@
  */
 import { Link } from "react-router";
 import { getEntryTypeLabel } from "../constants/entryTypes";
-import { STATUS_LABELS } from "../constants/animeStatus";
+import { STATUS_LABELS, STATUS_COLORS } from "../constants/animeStatus";
 import { UserInfo } from "./UserInfo";
 
 // #region Types
@@ -49,7 +49,7 @@ export const EntryItem = ({ entry, anonymized = false }: EntryItemProps) => {
 
           {/* Header */}
           <div className="flex flex-col flex-1">
-            <div className="text-xs text-rose-400 font-semibold mb-1">
+            <div className="text-[11px] text-rose-400 font-medium uppercase tracking-widest mb-1">
               {getEntryTypeLabel(entry.entry_type)}
             </div>
 
@@ -64,29 +64,38 @@ export const EntryItem = ({ entry, anonymized = false }: EntryItemProps) => {
               <img
                 src={entry.anime.cover_image_url}
                 alt={entry.anime.name}
+                loading="lazy"
+                decoding="async"
                 className="w-full rounded-sm object-cover max-h-64"
               />
             )}
 
             {/* Display each field on separate lines */}
-            <div className="space-y-1">
-              {/* Status */}
-              {entry.status_value && (
-                <p className="text-gray-300 italic">
-                  Marked as {STATUS_LABELS[entry.status_value]}
-                </p>
-              )}
+            <div className="space-y-2">
+              {/* Status + rating chips */}
+              {(entry.status_value || entry.rating_value) && (
+                <div className="flex items-center gap-2 flex-wrap">
+                  {entry.status_value && (
+                    <span
+                      className={`px-2.5 py-0.5 rounded text-xs font-semibold ${STATUS_COLORS[entry.status_value]}`}
+                    >
+                      {STATUS_LABELS[entry.status_value]}
+                    </span>
+                  )}
 
-              {/* Rating */}
-              {entry.rating_value && (
-                <p className="text-gray-300 italic">
-                  Rated {entry.rating_value}/10
-                </p>
+                  {entry.rating_value && (
+                    <span className="text-yellow-500 text-sm font-semibold">
+                      ⭐ {entry.rating_value}/10
+                    </span>
+                  )}
+                </div>
               )}
 
               {/* Review content */}
               {entry.content && (
-                <p className="text-gray-300">{entry.content}</p>
+                <p className="text-gray-300 border-l-2 border-rose-400/60 pl-3 line-clamp-4">
+                  {entry.content}
+                </p>
               )}
             </div>
           </div>

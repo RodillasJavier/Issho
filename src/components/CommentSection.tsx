@@ -1,13 +1,17 @@
 /**
  * src/components/CommentSection.tsx
  *
- * Component for displaying and adding comments to an entry.
+ * Component for displaying and adding comments to an entry: heading with a
+ * live count, a composer card, the threaded comment list (first few shown,
+ * expandable), and sign-in gating for anonymous viewers.
  */
 import { useState } from "react";
 import { useAuth } from "../hooks/useAuth";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import supabase from "../supabase-client";
 import { CommentItem } from "./CommentItem";
+import { UserAvatar } from "./UserAvatar";
+import { getProfileById } from "../services/supabase/profiles";
 
 // #region Types
 import type { Comment } from "../types/database.types";
@@ -21,6 +25,8 @@ interface NewComment {
   content: string;
   parent_comment_id?: string | null;
 }
+
+const VISIBLE_ROOT_COMMENTS = 3;
 // #endregion Types
 
 const createComment = async (
@@ -68,6 +74,7 @@ export const CommentSection = ({
   anonymized = false,
 }: CommentSectionProps) => {
   const [newCommentText, setNewCommentText] = useState<string>("");
+  const [showAll, setShowAll] = useState<boolean>(false);
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
@@ -78,6 +85,13 @@ export const CommentSection = ({
   } = useQuery<Comment[], Error>({
     queryKey: ["comments", entryId],
     queryFn: () => fetchComments(entryId),
+  });
+
+  // Own profile for the composer avatar
+  const { data: ownProfile } = useQuery({
+    queryKey: ["profileById", user?.id],
+    queryFn: () => getProfileById(user!.id),
+    enabled: !!user,
   });
 
   const { mutate, isPending, isError } = useMutation({
@@ -91,11 +105,11 @@ export const CommentSection = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault(); // Prevent page reload
 
-    if (!newCommentText) {
+    if (!newCommentText.trim()) {
       return;
     }
 
-    mutate({ content: newCommentText, parent_comment_id: null });
+    mutate({ content: newCommentText.trim(), parent_comment_id: null });
 
     setNewCommentText("");
   };
@@ -143,39 +157,87 @@ export const CommentSection = ({
   }
 
   const commentTree = comments ? buildCommentTree(comments) : [];
+  const visibleComments = showAll
+    ? commentTree
+    : commentTree.slice(0, VISIBLE_ROOT_COMMENTS);
+  const hiddenCount = commentTree.length - visibleComments.length;
 
   return (
-    <div className="flex flex-col gap-2">
-      <h3 className="text-2xl">Comments</h3>
-
-      {/* Create Comment Section */}
-      {user ? (
-        <form className="space-y-1" onSubmit={handleSubmit}>
-          <textarea
-            value={newCommentText}
-            onChange={(e) => setNewCommentText(e.target.value)}
-            rows={3}
-            placeholder="Leave a comment..."
-            className="w-full text-md bg-neutral-950 border border-neutral-900 focus:outline-none rounded px-2 py-1"
-          />
-
-          <button
-            type="submit"
-            disabled={!newCommentText}
-            className="cursor-pointer rounded bg-rose-500 hover:bg-rose-500/25 border border-rose-500/50 py-1 px-2 transition transition-duration-250"
+    <div>
+      {/* Heading */}
+      <div className="mb-6">
+        <div className="flex items-center gap-2">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 640 640"
+            fill="currentColor"
+            className="w-4 text-rose-400"
           >
-            {isPending ? "Posting..." : "Post Comment"}
-          </button>
+            <path d="M576 304C576 436.5 461.4 544 320 544C282.9 544 247.7 536.6 215.9 523.3L97.5 574.1C88.1 578.1 77.3 575.8 70.4 568.3C63.5 560.8 62 549.8 66.8 540.8L115.6 448.6C83.2 408.3 64 358.3 64 304C64 171.5 178.6 64 320 64C461.4 64 576 171.5 576 304z" />
+          </svg>
+          <h3 className="text-xl font-semibold text-white">Comments</h3>
+          <span className="rounded-full border border-neutral-800 bg-neutral-950 px-2 py-0.5 font-mono text-[11px] text-neutral-400">
+            {comments?.length ?? 0}
+          </span>
+        </div>
+        <p className="mt-1 text-sm text-neutral-500">
+          Join the conversation about this entry.
+        </p>
+      </div>
 
-          {isError && <p>Error posting comment.</p>}
+      {/* Composer */}
+      {user ? (
+        <form
+          onSubmit={handleSubmit}
+          className="rounded-xl border border-neutral-800 bg-neutral-950 p-4 transition-colors focus-within:border-rose-400/50 focus-within:ring-1 focus-within:ring-rose-400/20"
+        >
+          <div className="flex gap-3">
+            <UserAvatar
+              username={ownProfile?.username ?? "?"}
+              avatarUrl={ownProfile?.avatar_url ?? null}
+              size="sm"
+              linkToProfile={false}
+            />
+            <div className="min-w-0 flex-1">
+              <label className="sr-only" htmlFor="comment">
+                Add a comment
+              </label>
+              <textarea
+                id="comment"
+                value={newCommentText}
+                onChange={(e) => setNewCommentText(e.target.value)}
+                rows={3}
+                placeholder="Share your thoughts..."
+                className="min-h-[88px] w-full resize-y bg-transparent py-1 text-sm leading-6 text-white outline-none placeholder:text-neutral-600"
+              />
+              <div className="mt-2 flex items-center justify-between border-t border-neutral-800 pt-3">
+                <p className="text-xs text-neutral-600">
+                  Be kind and keep spoilers tagged.
+                </p>
+                <button
+                  type="submit"
+                  disabled={!newCommentText.trim() || isPending}
+                  className="rounded-md bg-rose-500 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-rose-400 disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer"
+                >
+                  {isPending ? "Posting..." : "Post comment ➤"}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {isError && (
+            <p className="mt-2 text-sm text-red-400">Error posting comment.</p>
+          )}
         </form>
       ) : (
-        <p> You must be logged in to post a comment</p>
+        <p className="rounded-xl border border-neutral-800 bg-neutral-950 p-4 text-sm text-neutral-500">
+          You must be logged in to post a comment
+        </p>
       )}
 
       {/* Comments Display Section */}
-      <div className="flex flex-col gap-2">
-        {commentTree.map((comment) => {
+      <div className="mt-6 space-y-3">
+        {visibleComments.map((comment) => {
           return (
             <CommentItem
               key={comment.id}
@@ -186,6 +248,25 @@ export const CommentSection = ({
           );
         })}
       </div>
+
+      {(hiddenCount > 0 || showAll) && (
+        <button
+          onClick={() => setShowAll((prev) => !prev)}
+          className="mt-5 flex items-center gap-1.5 text-sm font-medium text-neutral-500 transition-colors hover:text-white cursor-pointer"
+        >
+          {showAll
+            ? "Show fewer comments"
+            : `View all comments (${commentTree.length})`}
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            className={`w-4 transition-transform ${showAll ? "rotate-180" : ""}`}
+          >
+            <path d="M16.59 8.59L12 13.17 7.41 8.59 6 10l6 6 6-6-1.41-1.41z" />
+          </svg>
+        </button>
+      )}
     </div>
   );
 };

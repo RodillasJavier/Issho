@@ -28,6 +28,7 @@ export interface Anime {
   anilist_url: string | null;
   franchise_key: number | null; // AniList ID of the franchise's backbone root
   franchise_title: string | null; // Denormalized root title for grouped display
+  banner_image_url: string | null; // Wide AniList banner art (null for many titles)
 }
 
 export interface AnimeInsert {
@@ -47,6 +48,7 @@ export interface AnimeInsert {
   anilist_url?: string | null;
   franchise_key?: number | null;
   franchise_title?: string | null;
+  banner_image_url?: string | null;
 }
 
 export interface Entry {

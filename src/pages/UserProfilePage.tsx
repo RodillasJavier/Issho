@@ -3,20 +3,21 @@
  *
  * Page to view a user's profile, anime list, and stats.
  */
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useParams, Link } from "react-router";
 import { useQuery } from "@tanstack/react-query";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import { getProfileByUsername } from "../services/supabase/profiles";
-import {
-  fetchUserAnimeList,
-  getUserListStats,
-} from "../services/supabase/userAnimeList";
+import { fetchAllUserAnimeEntries } from "../services/supabase/userAnimeList";
+import { fetchUserFranchiseList } from "../services/supabase/userFranchiseList";
 import { getFriends } from "../services/supabase/friendships";
 import { UserAvatar } from "../components/UserAvatar";
 import { MyAnimeListItem } from "../components/MyAnimeListItem";
+import { MyFranchiseListItem } from "../components/MyFranchiseListItem";
 import { AnimeListStats } from "../components/AnimeListStats";
 import { FriendButton } from "../components/FriendButton";
+import { groupUserEntriesByFranchise } from "../utils/franchise";
 import type { AnimeStatus } from "../types/database.types";
 
 type FilterTab = "all" | AnimeStatus;
@@ -42,26 +43,72 @@ export const UserProfilePage = () => {
   });
   const isOwnProfile = user?.id === profile?.id;
 
-  const { data: animeListData, isLoading: listLoading } = useQuery({
-    queryKey: ["userAnimeList", profile?.id, activeFilter, pageNumber],
-    queryFn: () =>
-      fetchUserAnimeList(
-        profile!.id,
-        activeFilter === "all" ? undefined : activeFilter,
-        pageNumber,
-        ITEMS_PER_PAGE
-      ),
+  const { data: allEntries, isLoading: listLoading } = useQuery({
+    queryKey: ["userAnimeList", profile?.id, "all"],
+    queryFn: () => fetchAllUserAnimeEntries(profile!.id),
     enabled: !!profile?.id,
   });
 
-  const animeList = animeListData?.entries || [];
-  const hasMore = animeListData?.hasMore || false;
-
-  const { data: stats, isLoading: statsLoading } = useQuery({
-    queryKey: ["userListStats", profile?.id],
-    queryFn: () => getUserListStats(profile!.id),
+  const { data: userFranchiseEntries } = useQuery({
+    queryKey: ["userFranchiseList", profile?.id],
+    queryFn: () => fetchUserFranchiseList(profile!.id),
     enabled: !!profile?.id,
   });
+  // The profile list is series-level: one card per franchise. A card's
+  // effective status/rating is the user-set series value for multi-entry
+  // franchises, or the entry's own for standalone shows (where entry = series).
+  const seriesCards = useMemo(() => {
+    const franchiseEntryByKey = new Map(
+      (userFranchiseEntries ?? []).map((entry) => [entry.franchise_key, entry])
+    );
+    return groupUserEntriesByFranchise(allEntries ?? []).map((group) => {
+      const isFranchise =
+        group.entries.length > 1 && group.franchiseKey != null;
+      const franchiseEntry = isFranchise
+        ? (franchiseEntryByKey.get(group.franchiseKey!) ?? null)
+        : null;
+      return {
+        group,
+        isFranchise,
+        franchiseEntry,
+        status: isFranchise
+          ? (franchiseEntry?.status ?? "not_started")
+          : group.entries[0].status,
+        rating: isFranchise
+          ? (franchiseEntry?.rating ?? null)
+          : group.entries[0].rating,
+      };
+    });
+  }, [allEntries, userFranchiseEntries]);
+
+  // Stats count series, matching what the list displays
+  const stats = useMemo(() => {
+    const ratings = seriesCards
+      .map((card) => card.rating)
+      .filter((rating): rating is number => rating != null);
+    return {
+      total: seriesCards.length,
+      watching: seriesCards.filter((c) => c.status === "watching").length,
+      completed: seriesCards.filter((c) => c.status === "completed").length,
+      dropped: seriesCards.filter((c) => c.status === "dropped").length,
+      notStarted: seriesCards.filter((c) => c.status === "not_started").length,
+      avgRating:
+        ratings.length > 0
+          ? (ratings.reduce((sum, r) => sum + r, 0) / ratings.length).toFixed(1)
+          : "N/A",
+    };
+  }, [seriesCards]);
+
+  const filteredCards =
+    activeFilter === "all"
+      ? seriesCards
+      : seriesCards.filter((card) => card.status === activeFilter);
+  const startIndex = pageNumber * ITEMS_PER_PAGE;
+  const paginatedCards = filteredCards.slice(
+    startIndex,
+    startIndex + ITEMS_PER_PAGE
+  );
+  const hasMore = startIndex + ITEMS_PER_PAGE < filteredCards.length;
 
   const { data: friends } = useQuery({
     queryKey: ["friends", profile?.id],
@@ -172,8 +219,8 @@ export const UserProfilePage = () => {
         </div>
       </div>
 
-      {/* Stats Cards */}
-      {!statsLoading && stats && (
+      {/* Stats Cards (series-level) */}
+      {allEntries && (
         <AnimeListStats
           stats={stats}
           activeFilter={activeFilter}
@@ -187,12 +234,26 @@ export const UserProfilePage = () => {
 
         {listLoading ? (
           <div>Loading anime list...</div>
-        ) : animeList && animeList.length > 0 ? (
+        ) : paginatedCards.length > 0 ? (
           <>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {animeList.map((entry) => (
-                <MyAnimeListItem key={entry.id} entry={entry} />
-              ))}
+              {paginatedCards.map((card) =>
+                card.isFranchise ? (
+                  <MyFranchiseListItem
+                    key={card.group.groupKey}
+                    franchiseKey={card.group.franchiseKey!}
+                    title={card.group.title}
+                    entries={card.group.entries}
+                    franchiseEntry={card.franchiseEntry}
+                    isOwnProfile={isOwnProfile}
+                  />
+                ) : (
+                  <MyAnimeListItem
+                    key={card.group.groupKey}
+                    entry={card.group.entries[0]}
+                  />
+                )
+              )}
             </div>
 
             {/* Pagination Controls */}
@@ -200,9 +261,10 @@ export const UserProfilePage = () => {
               <button
                 onClick={handlePrevPage}
                 disabled={pageNumber === 0}
-                className="px-4 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-white hover:border-rose-500 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                className="flex items-center gap-1 px-4 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-white hover:border-rose-500 disabled:opacity-50 disabled:cursor-not-allowed transition"
               >
-                ← Prev
+                <ChevronLeft className="size-4" />
+                Prev
               </button>
 
               <span className="text-gray-400">Page {pageNumber + 1}</span>
@@ -210,9 +272,10 @@ export const UserProfilePage = () => {
               <button
                 onClick={handleNextPage}
                 disabled={!hasMore}
-                className="px-4 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-white hover:border-rose-500 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                className="flex items-center gap-1 px-4 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-white hover:border-rose-500 disabled:opacity-50 disabled:cursor-not-allowed transition"
               >
-                Next →
+                Next
+                <ChevronRight className="size-4" />
               </button>
             </div>
           </>

@@ -1,13 +1,13 @@
 /**
  * src/components/AnimeSearch.tsx
  *
- * Search component for finding anime from Jikan API and local database
+ * Search component for finding anime from AniList API and local database
  */
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { Link } from "react-router";
 import { searchAnimeCombined } from "../api/animeSearch";
-import { importAnimeFromJikan } from "../api/animeImport";
+import { importAnimeFromAniList } from "../api/animeImport";
 import type { CombinedSearchResults } from "../api/animeSearch";
 
 // #region Component Logic
@@ -23,7 +23,7 @@ export function AnimeSearch() {
   });
 
   const importMutation = useMutation({
-    mutationFn: (malId: number) => importAnimeFromJikan(malId),
+    mutationFn: (anilistId: number) => importAnimeFromAniList(anilistId),
   });
 
   const handleSearch = (e: React.FormEvent) => {
@@ -34,8 +34,8 @@ export function AnimeSearch() {
     }
   };
 
-  const handleImport = async (malId: number) => {
-    await importMutation.mutateAsync(malId);
+  const handleImport = async (anilistId: number) => {
+    await importMutation.mutateAsync(anilistId);
 
     if (query.trim()) {
       searchMutation.mutate(query.trim());
@@ -52,7 +52,7 @@ export function AnimeSearch() {
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search for anime from MyAnimeList..."
+          placeholder="Search for anime from AniList..."
           className="w-full px-4 py-3 pl-12 bg-neutral-900 border border-neutral-700 rounded-lg text-white placeholder-neutral-500 focus:border-rose-500 focus:outline-none"
         />
 
@@ -104,10 +104,12 @@ export function AnimeSearch() {
                     to={`/anime/${anime.id}`}
                     className="group block"
                   >
-                    <div className="bg-white/5 backdrop-blur-sm rounded-lg overflow-hidden border border-white/10 hover:border-white/30 transition-all">
+                    <div className="bg-white/5 rounded-lg overflow-hidden border border-white/10 hover:border-white/30 transition-colors">
                       <img
                         src={anime.cover_image_url || "/placeholder.png"}
                         alt={anime.name}
+                        loading="lazy"
+                        decoding="async"
                         className="w-full aspect-[2/3] object-cover"
                       />
 
@@ -129,57 +131,61 @@ export function AnimeSearch() {
             </div>
           )}
 
-          {/* Jikan Results */}
-          {results.jikanResults && results.jikanResults.length > 0 && (
+          {/* AniList Results */}
+          {results.anilistResults && results.anilistResults.length > 0 && (
             <div>
               <h2 className="text-xl font-bold mb-4">
-                From MyAnimeList ({results.jikanResults.length})
+                From AniList ({results.anilistResults.length})
               </h2>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {results.jikanResults.map((anime) => {
+                {results.anilistResults.map((anime) => {
                   const isInDb = results.localResults.some(
-                    (local) => local.external_id === anime.mal_id
+                    (local) => local.anilist_id === anime.id
                   );
+                  const title = anime.title.english ?? anime.title.romaji ?? "";
 
                   return (
                     <div
-                      key={anime.mal_id}
-                      className="bg-white/5 backdrop-blur-sm rounded-lg overflow-hidden border border-white/10"
+                      key={anime.id}
+                      className="bg-white/5 rounded-lg overflow-hidden border border-white/10"
                     >
                       <img
-                        src={anime.images.jpg.image_url}
-                        alt={anime.title}
+                        src={anime.coverImage.large ?? undefined}
+                        alt={title}
+                        loading="lazy"
+                        decoding="async"
                         className="w-full aspect-[2/3] object-cover"
                       />
 
                       <div className="p-3">
                         <div className="mb-2">
                           <h3 className="font-semibold line-clamp-2">
-                            {anime.title_english || anime.title}
+                            {title}
                           </h3>
 
-                          {anime.title_english &&
-                            anime.title !== anime.title_english && (
+                          {anime.title.english &&
+                            anime.title.romaji &&
+                            anime.title.romaji !== anime.title.english && (
                               <p className="text-xs text-gray-400 mt-0.5 line-clamp-1">
-                                {anime.title}
+                                {anime.title.romaji}
                               </p>
                             )}
                         </div>
 
-                        {anime.year && (
+                        {(anime.seasonYear ?? anime.startDate.year) && (
                           <p className="text-sm text-gray-400 mt-1">
-                            {anime.year}
+                            {anime.seasonYear ?? anime.startDate.year}
                           </p>
                         )}
 
                         {anime.genres.length > 0 && (
                           <p className="text-xs text-gray-500 mt-1 line-clamp-1">
-                            {anime.genres.map((g) => g.name).join(", ")}
+                            {anime.genres.join(", ")}
                           </p>
                         )}
 
                         <button
-                          onClick={() => handleImport(anime.mal_id)}
+                          onClick={() => handleImport(anime.id)}
                           disabled={isInDb || importMutation.isPending}
                           className="mt-2 w-full px-3 py-1.5 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
@@ -199,7 +205,7 @@ export function AnimeSearch() {
 
           {/* No Results */}
           {results.localResults.length === 0 &&
-            results.jikanResults.length === 0 && (
+            results.anilistResults.length === 0 && (
               <div className="text-center py-12 text-gray-400">
                 No anime found for "{query}"
               </div>

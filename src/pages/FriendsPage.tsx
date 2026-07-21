@@ -1,82 +1,119 @@
 /**
  * src/pages/FriendsPage.tsx
  *
- * Page displaying a user's friends list and pending friend requests.
+ * Page displaying a user's friends: on your own page, tools to add friends
+ * by username and respond to incoming requests, plus a "channels" view
+ * (each friend's latest activity) or a compact "directory" list. Viewing
+ * someone else's friends page shows the same list/channels, read-only.
  */
-import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useParams, Link } from "react-router";
+import { useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useParams } from "react-router";
 import { useAuth } from "../hooks/useAuth";
 import { getProfileByUsername } from "../services/supabase/profiles";
 import {
   getFriends,
-  getPendingIncomingRequests,
-  acceptFriendRequest,
-  rejectFriendRequest,
+  getOtherProfile,
+  unfriend,
 } from "../services/supabase/friendships";
-import { searchUsers } from "../services/supabase/userSearch";
-import { UserAvatar } from "../components/UserAvatar";
-import { FriendButton } from "../components/FriendButton";
-import type { Friendship, Profile } from "../types/database.types";
+import { fetchEntriesWithCounts } from "../services/supabase/entries";
+import { getEntryActivityLabel } from "../constants/entryTypes";
+import { FriendRequestForm } from "../components/FriendRequestForm";
+import { IncomingFriendRequests } from "../components/IncomingFriendRequests";
+import {
+  FriendsViewToggle,
+  type FriendsViewMode,
+} from "../components/FriendsViewToggle";
+import { FriendChannel } from "../components/FriendChannel";
+import { FriendDirectoryCard } from "../components/FriendDirectoryCard";
+import type { Entry, Friendship, Profile } from "../types/database.types";
 
 // #region Component Logic
 export const FriendsPage = () => {
   const { username } = useParams<{ username: string }>();
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const [searchQuery, setSearchQuery] = useState("");
+  const [viewMode, setViewMode] = useState<FriendsViewMode>("channels");
 
-  // Fetch profile of the user whose friends we're viewing
   const { data: profile, isLoading: profileLoading } = useQuery({
     queryKey: ["profile", username],
     queryFn: () => getProfileByUsername(username!),
     enabled: !!username,
   });
 
-  const isOwnProfile = user?.id === profile?.id;
+  const isOwnProfile = !!user && user.id === profile?.id;
 
-  // Search users query (only for own profile when searching for friends)
-  const { data: searchResults, isLoading: searchLoading } = useQuery({
-    queryKey: ["userSearch", searchQuery],
-    queryFn: () => searchUsers(searchQuery),
-    enabled: isOwnProfile && searchQuery.length >= 2,
-  });
-
-  // Fetch friends list
   const { data: friendships, isLoading: friendsLoading } = useQuery({
     queryKey: ["friends", profile?.id],
     queryFn: () => getFriends(profile!.id),
     enabled: !!profile?.id,
   });
 
-  // Fetch pending incoming requests (only for own profile when viewing own friends)
-  const { data: pendingRequests, isLoading: requestsLoading } = useQuery({
-    queryKey: ["pendingRequests"],
-    queryFn: getPendingIncomingRequests,
-    enabled: isOwnProfile,
+  const { data: allEntries, isLoading: entriesLoading } = useQuery({
+    queryKey: ["entries"],
+    queryFn: fetchEntriesWithCounts,
   });
 
-  // Mutation for accepting friend request
-  const acceptRequestMutation = useMutation({
-    mutationFn: (friendshipId: string) => acceptFriendRequest(friendshipId),
+  const unfriendMutation = useMutation({
+    mutationFn: (friendshipId: string) => unfriend(friendshipId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["friends"] });
-      queryClient.invalidateQueries({ queryKey: ["pendingRequests"] });
+      queryClient.invalidateQueries({ queryKey: ["friends", profile?.id] });
     },
   });
 
-  // Mutation for rejecting friend request
-  const rejectRequestMutation = useMutation({
-    mutationFn: (friendshipId: string) => rejectFriendRequest(friendshipId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["pendingRequests"] });
-    },
-  });
+  // Resolve each friendship to the *other* profile (not the page owner)
+  const friendRows = useMemo(() => {
+    if (!friendships || !profile) return [];
+    return friendships
+      .map((friendship) => ({
+        friendship,
+        friendProfile: getOtherProfile(friendship, profile.id),
+      }))
+      .filter(
+        (row): row is { friendship: Friendship; friendProfile: Profile } =>
+          !!row.friendProfile
+      );
+  }, [friendships, profile]);
 
+  // Each friend's 3 most recent entries, grouped in a single pass over the
+  // shared bulk fetch (which is already sorted most-recent-first)
+  const entriesByFriend = useMemo(() => {
+    const map = new Map<string, Entry[]>();
+    if (!allEntries) return map;
+    const friendIds = new Set(friendRows.map((row) => row.friendProfile.id));
+    for (const entry of allEntries) {
+      if (!friendIds.has(entry.user_id)) continue;
+      const existing = map.get(entry.user_id);
+      if (existing) {
+        if (existing.length < 3) existing.push(entry);
+      } else {
+        map.set(entry.user_id, [entry]);
+      }
+    }
+    return map;
+  }, [allEntries, friendRows]);
+
+  // Channels view: most recent activity first, friends with no activity last
+  const channelRows = useMemo(() => {
+    return [...friendRows].sort((a, b) => {
+      const aLatest = entriesByFriend.get(a.friendProfile.id)?.[0]?.created_at;
+      const bLatest = entriesByFriend.get(b.friendProfile.id)?.[0]?.created_at;
+      if (!aLatest && !bLatest) return 0;
+      if (!aLatest) return 1;
+      if (!bLatest) return -1;
+      return new Date(bLatest).getTime() - new Date(aLatest).getTime();
+    });
+  }, [friendRows, entriesByFriend]);
+
+  // Directory view: alphabetical by username
+  const directoryRows = useMemo(() => {
+    return [...friendRows].sort((a, b) =>
+      a.friendProfile.username.localeCompare(b.friendProfile.username)
+    );
+  }, [friendRows]);
   // #endregion Component Logic
 
   // #region Render
-
   if (profileLoading) {
     return <div>Loading profile...</div>;
   }
@@ -85,195 +122,110 @@ export const FriendsPage = () => {
     return <div>Profile not found</div>;
   }
 
-  // Helper to get friend profile from friendship (the user who isn't the profile owner)
-  const getFriendProfile = (friendship: Friendship): Profile | undefined => {
-    if (friendship.requester_id === profile.id) {
-      return friendship.addressee;
-    }
-    return friendship.requester;
-  };
-
   return (
-    <div className="max-w-4xl mx-auto">
-      <h2 className="text-4xl font-semibold mb-8 bg-gradient-to-r from-rose-300 to-rose-800 bg-clip-text text-transparent">
-        {isOwnProfile ? "Your Friends" : `${profile.username}'s Friends`}
-      </h2>
+    <div className="flex w-full flex-col gap-6">
+      <section className="border-b border-neutral-800 pb-7 sm:flex sm:items-end sm:justify-between sm:gap-8">
+        <div>
+          <p className="font-mono text-xs font-medium uppercase tracking-widest text-rose-400">
+            Your anime circle
+          </p>
 
-      {/* User Search Section (only for own profile) */}
+          <div className="mt-3 flex flex-wrap items-baseline gap-x-4 gap-y-1">
+            <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">
+              Friends
+            </h1>
+            <p className="text-sm text-neutral-500">
+              {isOwnProfile
+                ? "Follow what your friends are watching, then manage your circle from one place."
+                : `${profile.username}'s anime circle.`}
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-5 flex flex-wrap items-center gap-3 sm:mt-0">
+          <span className="rounded-md border border-neutral-800 bg-neutral-950 px-3 py-2 font-mono text-xs text-neutral-400">
+            {friendRows.length} {friendRows.length === 1 ? "friend" : "friends"}
+          </span>
+          <FriendsViewToggle mode={viewMode} onChange={setViewMode} />
+        </div>
+      </section>
+
       {isOwnProfile && (
-        <div className="mb-8">
-          <h3 className="text-2xl font-semibold mb-4 text-rose-300">
-            Find Friends
-          </h3>
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(290px,0.72fr)]">
+          <FriendRequestForm />
+          <IncomingFriendRequests profileId={profile.id} />
+        </div>
+      )}
 
-          <div className="flex relative">
-            <input
-              type="text"
-              placeholder="Search users by username..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full px-4 py-3 bg-zinc-900/50 border border-zinc-800 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-rose-500"
-            />
-
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery("")}
-                className="text-sm absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
-              >
-                ✕
-              </button>
-            )}
+      {friendsLoading ? (
+        <div>Loading friends...</div>
+      ) : friendRows.length > 0 ? (
+        <section>
+          <div className="mb-5 flex items-center justify-between">
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-neutral-300">
+              {viewMode === "channels" ? "Latest from friends" : "Friend list"}
+            </h2>
+            <p className="font-mono text-xs text-neutral-600">
+              {friendRows.length} showing
+            </p>
           </div>
 
-          {/* Search Results */}
-          {searchQuery.length >= 2 && (
-            <div className="mt-4 space-y-2">
-              {searchLoading ? (
-                <div className="text-gray-400 text-center py-4">
-                  Searching...
-                </div>
-              ) : searchResults && searchResults.length > 0 ? (
-                searchResults
-                  .filter((result) => result.id !== user?.id)
-                  .map((result) => (
-                    <div
-                      key={result.id}
-                      className="flex items-center justify-between p-4 bg-zinc-900/50 rounded-lg border border-zinc-800"
-                    >
-                      <Link
-                        to={`/profile/${result.username}`}
-                        className="flex items-center gap-3 hover:opacity-80 transition"
-                      >
-                        <UserAvatar
-                          avatarUrl={result.avatar_url}
-                          username={result.username}
-                          size="md"
-                        />
+          {viewMode === "channels" ? (
+            <div className="space-y-8">
+              {channelRows.map(({ friendProfile }) => (
+                <FriendChannel
+                  key={friendProfile.id}
+                  friend={friendProfile}
+                  entries={entriesByFriend.get(friendProfile.id) ?? []}
+                  entriesLoading={entriesLoading}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2">
+              {directoryRows.map(({ friendship, friendProfile }) => {
+                const friendEntries =
+                  entriesByFriend.get(friendProfile.id) ?? [];
+                const latestEntry = friendEntries[0];
+                const activityLabel = latestEntry
+                  ? getEntryActivityLabel(latestEntry)
+                  : "No activity yet";
 
-                        <div className="flex flex-col">
-                          <span className="text-lg font-medium text-white">
-                            {result.username}
-                          </span>
-                          {result.bio && (
-                            <span className="text-sm text-gray-400 line-clamp-1">
-                              {result.bio}
-                            </span>
-                          )}
-                        </div>
-                      </Link>
-
-                      <FriendButton targetUserId={result.id} />
-                    </div>
-                  ))
-              ) : (
-                <div className="text-gray-400 text-center py-4">
-                  No users found matching "{searchQuery}"
-                </div>
-              )}
+                return (
+                  <FriendDirectoryCard
+                    key={friendProfile.id}
+                    friend={friendProfile}
+                    activityLabel={activityLabel}
+                    onRemove={
+                      isOwnProfile
+                        ? () => unfriendMutation.mutate(friendship.id)
+                        : undefined
+                    }
+                    isRemoving={
+                      isOwnProfile &&
+                      unfriendMutation.isPending &&
+                      unfriendMutation.variables === friendship.id
+                    }
+                  />
+                );
+              })}
             </div>
           )}
-        </div>
-      )}
-
-      {/* Pending Incoming Requests Section (only for own profile) */}
-      {isOwnProfile && pendingRequests && pendingRequests.length > 0 && (
-        <div className="mb-8">
-          <h3 className="text-2xl font-semibold mb-4 text-rose-300">
-            Pending Friend Requests ({pendingRequests.length})
-          </h3>
-
-          <div className="space-y-4">
-            {pendingRequests.map((request) => {
-              const requesterProfile = request.requester;
-              if (!requesterProfile) return null;
-
-              return (
-                <div
-                  key={request.id}
-                  className="flex items-center justify-between p-4 bg-zinc-900/50 rounded-lg border border-zinc-800"
-                >
-                  <Link
-                    to={`/profile/${requesterProfile.username}`}
-                    className="flex items-center gap-3 hover:opacity-80 transition"
-                  >
-                    <UserAvatar
-                      avatarUrl={requesterProfile.avatar_url}
-                      username={requesterProfile.username}
-                      size="md"
-                    />
-
-                    <span className="text-lg font-medium text-white">
-                      {requesterProfile.username}
-                    </span>
-                  </Link>
-
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => acceptRequestMutation.mutate(request.id)}
-                      disabled={acceptRequestMutation.isPending}
-                      className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg transition disabled:opacity-50"
-                    >
-                      Accept
-                    </button>
-
-                    <button
-                      onClick={() => rejectRequestMutation.mutate(request.id)}
-                      disabled={rejectRequestMutation.isPending}
-                      className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition disabled:opacity-50"
-                    >
-                      Reject
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Friends List */}
-      <div>
-        <h3 className="text-2xl font-semibold mb-4 text-rose-300">
-          Friends {friendships && `(${friendships.length})`}
-        </h3>
-
-        {friendsLoading || requestsLoading ? (
-          <div>Loading friends...</div>
-        ) : friendships && friendships.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {friendships.map((friendship) => {
-              const friendProfile = getFriendProfile(friendship);
-              if (!friendProfile) return null;
-
-              return (
-                <Link
-                  key={friendship.id}
-                  to={`/profile/${friendProfile.username}`}
-                  className="flex items-center gap-3 p-4 bg-neutral-900/50 rounded-lg border border-neutral-800 hover:border-rose-500 transition"
-                >
-                  <UserAvatar
-                    avatarUrl={friendProfile.avatar_url}
-                    username={friendProfile.username}
-                    size="md"
-                  />
-
-                  <span className="text-lg font-medium text-white">
-                    {friendProfile.username}
-                  </span>
-                </Link>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="text-gray-400 text-center py-8">
+        </section>
+      ) : (
+        <div className="rounded-xl border border-neutral-800 bg-neutral-950 px-5 py-12 text-center">
+          <p className="text-sm font-semibold text-neutral-200">
+            {isOwnProfile ? "Your friends list is empty" : "No friends yet"}
+          </p>
+          <p className="mt-2 text-sm text-neutral-500">
             {isOwnProfile
-              ? "You haven't added any friends yet. Visit user profiles to send friend requests!"
+              ? "Send a request with a username you know, or accept an incoming request to build your circle."
               : `${profile.username} hasn't added any friends yet.`}
-          </div>
-        )}
-      </div>
+          </p>
+        </div>
+      )}
     </div>
   );
+  // #endregion Render
 };
-
-// #endregion Render
+// #endregion

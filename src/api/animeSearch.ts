@@ -1,18 +1,21 @@
 /**
  * src/api/animeSearch.ts
  *
- * API functions for searching anime from both Jikan API and local database
+ * API functions for searching anime from both AniList API and local database
  */
 import supabase from "../supabase-client";
-import { searchAnime as searchJikan } from "../services/jikanApi";
-import type { JikanAnime } from "../services/jikanApi";
+import {
+  searchAnime as searchAniList,
+  withRetry,
+} from "../services/anilistApi";
+import type { AniListMedia } from "../services/anilistApi";
 import type { Anime } from "../types/database.types";
 
 // #region Types
 
 export interface CombinedSearchResults {
   localResults: Anime[];
-  jikanResults: JikanAnime[];
+  anilistResults: AniListMedia[];
 }
 
 // #endregion Types
@@ -40,39 +43,39 @@ export const searchAnimeInDB = async (query: string): Promise<Anime[]> => {
 };
 
 /**
- * Search anime from Jikan API
+ * Search anime from the AniList API
  *
  * @param query search string
- * @returns Array of JikanAnime objects matching the query
+ * @returns Array of AniListMedia objects matching the query
  */
-export const searchAnimeFromJikan = async (
+export const searchAnimeFromAniList = async (
   query: string
-): Promise<JikanAnime[]> => {
+): Promise<AniListMedia[]> => {
   try {
-    const response = await searchJikan(query, 1, 10);
-    return response.data;
+    return await withRetry(() => searchAniList(query, 10));
   } catch (error) {
-    console.error("Error searching anime from Jikan:", error);
+    console.error("Error searching anime from AniList:", error);
     throw error;
   }
 };
 
 /**
- * Combined search: returns both local and Jikan results
+ * Combined search: returns both local and AniList results
  *
  * @param query search string
- * @returns CombinedSearchResults object containing local and Jikan results
+ * @returns CombinedSearchResults object containing local and AniList results
  */
 export const searchAnimeCombined = async (
   query: string
 ): Promise<CombinedSearchResults> => {
-  const [localResults, jikanResults] = await Promise.allSettled([
+  const [localResults, anilistResults] = await Promise.allSettled([
     searchAnimeInDB(query),
-    searchAnimeFromJikan(query),
+    searchAnimeFromAniList(query),
   ]);
 
   return {
     localResults: localResults.status === "fulfilled" ? localResults.value : [],
-    jikanResults: jikanResults.status === "fulfilled" ? jikanResults.value : [],
+    anilistResults:
+      anilistResults.status === "fulfilled" ? anilistResults.value : [],
   };
 };

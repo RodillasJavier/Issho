@@ -1,12 +1,13 @@
 /**
  * src/components/AnimeHeader.tsx
  *
- * Enhanced header for anime pages showing metadata from Jikan. Displayed in
+ * Enhanced header for anime pages showing metadata from AniList. Displayed in
  * the page for a specific anime.
  */
 
 import { useQuery } from "@tanstack/react-query";
-import supabase from "../supabase-client";
+import { ExternalLink } from "lucide-react";
+import { fetchAnime } from "../services/supabase/anime";
 import type { Anime } from "../types/database.types";
 
 interface AnimeHeaderProps {
@@ -14,23 +15,6 @@ interface AnimeHeaderProps {
 }
 
 // #region Component Logic
-
-/**
- * Fetch anime details by ID.
- *
- * @param animeId uuid of the anime to fetch
- * @returns Anime details
- */
-const fetchAnime = async (animeId: string): Promise<Anime> => {
-  const { data, error } = await supabase
-    .from("anime")
-    .select("*")
-    .eq("id", animeId)
-    .single();
-
-  if (error) throw new Error(error.message);
-  return data as Anime;
-};
 
 export function AnimeHeader({ animeId }: AnimeHeaderProps) {
   const {
@@ -47,9 +31,7 @@ export function AnimeHeader({ animeId }: AnimeHeaderProps) {
   // #region Render
 
   if (isLoading) {
-    return (
-      <div className="w-full h-64 bg-white/5 backdrop-blur-sm rounded-lg animate-pulse" />
-    );
+    return <div className="w-full h-64 bg-white/5 rounded-lg animate-pulse" />;
   }
 
   if (error || !anime) {
@@ -93,28 +75,40 @@ export function AnimeHeader({ animeId }: AnimeHeaderProps) {
             {/* Metadata Row */}
             <div className="flex flex-wrap gap-4 text-sm">
               {anime.year && (
-                <span className="px-3 py-1 bg-white/10 backdrop-blur-sm rounded-full">
+                <span className="px-3 py-1 bg-white/10 rounded-full">
                   {anime.year}
                 </span>
               )}
               {anime.status && (
-                <span className="px-3 py-1 bg-white/10 backdrop-blur-sm rounded-full">
+                <span className="px-3 py-1 bg-white/10 rounded-full">
                   {anime.status}
                 </span>
               )}
               {anime.episode_count && (
-                <span className="px-3 py-1 bg-white/10 backdrop-blur-sm rounded-full">
+                <span className="px-3 py-1 bg-white/10 rounded-full">
                   {anime.episode_count} Episodes
                 </span>
+              )}
+              {anime.anilist_url && (
+                <a
+                  href={anime.anilist_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 px-3 py-1 bg-blue-500/20 hover:bg-blue-500/30 rounded-full text-blue-300 hover:text-blue-200 transition-colors"
+                >
+                  AniList
+                  <ExternalLink className="size-3.5" />
+                </a>
               )}
               {anime.mal_url && (
                 <a
                   href={anime.mal_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="px-3 py-1 bg-blue-500/20 hover:bg-blue-500/30 backdrop-blur-sm rounded-full text-blue-300 hover:text-blue-200 transition-colors"
+                  className="flex items-center gap-1 px-3 py-1 bg-blue-500/20 hover:bg-blue-500/30 rounded-full text-blue-300 hover:text-blue-200 transition-colors"
                 >
-                  MyAnimeList ↗
+                  MyAnimeList
+                  <ExternalLink className="size-3.5" />
                 </a>
               )}
             </div>

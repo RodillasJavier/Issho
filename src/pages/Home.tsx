@@ -1,31 +1,50 @@
 /* src/pages/Home.tsx */
+import { useState } from "react";
+import { Link } from "react-router";
 import { EntryList } from "../components/EntryList";
+import { ActivityFilterTabs } from "../components/ActivityFilterTabs";
+import type { ActivityFilter } from "../constants/activityFilters";
 import { useAuth } from "../hooks/useAuth";
 
 export const Home = () => {
   const { user } = useAuth();
+  const [filter, setFilter] = useState<ActivityFilter>("all");
 
   return (
-    <div className="flex flex-col items-center w-full space-y-6">
-      <h2 className="text-5xl font-semibold bg-gradient-to-r from-rose-300 to-rose-800 bg-clip-text text-transparent">
-        Recent Activity
-      </h2>
+    <div className="flex w-full flex-col gap-6">
+      <section className="border-b border-neutral-800 pb-7 sm:flex sm:items-end sm:justify-between sm:gap-8">
+        <div>
+          <p className="font-mono text-xs font-medium uppercase tracking-widest text-rose-400">
+            {user ? "From your circle" : "Public feed"}
+          </p>
+          <div className="mt-3 flex flex-wrap items-baseline gap-x-4 gap-y-1">
+            <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">
+              Recent activity
+            </h1>
+            <p className="text-sm text-neutral-500">
+              {user
+                ? "Fresh entries from you and your friends."
+                : "Sign in to personalize your feed and follow friends."}
+            </p>
+          </div>
+        </div>
+
+        {user && <ActivityFilterTabs value={filter} onChange={setFilter} />}
+      </section>
 
       {!user && (
-        <div className="bg-zinc-900/50 border border-zinc-800 rounded-lg p-4 mb-4">
-          <p className="text-gray-300 text-center">
+        <div className="rounded-lg border border-neutral-800 bg-neutral-950 p-4">
+          <p className="text-center text-gray-300">
             Viewing anonymous public feed.{" "}
-            <a href="/signin" className="text-rose-400 hover:text-rose-300">
+            <Link to="/signin" className="text-rose-400 hover:text-rose-300">
               Sign in
-            </a>{" "}
+            </Link>{" "}
             to see your friends' activity and personalize your experience.
           </p>
         </div>
       )}
 
-      <div>
-        <EntryList friendsOnly={!!user} anonymized={!user} />
-      </div>
+      <EntryList filter={user ? filter : "all"} />
     </div>
   );
 };

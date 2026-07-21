@@ -5,6 +5,7 @@
  */
 import { useState, type ChangeEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Tv, Star, FileText } from "lucide-react";
 import supabase from "../supabase-client";
 import { useNavigate } from "react-router";
 import { useAuth } from "../hooks/useAuth";
@@ -60,12 +61,12 @@ const createEntries = async (input: EntryInput, userId: string) => {
     if (error) throw error;
   }
 
+  // Rating-only submissions just update the list — the post page shows the
+  // author's current rating live, so no rating post is created
+  if (!review && !status) return;
+
   // Create a single combined entry with all provided values
-  const entryType = review
-    ? "review"
-    : rating !== undefined
-      ? "rating"
-      : "status_update";
+  const entryType = review ? "review" : "status_update";
 
   const { error } = await supabase.from("entries").insert({
     user_id: userId,
@@ -111,6 +112,7 @@ export const CreateEntry = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["entries"] });
+      queryClient.invalidateQueries({ queryKey: ["animeEntries"] });
       queryClient.invalidateQueries({ queryKey: ["userAnimeList"] });
       navigate("/");
     },
@@ -182,8 +184,12 @@ export const CreateEntry = () => {
 
       {/* Status Selection */}
       <div className="flex flex-col space-y-2">
-        <label htmlFor="status" className="font-semibold">
-          📺 Status
+        <label
+          htmlFor="status"
+          className="flex items-center gap-1.5 font-semibold"
+        >
+          <Tv className="size-4" />
+          Status
         </label>
 
         <select
@@ -202,9 +208,17 @@ export const CreateEntry = () => {
 
       {/* Rating Input */}
       <div className="flex flex-col space-y-2">
-        <label htmlFor="rating" className="font-semibold">
-          ⭐ Rating (1-10)
+        <label
+          htmlFor="rating"
+          className="flex items-center gap-1.5 font-semibold"
+        >
+          <Star className="size-4" />
+          Rating (1-10)
         </label>
+        <p className="text-xs text-neutral-500">
+          Ratings save to your list and show live on your posts — a rating by
+          itself doesn't create a post.
+        </p>
 
         <input
           type="number"
@@ -220,8 +234,12 @@ export const CreateEntry = () => {
 
       {/* Review Text */}
       <div className="flex flex-col space-y-2">
-        <label htmlFor="review" className="font-semibold">
-          📝 Review
+        <label
+          htmlFor="review"
+          className="flex items-center gap-1.5 font-semibold"
+        >
+          <FileText className="size-4" />
+          Review
         </label>
 
         <textarea

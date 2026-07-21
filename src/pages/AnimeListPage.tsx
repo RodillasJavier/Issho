@@ -13,10 +13,10 @@ export const AnimeListPage = () => {
       </h2>
 
       {/* View Toggle */}
-      <div className="flex gap-2 bg-white/5 backdrop-blur-sm rounded-lg p-1">
+      <div className="flex gap-2 bg-white/5 rounded-lg p-1">
         <button
           onClick={() => setView("browse")}
-          className={`px-6 py-2 rounded-md transition-all ${
+          className={`px-6 py-2 rounded-md transition-colors ${
             view === "browse"
               ? "bg-rose-400 text-white"
               : "text-gray-400 hover:text-white"
@@ -27,9 +27,9 @@ export const AnimeListPage = () => {
 
         <button
           onClick={() => setView("search")}
-          className={`px-6 py-2 rounded-md transition-all ${
+          className={`px-6 py-2 rounded-md transition-colors ${
             view === "search"
-              ? " T>  bg-rose-400 text-white"
+              ? "bg-rose-400 text-white"
               : "text-gray-400 hover:text-white"
           }`}
         >

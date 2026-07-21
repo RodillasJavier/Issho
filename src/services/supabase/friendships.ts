@@ -7,7 +7,24 @@ import supabase from "../../supabase-client";
 import type {
   Friendship,
   FriendshipStatusInfo,
+  Profile,
 } from "../../types/database.types";
+
+/**
+ * Resolve a friendship to the *other* party's profile — whichever of
+ * requester/addressee isn't the viewer.
+ *
+ * @param friendship - The friendship row (with requester/addressee joined)
+ * @param viewerId - The profile ID viewing this friendship
+ * @returns The other party's profile, or undefined if it wasn't joined
+ */
+export const getOtherProfile = (
+  friendship: Friendship,
+  viewerId: string
+): Profile | undefined =>
+  friendship.requester_id === viewerId
+    ? friendship.addressee
+    : friendship.requester;
 
 /**
  * Send a friend request to another user

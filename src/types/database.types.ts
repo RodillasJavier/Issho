@@ -18,10 +18,17 @@ export interface Anime {
   episode_count: number | null;
   cover_image_url: string | null;
   year: number | null;
-  external_id: number | null; // MAL ID from Jikan
+  external_id: number | null; // Legacy MAL ID (superseded by anilist_id/mal_id)
   genres: string | null;
   status: string | null; // "Finished Airing", "Currently Airing", etc.
   mal_url: string | null;
+  anilist_id: number | null; // AniList media ID (external key going forward)
+  mal_id: number | null; // MyAnimeList ID, preserved from external_id
+  format: string | null; // AniList MediaFormat: TV, TV_SHORT, MOVIE, SPECIAL, OVA, ONA, MUSIC
+  anilist_url: string | null;
+  franchise_key: number | null; // AniList ID of the franchise's backbone root
+  franchise_title: string | null; // Denormalized root title for grouped display
+  banner_image_url: string | null; // Wide AniList banner art (null for many titles)
 }
 
 export interface AnimeInsert {
@@ -35,6 +42,13 @@ export interface AnimeInsert {
   genres?: string | null;
   status?: string | null;
   mal_url?: string | null;
+  anilist_id?: number | null;
+  mal_id?: number | null;
+  format?: string | null;
+  anilist_url?: string | null;
+  franchise_key?: number | null;
+  franchise_title?: string | null;
+  banner_image_url?: string | null;
 }
 
 export interface Entry {
@@ -48,9 +62,10 @@ export interface Entry {
   status_value: AnimeStatus | null; // For "status_update" entries
   anime?: Anime; // When joined
   profile?: Profile; // When joined
-  vote_count?: number; // When aggregated
+  likes_count?: number; // When aggregated
+  dislikes_count?: number; // When aggregated
   comment_count?: number; // When aggregated
-  user_vote?: number; // User's vote (-1, 0, 1)
+  user_vote?: number | null; // Current user's vote on this entry: 1, -1, or null
 }
 
 export interface Vote {
@@ -83,6 +98,17 @@ export interface UserAnimeEntry {
   review: string | null;
   updated_at: string;
   anime?: Anime; // When joined
+}
+
+export interface UserFranchiseEntry {
+  id: string;
+  created_at: string;
+  user_id: string;
+  franchise_key: number; // Matches anime.franchise_key
+  status: AnimeStatus;
+  rating: number | null;
+  review: string | null;
+  updated_at: string;
 }
 
 export interface Profile {

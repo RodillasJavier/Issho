@@ -15,7 +15,6 @@ interface AnimeInput {
   cover_image_url: string;
   episode_count: number | null;
   year: number | null;
-  external_id: string;
 }
 
 const DEFAULT_COVER_IMAGE_URL =
@@ -59,7 +58,6 @@ export const CreateAnime = () => {
       cover_image_url: coverImageUrl || DEFAULT_COVER_IMAGE_URL,
       episode_count: episodeCount,
       year: year,
-      external_id: `manual_${Date.now()}`,
     });
   };
   // #endregion Component Logic

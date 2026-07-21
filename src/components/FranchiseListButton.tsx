@@ -4,10 +4,9 @@
  * Series-level counterpart of AddToListButton: sets the user's status for a
  * whole franchise. Independent of per-season statuses — never syncs them.
  */
-import { useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, ChevronDown } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
+import { useListStatusEntry } from "../hooks/useListStatusEntry";
 import {
   getUserFranchiseEntry,
   addUserFranchiseEntry,
@@ -29,48 +28,28 @@ export const FranchiseListButton = ({
   onEditClick,
 }: FranchiseListButtonProps) => {
   const { user } = useAuth();
-  const [showStatusPicker, setShowStatusPicker] = useState(false);
-  const queryClient = useQueryClient();
 
   const {
-    data: listEntry,
+    entry: listEntry,
     isLoading,
     error,
-  } = useQuery({
+    showStatusPicker,
+    setShowStatusPicker,
+    handleStatusSelect,
+    isMutating,
+  } = useListStatusEntry({
     queryKey: ["userFranchiseList", franchiseKey, user?.id],
-    queryFn: () => getUserFranchiseEntry(franchiseKey, user!.id),
+    getEntry: () => getUserFranchiseEntry(franchiseKey, user!.id),
+    addEntry: (status: AnimeStatus) =>
+      addUserFranchiseEntry(franchiseKey, user!.id, status),
+    updateEntry: (entryId, status) =>
+      updateUserFranchiseEntry(entryId, { status }),
+    invalidateKeys: [
+      ["userFranchiseList", franchiseKey, user?.id],
+      ["userFranchiseList", user?.id],
+    ],
     enabled: !!user,
   });
-
-  const invalidate = () => {
-    queryClient.invalidateQueries({
-      queryKey: ["userFranchiseList", franchiseKey, user?.id],
-    });
-    queryClient.invalidateQueries({
-      queryKey: ["userFranchiseList", user?.id],
-    });
-    setShowStatusPicker(false);
-  };
-
-  const addMutation = useMutation({
-    mutationFn: (status: AnimeStatus) =>
-      addUserFranchiseEntry(franchiseKey, user!.id, status),
-    onSuccess: invalidate,
-  });
-
-  const updateMutation = useMutation({
-    mutationFn: (status: AnimeStatus) =>
-      updateUserFranchiseEntry(listEntry!.id, { status }),
-    onSuccess: invalidate,
-  });
-
-  const handleStatusSelect = (status: AnimeStatus) => {
-    if (listEntry) {
-      updateMutation.mutate(status);
-    } else {
-      addMutation.mutate(status);
-    }
-  };
   // #endregion Component Logic
 
   // #region Render
@@ -127,7 +106,7 @@ export const FranchiseListButton = ({
               <button
                 key={status}
                 onClick={() => handleStatusSelect(status)}
-                disabled={addMutation.isPending || updateMutation.isPending}
+                disabled={isMutating}
                 className={`flex w-full items-center justify-between gap-2 text-left px-4 py-2 text-sm hover:bg-neutral-800 transition-colors ${
                   listEntry?.status === status ? "bg-neutral-800" : ""
                 }`}

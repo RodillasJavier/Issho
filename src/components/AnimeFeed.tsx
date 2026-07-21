@@ -81,8 +81,6 @@ export const AnimeFeed = ({ animeId }: AnimeFeedProps) => {
   // Series-level UI only appears for real multi-entry franchises
   const { franchiseMembers, isMultiEntryFranchise } =
     useFranchiseMembers(franchiseKey);
-  const siblingAnime =
-    franchiseMembers?.filter((member) => member.id !== animeId) ?? [];
   const franchiseTitle =
     franchiseDisplayTitle(franchiseMembers ?? []) ??
     anime?.franchise_title ??
@@ -127,25 +125,39 @@ export const AnimeFeed = ({ animeId }: AnimeFeedProps) => {
         </div>
       )}
 
-      {/* Franchise siblings */}
-      {siblingAnime.length > 0 && (
+      {/* Franchise seasons — always the full list, current one highlighted
+          rather than omitted, so the layout stays stable while navigating
+          between seasons */}
+      {isMultiEntryFranchise && (
         <div className="space-y-2">
           <h3 className="text-lg font-semibold text-rose-300">
-            Also in {franchiseTitle}
+            Seasons in {franchiseTitle}
           </h3>
           <div className="flex flex-wrap gap-2">
-            {siblingAnime.map((member) => (
-              <Link
-                key={member.id}
-                to={`/anime/${member.id}`}
-                className="px-3 py-1.5 bg-white/5 border border-white/10 hover:border-rose-400/50 rounded text-sm text-gray-300 hover:text-rose-300 transition-colors"
-              >
-                {member.name}
-                {member.year && (
-                  <span className="text-neutral-500"> · {member.year}</span>
-                )}
-              </Link>
-            ))}
+            {franchiseMembers?.map((member) =>
+              member.id === animeId ? (
+                <span
+                  key={member.id}
+                  className="px-3 py-1.5 bg-rose-500/20 border border-rose-400/50 rounded text-sm font-semibold text-rose-300"
+                >
+                  {member.name}
+                  {member.year && (
+                    <span className="text-rose-400/70"> · {member.year}</span>
+                  )}
+                </span>
+              ) : (
+                <Link
+                  key={member.id}
+                  to={`/anime/${member.id}`}
+                  className="px-3 py-1.5 bg-white/5 border border-white/10 hover:border-rose-400/50 rounded text-sm text-gray-300 hover:text-rose-300 transition-colors"
+                >
+                  {member.name}
+                  {member.year && (
+                    <span className="text-neutral-500"> · {member.year}</span>
+                  )}
+                </Link>
+              )
+            )}
           </div>
         </div>
       )}

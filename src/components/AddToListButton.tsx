@@ -3,10 +3,9 @@
  *
  * Component for adding anime to user's personal list or showing current status.
  */
-import { useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, ChevronDown } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
+import { useListStatusEntry } from "../hooks/useListStatusEntry";
 import {
   getUserAnimeEntry,
   addUserAnimeEntry,
@@ -28,50 +27,27 @@ export const AddToListButton = ({
   onEditClick,
 }: AddToListButtonProps) => {
   const { user } = useAuth();
-  const [showStatusPicker, setShowStatusPicker] = useState(false);
-  const queryClient = useQueryClient();
 
   const {
-    data: listEntry,
+    entry: listEntry,
     isLoading,
     error,
-  } = useQuery({
+    showStatusPicker,
+    setShowStatusPicker,
+    handleStatusSelect,
+    isMutating,
+  } = useListStatusEntry({
     queryKey: ["userAnimeList", animeId, user?.id],
-    queryFn: () => getUserAnimeEntry(animeId, user!.id),
+    getEntry: () => getUserAnimeEntry(animeId, user!.id),
+    addEntry: (status: AnimeStatus) =>
+      addUserAnimeEntry(animeId, user!.id, status),
+    updateEntry: (entryId, status) => updateUserAnimeEntry(entryId, { status }),
+    invalidateKeys: [
+      ["userAnimeList", animeId, user?.id],
+      ["userAnimeList", user?.id],
+    ],
     enabled: !!user,
   });
-
-  const addMutation = useMutation({
-    mutationFn: (status: AnimeStatus) =>
-      addUserAnimeEntry(animeId, user!.id, status),
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ["userAnimeList", animeId, user?.id],
-      });
-      queryClient.invalidateQueries({ queryKey: ["userAnimeList", user?.id] });
-      setShowStatusPicker(false);
-    },
-  });
-
-  const updateMutation = useMutation({
-    mutationFn: (status: AnimeStatus) =>
-      updateUserAnimeEntry(listEntry!.id, { status }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ["userAnimeList", animeId, user?.id],
-      });
-      queryClient.invalidateQueries({ queryKey: ["userAnimeList", user?.id] });
-      setShowStatusPicker(false);
-    },
-  });
-
-  const handleStatusSelect = (status: AnimeStatus) => {
-    if (listEntry) {
-      updateMutation.mutate(status);
-    } else {
-      addMutation.mutate(status);
-    }
-  };
   // #endregion Component Logic
 
   // #region Render
@@ -129,7 +105,7 @@ export const AddToListButton = ({
               <button
                 key={status}
                 onClick={() => handleStatusSelect(status)}
-                disabled={addMutation.isPending || updateMutation.isPending}
+                disabled={isMutating}
                 className={`flex w-full items-center justify-between gap-2 text-left px-4 py-2 text-sm hover:bg-neutral-800 transition-colors ${
                   listEntry?.status === status ? "bg-neutral-800" : ""
                 }`}

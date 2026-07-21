@@ -2,153 +2,136 @@
  * src/components/EntryList.tsx
  *
  * Component that fetches and displays a list of recent entries with their
- * associated anime data.
+ * associated anime data: a featured entry + following panel + create-entry
+ * CTA on the first page, a grid of activity cards, and pagination. The
+ * All/Friends/You filter is owned by Home (rendered in the page header) and
+ * passed in as a prop. Every entry is fetched once and filter/pagination
+ * are applied client-side, so switching tabs or pages never re-hits the
+ * network.
  */
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import supabase from "../supabase-client";
 import { EntryItem } from "./EntryItem";
-import type { Entry } from "../types/database.types";
+import { FeaturedEntry } from "./FeaturedEntry";
+import { FollowingPanel } from "./FollowingPanel";
+import { CreateEntryCta } from "./CreateEntryCta";
+import {
+  ACTIVITY_FILTERS,
+  type ActivityFilter,
+} from "../constants/activityFilters";
 import { useAuth } from "../hooks/useAuth";
 import { getFriendIds } from "../services/supabase/friendships";
 import { getProfileById } from "../services/supabase/profiles";
+import { fetchEntriesWithCounts } from "../services/supabase/entries";
 
 const ENTRIES_PER_PAGE = 30;
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+
+const getWeekAgoTimestamp = (): number => Date.now() - WEEK_MS;
 
 // #region Types
-interface EntryWithCounts {
-  id: string;
-  anime_id: string;
-  user_id: string;
-  entry_type: string;
-  content: string;
-  created_at: string;
-  vote_count: number;
-  comment_count: number;
-  rating_value: number | null;
-  status_value: string | null;
-}
-
-interface AnimeData {
-  id: string;
-  name: string;
-  cover_image_url: string | null;
-}
-
-interface ProfileData {
-  id: string;
-  username: string;
-  avatar_url: string | null;
-}
-
 interface EntryListProps {
-  friendsOnly?: boolean;
-  anonymized?: boolean;
+  filter: ActivityFilter;
 }
 // #endregion Types
 
+const EmptyFeedState = ({
+  title,
+  subtitle,
+  ctaHref,
+  ctaLabel,
+}: {
+  title: string;
+  subtitle: string;
+  ctaHref?: string;
+  ctaLabel: string;
+}) => (
+  <div className="flex flex-col items-center justify-center py-12 px-4 text-center gap-6">
+    <div>
+      <div className="text-gray-400 text-lg mb-4">{title}</div>
+      <div className="text-gray-500 text-sm max-w-md">{subtitle}</div>
+    </div>
+
+    {ctaHref && (
+      <Link
+        to={ctaHref}
+        className="px-6 py-3 bg-rose-600 hover:bg-rose-700 text-white rounded-lg transition font-semibold flex items-center gap-2"
+      >
+        {ctaLabel}
+      </Link>
+    )}
+  </div>
+);
+
 // #region Component Logic
-const fetchEntries = async (
-  friendsOnly: boolean,
-  page: number,
-  limit: number
-): Promise<{ entries: Entry[]; hasMore: boolean }> => {
-  let allowedUserIds: string[] | null = null;
-
-  // If friends-only mode, get friend IDs + current user ID
-  if (friendsOnly) {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      return { entries: [], hasMore: false };
-    }
-
-    const friendIds = await getFriendIds();
-    allowedUserIds = [...friendIds, user.id];
-
-    // If no friends and only self, return empty if no entries from self yet
-    if (allowedUserIds.length === 1) {
-      // Will only show current user's entries
-      allowedUserIds = [user.id];
-    }
-  }
-
-  // Use RPC function to get entries with vote counts & comment counts
-  const { data: entriesWithCounts, error } = await supabase.rpc(
-    "get_entries_with_counts"
-  );
-  if (error) throw new Error(error.message);
-
-  if (!entriesWithCounts || entriesWithCounts.length === 0) {
-    return { entries: [], hasMore: false };
-  }
-
-  // Filter by allowed user IDs if in friends-only mode
-  let filteredEntries = entriesWithCounts as EntryWithCounts[];
-  if (allowedUserIds !== null) {
-    filteredEntries = filteredEntries.filter((entry) =>
-      allowedUserIds.includes(entry.user_id)
-    );
-  }
-
-  if (filteredEntries.length === 0) {
-    return { entries: [], hasMore: false };
-  }
-
-  // Apply pagination
-  const startIndex = page * limit;
-  const endIndex = startIndex + limit;
-  const paginatedEntries = filteredEntries.slice(startIndex, endIndex);
-  const hasMore = endIndex < filteredEntries.length;
-
-  // Fetch anime and profile data separately and join in memory
-  const entryAnimeIds = paginatedEntries.map((entry) => entry.anime_id);
-  const userIds = [...new Set(paginatedEntries.map((entry) => entry.user_id))];
-
-  const { data: animeData } = await supabase
-    .from("anime")
-    .select("id, name, cover_image_url")
-    .in("id", entryAnimeIds);
-
-  const { data: profileData } = await supabase
-    .from("profiles")
-    .select("id, username, avatar_url")
-    .in("id", userIds);
-
-  // Map anime and profile data to entries
-  const entriesWithData = paginatedEntries.map((entry) => ({
-    ...entry,
-    anime: animeData?.find((a: AnimeData) => a.id === entry.anime_id),
-    profile: profileData?.find((p: ProfileData) => p.id === entry.user_id),
-  }));
-
-  return { entries: entriesWithData as Entry[], hasMore };
-};
-
-export const EntryList = ({
-  friendsOnly = false,
-  anonymized = false,
-}: EntryListProps) => {
+export const EntryList = ({ filter }: EntryListProps) => {
   const [pageNumber, setPageNumber] = useState(0);
   const { user } = useAuth();
+  const anonymized = !user;
+
+  // Reset to page 1 whenever the filter (owned by Home) changes. Adjusting
+  // state during render (rather than in an effect) avoids an extra
+  // cascading render on every filter switch.
+  const [prevFilter, setPrevFilter] = useState(filter);
+  if (filter !== prevFilter) {
+    setPrevFilter(filter);
+    setPageNumber(0);
+  }
 
   const { data: profile } = useQuery({
     queryKey: ["profile", user?.id],
     queryFn: () => getProfileById(user!.id),
-    enabled: !!user?.id,
+    enabled: !!user,
   });
 
-  const { data, error, isLoading } = useQuery({
-    queryKey: ["entries", friendsOnly ? "friends" : "all", pageNumber],
-    queryFn: () => fetchEntries(friendsOnly, pageNumber, ENTRIES_PER_PAGE),
+  const {
+    data: allEntries,
+    error,
+    isLoading,
+  } = useQuery({
+    queryKey: ["entries"],
+    queryFn: fetchEntriesWithCounts,
   });
 
-  const entries = data?.entries || [];
-  const hasMore = data?.hasMore || false;
+  const { data: friendIds, isLoading: isFriendIdsLoading } = useQuery({
+    queryKey: ["friendIds", user?.id],
+    queryFn: getFriendIds,
+    enabled: !!user,
+  });
+
+  const filteredEntries = useMemo(() => {
+    if (!allEntries) return [];
+    if (filter === "mine") {
+      return user
+        ? allEntries.filter((entry) => entry.user_id === user.id)
+        : [];
+    }
+    if (filter === "friends") {
+      return friendIds
+        ? allEntries.filter((entry) => friendIds.includes(entry.user_id))
+        : [];
+    }
+    return allEntries;
+  }, [allEntries, filter, user, friendIds]);
+
+  const entries = filteredEntries.slice(
+    pageNumber * ENTRIES_PER_PAGE,
+    (pageNumber + 1) * ENTRIES_PER_PAGE
+  );
+  const hasMore = (pageNumber + 1) * ENTRIES_PER_PAGE < filteredEntries.length;
+
+  // Friends' entries from the last 7 days, for FollowingPanel's headline stat
+  const recentActivityCount = useMemo(() => {
+    if (!allEntries || !friendIds) return 0;
+    const since = getWeekAgoTimestamp();
+    return allEntries.filter(
+      (entry) =>
+        friendIds.includes(entry.user_id) &&
+        new Date(entry.created_at).getTime() >= since
+    ).length;
+  }, [allEntries, friendIds]);
 
   const handlePrevPage = () => {
     if (pageNumber > 0) {
@@ -166,6 +149,38 @@ export const EntryList = ({
   // #endregion Component Logic
 
   // #region Render
+  const renderEmptyState = () => {
+    if (filter === "friends" && isFriendIdsLoading) {
+      return <div>Loading entries...</div>;
+    }
+
+    if (filter === "friends" && pageNumber === 0) {
+      return (
+        <EmptyFeedState
+          title="No activity yet from your friends"
+          subtitle="Add friends to see their activity here!"
+          ctaHref={profile ? `/profile/${profile.username}/friends` : undefined}
+          ctaLabel="Find Friends"
+        />
+      );
+    }
+
+    if (filter === "mine" && pageNumber === 0) {
+      return (
+        <EmptyFeedState
+          title="You haven't posted anything yet"
+          subtitle="Reviews, ratings, and status updates you post will show up here."
+          ctaHref="/entry/create"
+          ctaLabel="Create your first entry"
+        />
+      );
+    }
+
+    return (
+      <div className="text-gray-400 text-center py-8">No entries found</div>
+    );
+  };
+
   if (isLoading) {
     return <div>Loading entries...</div>;
   }
@@ -174,81 +189,75 @@ export const EntryList = ({
     return <div>Error loading entries: {error.message}</div>;
   }
 
-  if (!entries || entries.length === 0) {
-    if (friendsOnly && pageNumber === 0) {
-      return (
-        <div className="flex flex-col items-center justify-center py-12 px-4 text-center gap-6">
-          <div>
-            <div className="text-gray-400 text-lg mb-4">
-              No activity yet from you or your friends
-            </div>
-
-            <div className="text-gray-500 text-sm max-w-md">
-              Add friends to see their activity here! This is where you'll see
-              your own posts and your friends' posts.
-            </div>
-          </div>
-
-          {profile && (
-            <Link
-              to={`/profile/${profile.username}/friends`}
-              className="px-6 py-3 bg-rose-600 hover:bg-rose-700 text-white rounded-lg transition font-semibold flex items-center gap-2"
-            >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                />
-              </svg>
-              Find Friends
-            </Link>
-          )}
-        </div>
-      );
-    }
-    return (
-      <div className="text-gray-400 text-center py-8">No entries found</div>
-    );
-  }
-
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-row flex-wrap gap-6 justify-center">
-        {entries.map((entry) => (
-          <EntryItem entry={entry} key={entry.id} anonymized={anonymized} />
-        ))}
-      </div>
+      {!entries || entries.length === 0 ? (
+        renderEmptyState()
+      ) : (
+        <>
+          {pageNumber === 0 &&
+            (user && profile ? (
+              <div className="grid gap-4 lg:grid-cols-[minmax(0,1.65fr)_minmax(290px,0.85fr)]">
+                <FeaturedEntry entry={entries[0]} anonymized={anonymized} />
+                <div className="grid gap-4 lg:grid-rows-[minmax(0,1fr)_auto]">
+                  <FollowingPanel
+                    userId={user.id}
+                    username={profile.username}
+                    recentActivityCount={recentActivityCount}
+                  />
+                  <CreateEntryCta />
+                </div>
+              </div>
+            ) : (
+              <FeaturedEntry entry={entries[0]} anonymized={anonymized} />
+            ))}
+
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold uppercase tracking-wider text-neutral-300">
+              {ACTIVITY_FILTERS.find((f) => f.value === filter)?.label ??
+                "Activity"}
+            </h3>
+            <p className="font-mono text-xs text-neutral-600">
+              {entries.length} {entries.length === 1 ? "entry" : "entries"}
+            </p>
+          </div>
+
+          <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+            {entries.map((entry) => (
+              <EntryItem entry={entry} key={entry.id} anonymized={anonymized} />
+            ))}
+          </div>
+        </>
+      )}
 
       {/* Pagination Controls */}
-      <div className="flex justify-center items-center gap-4 py-4">
-        <button
-          onClick={handlePrevPage}
-          disabled={pageNumber === 0}
-          className="flex items-center gap-1 px-4 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-white hover:border-rose-500 disabled:opacity-50 disabled:cursor-not-allowed transition"
-        >
-          <ChevronLeft className="size-4" />
-          Prev
-        </button>
+      {entries.length > 0 && (
+        <div className="flex justify-center items-center gap-2 py-4">
+          <button
+            onClick={handlePrevPage}
+            disabled={pageNumber === 0}
+            aria-label="Previous page"
+            className="flex items-center justify-center size-9 bg-zinc-900 border border-zinc-800 rounded-md text-white hover:border-rose-500 disabled:opacity-40 disabled:cursor-not-allowed transition"
+          >
+            <ChevronLeft className="size-4" />
+          </button>
 
-        <span className="text-gray-400">Page {pageNumber + 1}</span>
+          <span className="flex items-center justify-center size-9 rounded-md bg-rose-500 font-mono text-xs font-semibold text-white">
+            {pageNumber + 1}
+          </span>
 
-        <button
-          onClick={handleNextPage}
-          disabled={!hasMore}
-          className="flex items-center gap-1 px-4 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-white hover:border-rose-500 disabled:opacity-50 disabled:cursor-not-allowed transition"
-        >
-          Next
-          <ChevronRight className="size-4" />
-        </button>
-      </div>
+          <button
+            onClick={handleNextPage}
+            disabled={!hasMore}
+            aria-label="Next page"
+            className="flex items-center justify-center size-9 bg-zinc-900 border border-zinc-800 rounded-md text-white hover:border-rose-500 disabled:opacity-40 disabled:cursor-not-allowed transition"
+          >
+            <ChevronRight className="size-4" />
+          </button>
+        </div>
+      )}
     </div>
   );
   // #endregion Render
 };
+// #endregion

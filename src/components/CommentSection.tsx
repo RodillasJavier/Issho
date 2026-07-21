@@ -13,6 +13,8 @@ import supabase from "../supabase-client";
 import { CommentItem } from "./CommentItem";
 import { UserAvatar } from "./UserAvatar";
 import { getProfileById } from "../services/supabase/profiles";
+import { incrementEntryCommentCount } from "../services/supabase/entries";
+import type { Entry } from "../types/database.types";
 
 // #region Types
 import type { Comment } from "../types/database.types";
@@ -100,6 +102,12 @@ export const CommentSection = ({
       createComment(newComment, entryId, user?.id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["comments", entryId] });
+
+      // Keep the cached feed list's comment count in sync so navigating
+      // back shows the up-to-date number instead of the stale initial fetch.
+      queryClient.setQueryData<Entry[]>(["entries"], (old) =>
+        incrementEntryCommentCount(old, entryId)
+      );
     },
   });
 

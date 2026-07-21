@@ -5,78 +5,18 @@
  */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ThumbsUp, ThumbsDown } from "lucide-react";
-import supabase from "../supabase-client";
 import { useAuth } from "../hooks/useAuth";
+import { getVotes, castVote } from "../services/supabase/votes";
+import { applyVoteToEntriesCache } from "../services/supabase/entries";
+import type { Entry } from "../types/database.types";
 
 // #region Types
 interface LikeButtonProps {
   entryId: string;
 }
-
-interface Vote {
-  id: string;
-  entry_id: string;
-  user_id: string;
-  vote: number;
-}
 // #endregion Types
 
 // #region Component Logic
-const vote = async (voteValue: number, entryId: string, userId: string) => {
-  const { data: existingVote } = await supabase
-    .from("votes")
-    .select("*")
-    .eq("entry_id", entryId)
-    .eq("user_id", userId)
-    .maybeSingle();
-
-  if (existingVote) {
-    if (existingVote.vote === voteValue) {
-      // Remove vote if clicking the same vote again
-      const { error } = await supabase
-        .from("votes")
-        .delete()
-        .eq("id", existingVote.id);
-
-      if (error) throw new Error(error.message);
-
-      return;
-    }
-
-    // Update vote if changing vote value
-    const { error } = await supabase
-      .from("votes")
-      .update({ vote: voteValue })
-      .eq("id", existingVote.id);
-
-    if (error) throw new Error(error.message);
-
-    return;
-  }
-
-  if (!existingVote) {
-    // Create new vote (only if no existing vote)
-    const { error } = await supabase
-      .from("votes")
-      .insert({ entry_id: entryId, user_id: userId, vote: voteValue });
-
-    if (error) throw new Error(error.message);
-  }
-};
-
-const fetchVotes = async (entryId: string): Promise<Vote[]> => {
-  const { data, error } = await supabase
-    .from("votes")
-    .select("*")
-    .eq("entry_id", entryId);
-
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  return data as Vote[];
-};
-
 export const LikeButton = ({ entryId }: LikeButtonProps) => {
   const { user } = useAuth();
 
@@ -86,20 +26,29 @@ export const LikeButton = ({ entryId }: LikeButtonProps) => {
     data: votes,
     isLoading,
     error,
-  } = useQuery<Vote[], Error>({
+  } = useQuery({
     queryKey: ["votes", entryId],
-    queryFn: () => fetchVotes(entryId),
+    queryFn: () => getVotes(entryId),
   });
 
-  const { mutate } = useMutation({
-    mutationFn: (voteValue: number) => {
+  const userVote = votes?.find((v) => v.user_id === user?.id)?.vote ?? null;
+
+  const { mutate, isPending } = useMutation({
+    mutationFn: (voteValue: 1 | -1) => {
       if (!user) {
         throw new Error("You must be logged in to vote!");
       }
-      return vote(voteValue, entryId, user.id);
+      return castVote(entryId, user.id, voteValue);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["votes", entryId] });
+    onSuccess: async (nextVote) => {
+      const freshVotes = await getVotes(entryId);
+      queryClient.setQueryData(["votes", entryId], freshVotes);
+
+      // Keep the cached feed list's counts in sync so navigating back
+      // shows the up-to-date numbers instead of the stale initial fetch.
+      queryClient.setQueryData<Entry[]>(["entries"], (old) =>
+        applyVoteToEntriesCache(old, entryId, userVote, nextVote)
+      );
     },
   });
   // #endregion Component Logic
@@ -116,10 +65,9 @@ export const LikeButton = ({ entryId }: LikeButtonProps) => {
 
   const likes = votes?.filter((v) => v.vote === 1).length || 0;
   const dislikes = votes?.filter((v) => v.vote === -1).length || 0;
-  const userVote = votes?.find((v) => v.user_id === user?.id)?.vote;
 
   const buttonClasses = (active: boolean) =>
-    `flex items-center justify-between gap-2 rounded-lg border px-3 py-2.5 text-xs font-medium transition-colors cursor-pointer ${
+    `flex items-center justify-between gap-2 rounded-lg border px-3 py-2.5 text-xs font-medium transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 ${
       active
         ? "border-rose-400/50 bg-rose-400/10 text-rose-200"
         : "border-neutral-800 bg-neutral-950 text-neutral-400 hover:border-neutral-700 hover:bg-neutral-800 hover:text-white"
@@ -136,6 +84,8 @@ export const LikeButton = ({ entryId }: LikeButtonProps) => {
       <div className="grid grid-cols-2 gap-2">
         <button
           aria-pressed={Number(userVote) === 1}
+          disabled={!user || isPending}
+          title={!user ? "Sign in to react" : undefined}
           className={buttonClasses(Number(userVote) === 1)}
           onClick={() => mutate(1)}
         >
@@ -148,6 +98,8 @@ export const LikeButton = ({ entryId }: LikeButtonProps) => {
 
         <button
           aria-pressed={Number(userVote) === -1}
+          disabled={!user || isPending}
+          title={!user ? "Sign in to react" : undefined}
           className={buttonClasses(Number(userVote) === -1)}
           onClick={() => mutate(-1)}
         >

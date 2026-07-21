@@ -62,9 +62,10 @@ export interface Entry {
   status_value: AnimeStatus | null; // For "status_update" entries
   anime?: Anime; // When joined
   profile?: Profile; // When joined
-  vote_count?: number; // When aggregated
+  likes_count?: number; // When aggregated
+  dislikes_count?: number; // When aggregated
   comment_count?: number; // When aggregated
-  user_vote?: number; // User's vote (-1, 0, 1)
+  user_vote?: number | null; // Current user's vote on this entry: 1, -1, or null
 }
 
 export interface Vote {

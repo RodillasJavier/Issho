@@ -7,16 +7,18 @@
  * yet — the "add to database" step is never shown. Reuses useListStatusEntry
  * so the status picker matches the anime detail page.
  */
-import { Check, ChevronDown } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { Link } from "react-router";
 import { useAuth } from "../hooks/useAuth";
 import { useListStatusEntry } from "../hooks/useListStatusEntry";
+import { StatusPickerDropdown } from "./StatusPickerDropdown";
 import { getAnimeByAnilistId } from "../api/animeImport";
 import { addAniListAnimeToList } from "../api/watchlist";
 import {
   getUserAnimeEntry,
   addUserAnimeEntry,
   updateUserAnimeEntry,
+  removeUserAnimeEntry,
 } from "../services/supabase/userAnimeList";
 import { STATUS_LABELS, STATUS_COLORS } from "../constants/animeStatus";
 import { splitGenres } from "../utils/anime";
@@ -82,10 +84,12 @@ export const SearchResultCard = ({
         ? addUserAnimeEntry(localAnime.id, user!.id, status)
         : addAniListAnimeToList(anilistId!, user!.id, status),
     updateEntry: (entryId, status) => updateUserAnimeEntry(entryId, { status }),
+    removeEntry: (entryId) => removeUserAnimeEntry(entryId),
     invalidateKeys: [
       ["searchListEntry", anilistId ?? localAnime?.id, user?.id],
       ["userAnimeList", user?.id],
       ["anime"],
+      ["entries"],
     ],
     enabled: !!user,
   });
@@ -221,7 +225,7 @@ const ListControl = ({
         <button
           type="button"
           onClick={() => setShowStatusPicker(!showStatusPicker)}
-          className={`${buttonBase} ${STATUS_COLORS[listEntry.status]}`}
+          className={`${buttonBase} cursor-pointer ${STATUS_COLORS[listEntry.status]}`}
         >
           {STATUS_LABELS[listEntry.status]}
           <ChevronDown className="size-4" />
@@ -230,7 +234,7 @@ const ListControl = ({
         <button
           type="button"
           onClick={() => setShowStatusPicker(!showStatusPicker)}
-          className={`${buttonBase} bg-rose-500 text-white hover:bg-rose-600`}
+          className={`${buttonBase} cursor-pointer bg-rose-500 text-white hover:bg-rose-600`}
         >
           + Add to list
         </button>
@@ -239,24 +243,11 @@ const ListControl = ({
       {showStatusPicker && (
         <>
           <div className="absolute bottom-full left-0 z-100 mb-2 min-w-[200px] rounded border border-neutral-800 bg-neutral-900 shadow-lg">
-            <div className="py-1">
-              {(Object.keys(STATUS_LABELS) as AnimeStatus[]).map((status) => (
-                <button
-                  key={status}
-                  type="button"
-                  onClick={() => handleStatusSelect(status)}
-                  disabled={isMutating}
-                  className={`flex w-full items-center justify-between gap-2 px-4 py-2 text-left text-sm transition-colors hover:bg-neutral-800 disabled:opacity-50 ${
-                    listEntry?.status === status ? "bg-neutral-800" : ""
-                  }`}
-                >
-                  {STATUS_LABELS[status]}
-                  {listEntry?.status === status && (
-                    <Check className="size-4 text-rose-400" />
-                  )}
-                </button>
-              ))}
-            </div>
+            <StatusPickerDropdown
+              currentStatus={listEntry?.status}
+              onSelect={handleStatusSelect}
+              isMutating={isMutating}
+            />
           </div>
 
           <div

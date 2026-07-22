@@ -74,13 +74,13 @@ export const AnimeFeed = ({ animeId }: AnimeFeedProps) => {
   // #endregion
 
   // #region Render
-  if (isLoading || !anime) {
-    return <div className="h-64 w-full animate-pulse rounded-xl bg-white/5" />;
-  }
-
   if (error) {
     console.error(error);
     return <div>Error loading anime: {error.message}</div>;
+  }
+
+  if (isLoading || !anime) {
+    return <div className="h-64 w-full animate-pulse rounded-xl bg-white/5" />;
   }
 
   const bannerUrl = anime.banner_image_url ?? anime.cover_image_url ?? null;

@@ -120,7 +120,7 @@ export const Navbar = () => {
               onClick={() => {
                 setMenuOpen((prev) => !prev);
               }}
-              className="text-gray-300 focus:outline-none"
+              className="cursor-pointer text-gray-300 focus:outline-none"
               aria-label="Toggle menu"
             >
               <svg
@@ -199,7 +199,7 @@ export const Navbar = () => {
                     setMenuOpen(false);
                     signOut();
                   }}
-                  className="flex items-center justify-center gap-2 w-full px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-700"
+                  className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-md px-3 py-2 text-base font-medium text-gray-300 hover:bg-gray-700 hover:text-white"
                 >
                   <svg
                     className="w-5 h-5"

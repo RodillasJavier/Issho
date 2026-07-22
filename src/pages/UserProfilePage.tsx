@@ -261,7 +261,7 @@ export const UserProfilePage = () => {
               <button
                 onClick={handlePrevPage}
                 disabled={pageNumber === 0}
-                className="flex items-center gap-1 px-4 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-white hover:border-rose-500 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                className="flex items-center gap-1 cursor-pointer px-4 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-white hover:border-rose-500 disabled:opacity-50 disabled:cursor-not-allowed transition"
               >
                 <ChevronLeft className="size-4" />
                 Prev
@@ -272,7 +272,7 @@ export const UserProfilePage = () => {
               <button
                 onClick={handleNextPage}
                 disabled={!hasMore}
-                className="flex items-center gap-1 px-4 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-white hover:border-rose-500 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                className="flex items-center gap-1 cursor-pointer px-4 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-white hover:border-rose-500 disabled:opacity-50 disabled:cursor-not-allowed transition"
               >
                 Next
                 <ChevronRight className="size-4" />

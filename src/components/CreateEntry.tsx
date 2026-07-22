@@ -356,7 +356,7 @@ export const CreateEntry = () => {
                     onClick={() =>
                       setActiveTab(activeTab === tab.value ? null : tab.value)
                     }
-                    className={`-mb-px border-b-2 pb-2 text-sm font-medium transition-colors ${
+                    className={`-mb-px cursor-pointer border-b-2 pb-2 text-sm font-medium transition-colors ${
                       activeTab === tab.value
                         ? "border-rose-400 text-rose-300"
                         : "border-transparent text-zinc-500 hover:text-zinc-300"
@@ -447,7 +447,7 @@ export const CreateEntry = () => {
                   key={option.value}
                   type="button"
                   onClick={() => setStatus(active ? null : option.value)}
-                  className={`flex w-full items-center gap-3 rounded-lg border px-4 py-3 text-left transition-colors ${
+                  className={`flex w-full cursor-pointer items-center gap-3 rounded-lg border px-4 py-3 text-left transition-colors ${
                     active
                       ? "border-rose-400/60 bg-rose-400/10"
                       : "border-zinc-800 bg-[#101014] hover:border-zinc-700"
@@ -485,7 +485,7 @@ export const CreateEntry = () => {
               <button
                 type="button"
                 onClick={() => setRating(null)}
-                className="text-sm text-zinc-500 transition-colors hover:text-zinc-200"
+                className="cursor-pointer text-sm text-zinc-500 transition-colors hover:text-zinc-200"
               >
                 Clear
               </button>
@@ -517,7 +517,7 @@ export const CreateEntry = () => {
                 key={value}
                 type="button"
                 onClick={() => setRating(rating === value ? null : value)}
-                className={`rounded-md border py-2 text-sm font-semibold transition-colors ${
+                className={`cursor-pointer rounded-md border py-2 text-sm font-semibold transition-colors ${
                   rating === value
                     ? "border-rose-400/60 bg-rose-400/10 text-rose-200"
                     : "border-zinc-800 bg-[#101014] text-zinc-300 hover:border-zinc-700"
@@ -534,7 +534,7 @@ export const CreateEntry = () => {
             type="button"
             onClick={() => mutate()}
             disabled={!canPublish || isPending}
-            className="flex w-full items-center justify-center gap-2 rounded-lg bg-rose-500 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-rose-600 disabled:cursor-not-allowed disabled:opacity-40"
+            className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-rose-500 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-rose-600 disabled:cursor-not-allowed disabled:opacity-40"
           >
             <Send className="size-4" />
             {isPending ? "Publishing..." : "Publish entry"}
@@ -583,7 +583,7 @@ const PickRow = ({
     <button
       type="button"
       onClick={onSelect}
-      className="shrink-0 rounded-md px-3 py-1.5 text-sm font-medium text-zinc-400 transition-colors hover:text-rose-300"
+      className="shrink-0 cursor-pointer rounded-md px-3 py-1.5 text-sm font-medium text-zinc-400 transition-colors hover:text-rose-300"
     >
       Select
     </button>
@@ -623,7 +623,7 @@ const SelectedAnime = ({
       <button
         type="button"
         onClick={onChange}
-        className="shrink-0 text-sm text-zinc-500 transition-colors hover:text-zinc-200"
+        className="shrink-0 cursor-pointer text-sm text-zinc-500 transition-colors hover:text-zinc-200"
       >
         Change
       </button>
@@ -641,7 +641,7 @@ const SelectedAnime = ({
             key={option.value}
             type="button"
             onClick={() => onScopeChange(option.value)}
-            className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+            className={`cursor-pointer rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
               scope === option.value
                 ? "bg-zinc-800 text-zinc-100"
                 : "text-zinc-500 hover:text-zinc-200"

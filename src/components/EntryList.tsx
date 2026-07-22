@@ -117,7 +117,7 @@ const PaginationControls = ({
       onClick={onPrevPage}
       disabled={pageNumber === 0}
       aria-label="Previous page"
-      className="flex items-center justify-center size-9 bg-zinc-900 border border-zinc-800 rounded-md text-white hover:border-rose-500 disabled:opacity-40 disabled:cursor-not-allowed transition"
+      className="flex items-center justify-center size-9 cursor-pointer bg-zinc-900 border border-zinc-800 rounded-md text-white hover:border-rose-500 disabled:opacity-40 disabled:cursor-not-allowed transition"
     >
       <ChevronLeft className="size-4" />
     </button>
@@ -130,7 +130,7 @@ const PaginationControls = ({
       onClick={onNextPage}
       disabled={!hasMore}
       aria-label="Next page"
-      className="flex items-center justify-center size-9 bg-zinc-900 border border-zinc-800 rounded-md text-white hover:border-rose-500 disabled:opacity-40 disabled:cursor-not-allowed transition"
+      className="flex items-center justify-center size-9 cursor-pointer bg-zinc-900 border border-zinc-800 rounded-md text-white hover:border-rose-500 disabled:opacity-40 disabled:cursor-not-allowed transition"
     >
       <ChevronRight className="size-4" />
     </button>
@@ -279,12 +279,14 @@ export const EntryList = ({ filter }: EntryListProps) => {
                   entries={featuredEntries}
                   anonymized={anonymized}
                 />
+
                 <div className="grid gap-4 lg:grid-rows-[minmax(0,1fr)_auto]">
                   <FollowingPanel
                     userId={user.id}
                     username={profile.username}
                     recentActivityCount={recentActivityCount}
                   />
+
                   <CreateEntryCta />
                 </div>
               </div>

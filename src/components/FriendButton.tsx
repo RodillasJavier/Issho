@@ -107,7 +107,7 @@ export const FriendButton = ({ targetUserId }: FriendButtonProps) => {
       <button
         onClick={() => unfriendMutation.mutate(friendship.id)}
         disabled={unfriendMutation.isPending}
-        className="px-4 py-2 bg-neutral-600 hover:bg-neutral-700 text-white text-sm rounded border border-neutral-600 transition disabled:opacity-50"
+        className="cursor-pointer rounded border border-neutral-600 bg-neutral-600 px-4 py-2 text-sm text-white transition hover:bg-neutral-700 disabled:cursor-not-allowed disabled:opacity-50"
       >
         {unfriendMutation.isPending ? "Removing..." : "Unfriend"}
       </button>
@@ -120,7 +120,7 @@ export const FriendButton = ({ targetUserId }: FriendButtonProps) => {
       <button
         onClick={() => cancelRequestMutation.mutate(friendship.id)}
         disabled={cancelRequestMutation.isPending}
-        className="px-4 py-2 bg-neutral-600 hover:bg-neutral-700 text-white text-sm rounded border border-neutral-600 transition disabled:opacity-50"
+        className="cursor-pointer rounded border border-neutral-600 bg-neutral-600 px-4 py-2 text-sm text-white transition hover:bg-neutral-700 disabled:cursor-not-allowed disabled:opacity-50"
       >
         {cancelRequestMutation.isPending ? "Canceling..." : "Request Pending"}
       </button>
@@ -134,7 +134,7 @@ export const FriendButton = ({ targetUserId }: FriendButtonProps) => {
         <button
           onClick={() => acceptRequestMutation.mutate(friendship.id)}
           disabled={acceptRequestMutation.isPending}
-          className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-sm rounded border border-rose-600 transition disabled:opacity-50 whitespace-nowrap"
+          className="cursor-pointer whitespace-nowrap rounded border border-rose-600 bg-rose-600 px-4 py-2 text-sm text-white transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {acceptRequestMutation.isPending ? "Accepting..." : "Accept"}
         </button>
@@ -142,7 +142,7 @@ export const FriendButton = ({ targetUserId }: FriendButtonProps) => {
         <button
           onClick={() => rejectRequestMutation.mutate(friendship.id)}
           disabled={rejectRequestMutation.isPending}
-          className="px-4 py-2 bg-neutral-600 hover:bg-neutral-700 text-white text-sm rounded border border-neutral-600 transition disabled:opacity-50 whitespace-nowrap"
+          className="cursor-pointer whitespace-nowrap rounded border border-neutral-600 bg-neutral-600 px-4 py-2 text-sm text-white transition hover:bg-neutral-700 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {rejectRequestMutation.isPending ? "Rejecting..." : "Reject"}
         </button>
@@ -155,7 +155,7 @@ export const FriendButton = ({ targetUserId }: FriendButtonProps) => {
     <button
       onClick={() => sendRequestMutation.mutate()}
       disabled={sendRequestMutation.isPending}
-      className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg transition disabled:opacity-50"
+      className="cursor-pointer rounded-lg bg-rose-600 px-4 py-2 text-white transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-50"
     >
       {sendRequestMutation.isPending ? "Sending..." : "Add Friend"}
     </button>

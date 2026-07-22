@@ -118,7 +118,7 @@ export const DetailHero = ({
                   <button
                     type="button"
                     onClick={() => setExpanded((value) => !value)}
-                    className="mt-1.5 text-sm font-medium text-rose-300 transition-colors hover:text-rose-200"
+                    className="mt-1.5 cursor-pointer text-sm font-medium text-rose-300 transition-colors hover:text-rose-200"
                   >
                     {expanded ? "Show less" : "View full description"}
                   </button>

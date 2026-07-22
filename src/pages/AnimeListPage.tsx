@@ -1,43 +1,27 @@
 /* src/pages/AnimeListPage.tsx */
-import { useState } from "react";
 import { AnimeList } from "../components/AnimeList";
-import { AnimeSearch } from "../components/AnimeSearch";
 
 export const AnimeListPage = () => {
-  const [view, setView] = useState<"browse" | "search">("browse");
-
   return (
-    <div className="flex flex-col items-center w-full space-y-6">
-      <h2 className="text-5xl font-semibold bg-gradient-to-r from-rose-300 to-rose-800 bg-clip-text text-transparent">
-        {view === "browse" ? "Browse Anime" : "Search Anime"}
-      </h2>
+    <div className="w-full">
+      {/* Header */}
+      <section>
+        <p className="font-mono text-xs font-medium uppercase tracking-[0.18em] text-rose-400">
+          Anime discovery
+        </p>
 
-      {/* View Toggle */}
-      <div className="flex gap-2 bg-white/5 rounded-lg p-1">
-        <button
-          onClick={() => setView("browse")}
-          className={`px-6 py-2 rounded-md transition-colors ${
-            view === "browse"
-              ? "bg-rose-400 text-white"
-              : "text-gray-400 hover:text-white"
-          }`}
-        >
-          Browse Database
-        </button>
+        <div className="mt-3">
+          <h1 className="text-3xl font-semibold tracking-tight text-zinc-50 sm:text-4xl">
+            Browse anime
+          </h1>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-500">
+            Search the full catalog — anything you add drops straight into your
+            list.
+          </p>
+        </div>
+      </section>
 
-        <button
-          onClick={() => setView("search")}
-          className={`px-6 py-2 rounded-md transition-colors ${
-            view === "search"
-              ? "bg-rose-400 text-white"
-              : "text-gray-400 hover:text-white"
-          }`}
-        >
-          Search & Add
-        </button>
-      </div>
-      {/* Content */}
-      {view === "browse" ? <AnimeList /> : <AnimeSearch />}
+      <AnimeList />
     </div>
   );
 };

@@ -9,8 +9,8 @@
  * longer tracks the anime.
  */
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "react-router";
-import { Star } from "lucide-react";
+import { Link, useNavigate } from "react-router";
+import { ArrowLeft, Star } from "lucide-react";
 import supabase from "../supabase-client";
 import { LikeButton } from "./LikeButton";
 import { CommentSection } from "./CommentSection";
@@ -58,6 +58,7 @@ export const EntryDetail = ({
   entryId,
   anonymized = false,
 }: EntryDetailProps) => {
+  const navigate = useNavigate();
   const { data, error, isLoading } = useQuery<Entry, Error>({
     queryKey: ["entry", entryId],
     queryFn: () => fetchEntryById(entryId),
@@ -91,13 +92,19 @@ export const EntryDetail = ({
     enabled: !!authorId && isMultiEntryFranchise && memberIds.length > 0,
   });
 
-  // Live values when the author still tracks the anime; frozen post values otherwise
-  const isLive = !!authorSeasonEntry;
-  const displayStatus = authorSeasonEntry
-    ? authorSeasonEntry.status
+  // Series-level entries lead with the author's franchise tracking; per-season
+  // entries lead with the season. Fall back to the frozen post values when the
+  // author no longer tracks it.
+  const isSeriesEntry = !!data?.franchise_key;
+  const authorLiveEntry = isSeriesEntry
+    ? authorFranchiseEntry
+    : authorSeasonEntry;
+  const isLive = !!authorLiveEntry;
+  const displayStatus = authorLiveEntry
+    ? authorLiveEntry.status
     : (data?.status_value ?? null);
-  const displayRating = authorSeasonEntry
-    ? authorSeasonEntry.rating
+  const displayRating = authorLiveEntry
+    ? authorLiveEntry.rating
     : (data?.rating_value ?? null);
 
   const seriesTitle = franchiseDisplayTitle(franchiseMembers ?? []);
@@ -124,6 +131,15 @@ export const EntryDetail = ({
     <div className="lg:grid lg:grid-cols-[300px_minmax(0,1fr)] lg:gap-10">
       {/* Entry Details Sidebar */}
       <aside className="mb-8 lg:mb-0">
+        <button
+          type="button"
+          onClick={() => navigate(-1)}
+          className="group mb-4 flex cursor-pointer items-center gap-1.5 text-sm font-medium text-neutral-400 transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400"
+        >
+          <ArrowLeft className="size-4 transition-transform group-hover:-translate-x-0.5" />
+          Back
+        </button>
+
         <p className="mb-4 text-[10px] font-semibold uppercase tracking-widest text-neutral-500">
           Entry details
         </p>
@@ -258,11 +274,19 @@ export const EntryDetail = ({
             Anime journal entry
           </p>
           <Link
-            to={`/anime/${data.anime_id}`}
+            to={
+              isSeriesEntry
+                ? `/series/${data.franchise_key}`
+                : `/anime/${data.anime_id}`
+            }
             className="block hover:text-rose-300 transition-colors"
           >
             <h1 className="text-3xl font-semibold text-white sm:text-4xl lg:text-5xl">
-              {data.anime?.name}
+              {isSeriesEntry
+                ? (seriesTitle ??
+                  data.anime?.franchise_title ??
+                  data.anime?.name)
+                : data.anime?.name}
             </h1>
           </Link>
 

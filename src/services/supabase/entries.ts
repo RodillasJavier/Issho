@@ -4,9 +4,10 @@
  * Bulk activity-feed fetch: entries with vote/comment counts (via the
  * get_entries_with_counts RPC) joined with anime and profile data in
  * memory. Shared under the ["entries"] query key by EntryList (the
- * homepage feed) and FriendsPage (per-friend channel previews), so the
- * second consumer to mount never triggers an extra network fetch once the
- * first has warmed the cache.
+ * homepage feed), FriendsPage (per-friend channel previews), and
+ * FranchisePage (series-level posts, filtered client-side by
+ * franchise_key), so the second consumer to mount never triggers an extra
+ * network fetch once the first has warmed the cache.
  */
 import supabase from "../../supabase-client";
 import type { Entry } from "../../types/database.types";
@@ -24,6 +25,7 @@ interface EntryWithCounts {
   comment_count: number;
   rating_value: number | null;
   status_value: string | null;
+  franchise_key: number | null;
   user_vote: number | null;
 }
 
@@ -31,6 +33,9 @@ interface AnimeData {
   id: string;
   name: string;
   cover_image_url: string | null;
+  franchise_title: string | null;
+  franchise_key: number | null;
+  banner_image_url: string | null;
 }
 
 interface ProfileData {
@@ -59,7 +64,9 @@ export const fetchEntriesWithCounts = async (): Promise<Entry[]> => {
   const [{ data: animeData }, { data: profileData }] = await Promise.all([
     supabase
       .from("anime")
-      .select("id, name, cover_image_url")
+      .select(
+        "id, name, cover_image_url, franchise_title, franchise_key, banner_image_url"
+      )
       .in("id", animeIds),
     supabase
       .from("profiles")

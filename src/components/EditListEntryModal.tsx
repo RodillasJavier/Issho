@@ -40,11 +40,16 @@ export const EditListEntryModal = ({
       removeConfirmText="Remove this anime from your list?"
       onUpdate={(updates) => updateUserAnimeEntry(entry.id, updates)}
       onRemove={() => removeUserAnimeEntry(entry.id)}
-      onInvalidate={() => {
+      onInvalidate={(statusChanged) => {
         queryClient.invalidateQueries({
           queryKey: ["userAnimeList", entry.anime_id],
         });
         queryClient.invalidateQueries({ queryKey: ["userAnimeList"] });
+        // A rating/notes-only save never touches the entries table — only
+        // invalidate the shared feed cache when it actually could have.
+        if (statusChanged) {
+          queryClient.invalidateQueries({ queryKey: ["entries"] });
+        }
       }}
       onClose={onClose}
     />

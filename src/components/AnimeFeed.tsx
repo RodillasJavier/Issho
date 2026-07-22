@@ -1,25 +1,28 @@
 /**
  * src/components/AnimeFeed.tsx
  *
- * Component that displays a feed of entries related to a specific anime.
+ * Season detail view (route /anime/:id): a full-bleed hero for the season,
+ * per-season watchlist tracking, a link up to its series with the sibling
+ * "Seasons & films" grid (current season highlighted), and the season's own
+ * community entries.
  */
-import { useState } from "react";
+import { useMemo } from "react";
 import { Link } from "react-router";
-import type { Anime, Entry } from "../types/database.types";
-import supabase from "../supabase-client";
+import { ArrowRight, Plus } from "lucide-react";
+import type { Anime } from "../types/database.types";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "../hooks/useAuth";
-import { EntryItem } from "./EntryItem";
 import { AddToListButton } from "./AddToListButton";
-import { EditListEntryModal } from "./EditListEntryModal";
-import { FranchiseListButton } from "./FranchiseListButton";
-import { EditFranchiseEntryModal } from "./EditFranchiseEntryModal";
-import { AnimeHeader } from "./AnimeHeader";
+import { DetailHero } from "./DetailHero";
+import { SeasonsGrid } from "./SeasonsGrid";
+import { WatchStatusBadge } from "./WatchStatusBadge";
+import { CommunityEntriesSection } from "./CommunityEntriesSection";
 import { fetchAnime } from "../services/supabase/anime";
+import { fetchEntriesWithCounts } from "../services/supabase/entries";
 import { getUserAnimeEntry } from "../services/supabase/userAnimeList";
-import { getUserFranchiseEntry } from "../services/supabase/userFranchiseList";
 import { useFranchiseMembers } from "../hooks/useFranchiseMembers";
 import { franchiseDisplayTitle } from "../utils/franchise";
+import { splitGenres } from "../utils/anime";
 
 // #region Types
 interface AnimeFeedProps {
@@ -28,42 +31,23 @@ interface AnimeFeedProps {
 // #endregion
 
 // #region Component Logic
-
-/**
- * Fetch anime entries for a specific anime.
- *
- * @param animeId uuid of the anime
- * @returns List of entries for the anime
- */
-const fetchAnimeEntries = async (animeId: string): Promise<Entry[]> => {
-  const { data, error } = await supabase
-    .from("entries")
-    .select(
-      `
-      *,
-      anime(name, cover_image_url),
-      profile:profiles!user_id(id, username, avatar_url)
-    `
-    )
-    .eq("anime_id", animeId)
-    .order("created_at", { ascending: false });
-
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  return data as Entry[];
-};
-
 export const AnimeFeed = ({ animeId }: AnimeFeedProps) => {
   const { user } = useAuth();
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [showFranchiseModal, setShowFranchiseModal] = useState(false);
 
-  const { data, isLoading, error } = useQuery<Entry[], Error>({
-    queryKey: ["animeEntries", animeId],
-    queryFn: () => fetchAnimeEntries(animeId),
+  // Shares the ["entries"] cache with the homepage feed/Friends page/Series
+  // page (per CLAUDE.md), so this never triggers its own fetch once that's
+  // warm, and gets the same accurate like/dislike/comment counts they do.
+  const { data: allEntries } = useQuery({
+    queryKey: ["entries"],
+    queryFn: fetchEntriesWithCounts,
   });
+  const entries = useMemo(
+    () =>
+      (allEntries ?? []).filter(
+        (entry) => entry.anime_id === animeId && entry.franchise_key == null
+      ),
+    [allEntries, animeId]
+  );
 
   const { data: listEntry } = useQuery({
     queryKey: ["userAnimeList", animeId, user?.id],
@@ -71,133 +55,86 @@ export const AnimeFeed = ({ animeId }: AnimeFeedProps) => {
     enabled: !!user,
   });
 
-  const { data: anime } = useQuery<Anime, Error>({
+  const {
+    data: anime,
+    isLoading,
+    error,
+  } = useQuery<Anime, Error>({
     queryKey: ["anime", animeId],
     queryFn: () => fetchAnime(animeId),
   });
 
   const franchiseKey = anime?.franchise_key ?? null;
-
-  // Series-level UI only appears for real multi-entry franchises
   const { franchiseMembers, isMultiEntryFranchise } =
     useFranchiseMembers(franchiseKey);
   const franchiseTitle =
     franchiseDisplayTitle(franchiseMembers ?? []) ??
     anime?.franchise_title ??
-    anime?.name ??
     "this series";
-
-  const { data: franchiseEntry } = useQuery({
-    queryKey: ["userFranchiseList", franchiseKey, user?.id],
-    queryFn: () => getUserFranchiseEntry(franchiseKey!, user!.id),
-    enabled: !!user && franchiseKey != null && isMultiEntryFranchise,
-  });
   // #endregion
 
   // #region Render
-  if (isLoading) {
-    return <div>Loading entries...</div>;
-  }
-
   if (error) {
     console.error(error);
-    return <div>Error loading entries: {error.message}</div>;
+    return <div>Error loading anime: {error.message}</div>;
   }
 
+  if (isLoading || !anime) {
+    return <div className="h-64 w-full animate-pulse rounded-xl bg-white/5" />;
+  }
+
+  const bannerUrl = anime.banner_image_url ?? anime.cover_image_url ?? null;
+  const subtitle = [anime.name_japanese, anime.year?.toString()]
+    .filter(Boolean)
+    .join(" · ");
+  const genres = splitGenres(anime.genres);
+
   return (
-    <div className="flex flex-col gap-6 w-full">
-      {/* Anime Header */}
-      <AnimeHeader animeId={animeId} />
+    <div className="flex flex-col gap-10">
+      <DetailHero
+        bannerUrl={bannerUrl}
+        eyebrow="Season"
+        title={anime.name}
+        subtitle={subtitle || undefined}
+        aboveActions={
+          isMultiEntryFranchise && franchiseKey != null ? (
+            <Link
+              to={`/series/${franchiseKey}`}
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-rose-300 transition-colors hover:text-rose-200"
+            >
+              Part of {franchiseTitle}
+              <ArrowRight aria-hidden className="size-4" />
+            </Link>
+          ) : undefined
+        }
+        statusBadge={
+          listEntry ? <WatchStatusBadge status={listEntry.status} /> : undefined
+        }
+        genres={genres}
+        description={anime.description}
+        actions={
+          <>
+            <Link
+              to={`/entry/create?animeId=${animeId}`}
+              className="inline-flex items-center gap-2 rounded-md border border-zinc-700 bg-zinc-950/45 px-3 py-2 text-sm font-semibold text-zinc-200 transition-colors hover:border-zinc-500 hover:bg-zinc-800"
+            >
+              <Plus aria-hidden className="size-4 text-rose-300" />
+              Create an entry
+            </Link>
+            {user && <AddToListButton animeId={animeId} />}
+          </>
+        }
+      />
 
-      {/* Add to List Buttons (per-entry, plus series-level for franchises) */}
-      {user && (
-        <div className="flex justify-center gap-3 flex-wrap">
-          <AddToListButton
-            animeId={animeId}
-            onEditClick={() => setShowEditModal(true)}
-          />
-          {isMultiEntryFranchise && franchiseKey != null && (
-            <FranchiseListButton
-              franchiseKey={franchiseKey}
-              onEditClick={() => setShowFranchiseModal(true)}
-            />
-          )}
-        </div>
+      {isMultiEntryFranchise && franchiseMembers && (
+        <SeasonsGrid members={franchiseMembers} currentId={animeId} />
       )}
 
-      {/* Franchise seasons — always the full list, current one highlighted
-          rather than omitted, so the layout stays stable while navigating
-          between seasons */}
-      {isMultiEntryFranchise && (
-        <div className="space-y-2">
-          <h3 className="text-lg font-semibold text-rose-300">
-            Seasons in {franchiseTitle}
-          </h3>
-          <div className="flex flex-wrap gap-2">
-            {franchiseMembers?.map((member) =>
-              member.id === animeId ? (
-                <span
-                  key={member.id}
-                  className="px-3 py-1.5 bg-rose-500/20 border border-rose-400/50 rounded text-sm font-semibold text-rose-300"
-                >
-                  {member.name}
-                  {member.year && (
-                    <span className="text-rose-400/70"> · {member.year}</span>
-                  )}
-                </span>
-              ) : (
-                <Link
-                  key={member.id}
-                  to={`/anime/${member.id}`}
-                  className="px-3 py-1.5 bg-white/5 border border-white/10 hover:border-rose-400/50 rounded text-sm text-gray-300 hover:text-rose-300 transition-colors"
-                >
-                  {member.name}
-                  {member.year && (
-                    <span className="text-neutral-500"> · {member.year}</span>
-                  )}
-                </Link>
-              )
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Entries Section */}
-      <div className="space-y-4">
-        <h3 className="text-2xl font-semibold text-rose-300">
-          Community Activity
-        </h3>
-
-        {data && data.length > 0 ? (
-          <div className="flex flex-wrap gap-6 justify-center">
-            {data.map((entry) => (
-              <EntryItem key={entry.id} entry={entry} />
-            ))}
-          </div>
-        ) : (
-          <p className="text-center text-gray-400 py-8">
-            No activity for this anime yet. Be the first to post!
-          </p>
-        )}
-      </div>
-
-      {/* Edit Modal */}
-      {showEditModal && listEntry && (
-        <EditListEntryModal
-          entry={listEntry}
-          onClose={() => setShowEditModal(false)}
-        />
-      )}
-
-      {/* Series Edit Modal */}
-      {showFranchiseModal && franchiseEntry && (
-        <EditFranchiseEntryModal
-          entry={franchiseEntry}
-          franchiseTitle={franchiseTitle}
-          onClose={() => setShowFranchiseModal(false)}
-        />
-      )}
+      <CommunityEntriesSection
+        entries={entries}
+        emptyMessage="No activity for this season yet. Be the first to post!"
+      />
     </div>
   );
+  // #endregion Render
 };
-// #endregion Render

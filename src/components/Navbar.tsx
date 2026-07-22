@@ -1,12 +1,32 @@
 import { useState } from "react";
-import { Link } from "react-router";
+import { Link, useLocation } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "../hooks/useAuth";
 import { getProfileById } from "../services/supabase/profiles";
 
+const desktopLinkClasses = (active: boolean) =>
+  `border-b-2 pb-1 transition-colors ${
+    active
+      ? "border-rose-400 text-white"
+      : "border-transparent text-gray-300 hover:text-white"
+  }`;
+
+const mobileLinkClasses = (active: boolean) =>
+  `block text-center px-3 py-2 rounded-md text-base font-medium transition-colors ${
+    active
+      ? "bg-neutral-800 text-white"
+      : "text-gray-300 hover:text-white hover:bg-gray-700"
+  }`;
+
 export const Navbar = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const { signOut, user } = useAuth();
+  const location = useLocation();
+
+  const isHomeActive = location.pathname === "/";
+  const isCreateActive = location.pathname.startsWith("/entry/create");
+  const isAnimeActive = location.pathname.startsWith("/anime");
+  const isProfileActive = location.pathname.startsWith("/profile");
 
   const { data: profile } = useQuery({
     queryKey: ["profile", user?.id],
@@ -27,24 +47,18 @@ export const Navbar = () => {
 
           {/* Desktop Nav */}
           <div className="hidden md:flex items-center space-x-8">
-            <Link
-              to="/"
-              className="text-gray-300 hover:text-white transition-colors"
-            >
+            <Link to="/" className={desktopLinkClasses(isHomeActive)}>
               Home
             </Link>
 
             <Link
               to="/entry/create"
-              className="text-gray-300 hover:text-white transition-colors"
+              className={desktopLinkClasses(isCreateActive)}
             >
               Create
             </Link>
 
-            <Link
-              to="/anime"
-              className="text-gray-300 hover:text-white transition-colors"
-            >
+            <Link to="/anime" className={desktopLinkClasses(isAnimeActive)}>
               Anime
             </Link>
 
@@ -54,7 +68,7 @@ export const Navbar = () => {
                 {profile && (
                   <Link
                     to={`/profile/${profile.username}`}
-                    className="text-gray-300 hover:text-white transition-colors"
+                    className={desktopLinkClasses(isProfileActive)}
                   >
                     Profile
                   </Link>
@@ -106,7 +120,7 @@ export const Navbar = () => {
               onClick={() => {
                 setMenuOpen((prev) => !prev);
               }}
-              className="text-gray-300 focus:outline-none"
+              className="cursor-pointer text-gray-300 focus:outline-none"
               aria-label="Toggle menu"
             >
               <svg
@@ -146,7 +160,7 @@ export const Navbar = () => {
             <Link
               to="/"
               onClick={() => setMenuOpen(false)}
-              className="block text-center px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-700"
+              className={mobileLinkClasses(isHomeActive)}
             >
               Home
             </Link>
@@ -154,7 +168,7 @@ export const Navbar = () => {
             <Link
               to="/entry/create"
               onClick={() => setMenuOpen(false)}
-              className="block text-center px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-700"
+              className={mobileLinkClasses(isCreateActive)}
             >
               Create
             </Link>
@@ -162,7 +176,7 @@ export const Navbar = () => {
             <Link
               to="/anime"
               onClick={() => setMenuOpen(false)}
-              className="block text-center px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-700"
+              className={mobileLinkClasses(isAnimeActive)}
             >
               Anime
             </Link>
@@ -174,7 +188,7 @@ export const Navbar = () => {
                   <Link
                     to={`/profile/${profile.username}`}
                     onClick={() => setMenuOpen(false)}
-                    className="block text-center px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-700"
+                    className={mobileLinkClasses(isProfileActive)}
                   >
                     Profile
                   </Link>
@@ -185,7 +199,7 @@ export const Navbar = () => {
                     setMenuOpen(false);
                     signOut();
                   }}
-                  className="flex items-center justify-center gap-2 w-full px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-700"
+                  className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-md px-3 py-2 text-base font-medium text-gray-300 hover:bg-gray-700 hover:text-white"
                 >
                   <svg
                     className="w-5 h-5"

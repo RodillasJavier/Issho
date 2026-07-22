@@ -3,13 +3,15 @@
  *
  * Component for adding anime to user's personal list or showing current status.
  */
-import { Check, ChevronDown } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import { useListStatusEntry } from "../hooks/useListStatusEntry";
+import { StatusPickerDropdown } from "./StatusPickerDropdown";
 import {
   getUserAnimeEntry,
   addUserAnimeEntry,
   updateUserAnimeEntry,
+  removeUserAnimeEntry,
 } from "../services/supabase/userAnimeList";
 import { STATUS_LABELS, STATUS_COLORS } from "../constants/animeStatus";
 import type { AnimeStatus } from "../types/database.types";
@@ -17,15 +19,11 @@ import type { AnimeStatus } from "../types/database.types";
 // #region Types
 interface AddToListButtonProps {
   animeId: string;
-  onEditClick?: () => void;
 }
 // #endregion Types
 
 // #region Component Logic
-export const AddToListButton = ({
-  animeId,
-  onEditClick,
-}: AddToListButtonProps) => {
+export const AddToListButton = ({ animeId }: AddToListButtonProps) => {
   const { user } = useAuth();
 
   const {
@@ -42,9 +40,11 @@ export const AddToListButton = ({
     addEntry: (status: AnimeStatus) =>
       addUserAnimeEntry(animeId, user!.id, status),
     updateEntry: (entryId, status) => updateUserAnimeEntry(entryId, { status }),
+    removeEntry: (entryId) => removeUserAnimeEntry(entryId),
     invalidateKeys: [
       ["userAnimeList", animeId, user?.id],
       ["userAnimeList", user?.id],
+      ["entries"],
     ],
     enabled: !!user,
   });
@@ -70,28 +70,17 @@ export const AddToListButton = ({
     <div className="relative">
       {/* If the user has an anime in their list already, show the status, otherwise show add to list button */}
       {listEntry ? (
-        <div className="flex gap-2">
-          <button
-            onClick={() => setShowStatusPicker(!showStatusPicker)}
-            className={`flex items-center gap-1 px-4 py-2 rounded text-white text-sm font-semibold transition-colors ${STATUS_COLORS[listEntry.status]}`}
-          >
-            {STATUS_LABELS[listEntry.status]}
-            <ChevronDown className="size-4" />
-          </button>
-
-          {onEditClick && (
-            <button
-              onClick={onEditClick}
-              className="px-4 py-2 bg-neutral-700 hover:bg-neutral-600 rounded text-white text-sm transition-colors"
-            >
-              Edit
-            </button>
-          )}
-        </div>
+        <button
+          onClick={() => setShowStatusPicker(!showStatusPicker)}
+          className={`flex cursor-pointer items-center gap-1 rounded px-4 py-2 text-sm font-semibold text-white transition-colors ${STATUS_COLORS[listEntry.status]}`}
+        >
+          {STATUS_LABELS[listEntry.status]}
+          <ChevronDown className="size-4" />
+        </button>
       ) : (
         <button
           onClick={() => setShowStatusPicker(!showStatusPicker)}
-          className="px-4 py-2 bg-rose-500 hover:bg-rose-600 rounded text-white text-sm font-semibold transition-colors"
+          className="cursor-pointer rounded bg-rose-500 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-rose-600"
         >
           + Add to your List
         </button>
@@ -100,23 +89,11 @@ export const AddToListButton = ({
       {/* Status Picker Dropdown */}
       {showStatusPicker && (
         <div className="absolute top-full mt-2 left-0 bg-neutral-900 border border-neutral-800 rounded shadow-lg z-100 min-w-[200px]">
-          <div className="py-1">
-            {(Object.keys(STATUS_LABELS) as AnimeStatus[]).map((status) => (
-              <button
-                key={status}
-                onClick={() => handleStatusSelect(status)}
-                disabled={isMutating}
-                className={`flex w-full items-center justify-between gap-2 text-left px-4 py-2 text-sm hover:bg-neutral-800 transition-colors ${
-                  listEntry?.status === status ? "bg-neutral-800" : ""
-                }`}
-              >
-                {STATUS_LABELS[status]}
-                {listEntry?.status === status && (
-                  <Check className="size-4 text-rose-400" />
-                )}
-              </button>
-            ))}
-          </div>
+          <StatusPickerDropdown
+            currentStatus={listEntry?.status}
+            onSelect={handleStatusSelect}
+            isMutating={isMutating}
+          />
         </div>
       )}
 

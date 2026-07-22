@@ -68,6 +68,17 @@ export const franchiseDisplayTitle = (
 };
 
 /**
+ * The franchise's chain-root member — franchise_key is the AniList id of
+ * that root, so it's whichever member matches, falling back to the first
+ * member when none does (e.g. the root itself isn't in the local table yet).
+ */
+export const franchiseRootMember = (
+  members: Anime[],
+  franchiseKey: number | null
+): Anime | undefined =>
+  members.find((member) => member.anilist_id === franchiseKey) ?? members[0];
+
+/**
  * Human-readable release year span for a franchise, e.g. "2013" or
  * "2013–2023". Returns null when no member has a known year.
  */

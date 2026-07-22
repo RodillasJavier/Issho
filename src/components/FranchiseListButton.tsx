@@ -4,13 +4,15 @@
  * Series-level counterpart of AddToListButton: sets the user's status for a
  * whole franchise. Independent of per-season statuses — never syncs them.
  */
-import { Check, ChevronDown } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import { useListStatusEntry } from "../hooks/useListStatusEntry";
+import { StatusPickerDropdown } from "./StatusPickerDropdown";
 import {
   getUserFranchiseEntry,
   addUserFranchiseEntry,
   updateUserFranchiseEntry,
+  removeUserFranchiseEntry,
 } from "../services/supabase/userFranchiseList";
 import { STATUS_LABELS, STATUS_COLORS } from "../constants/animeStatus";
 import type { AnimeStatus } from "../types/database.types";
@@ -18,14 +20,12 @@ import type { AnimeStatus } from "../types/database.types";
 // #region Types
 interface FranchiseListButtonProps {
   franchiseKey: number;
-  onEditClick?: () => void;
 }
 // #endregion Types
 
 // #region Component Logic
 export const FranchiseListButton = ({
   franchiseKey,
-  onEditClick,
 }: FranchiseListButtonProps) => {
   const { user } = useAuth();
 
@@ -44,6 +44,7 @@ export const FranchiseListButton = ({
       addUserFranchiseEntry(franchiseKey, user!.id, status),
     updateEntry: (entryId, status) =>
       updateUserFranchiseEntry(entryId, { status }),
+    removeEntry: (entryId) => removeUserFranchiseEntry(entryId),
     invalidateKeys: [
       ["userFranchiseList", franchiseKey, user?.id],
       ["userFranchiseList", user?.id],
@@ -71,28 +72,17 @@ export const FranchiseListButton = ({
   return (
     <div className="relative">
       {listEntry ? (
-        <div className="flex gap-2">
-          <button
-            onClick={() => setShowStatusPicker(!showStatusPicker)}
-            className={`flex items-center gap-1 px-4 py-2 rounded text-white text-sm font-semibold transition-colors ${STATUS_COLORS[listEntry.status]}`}
-          >
-            Series: {STATUS_LABELS[listEntry.status]}
-            <ChevronDown className="size-4" />
-          </button>
-
-          {onEditClick && (
-            <button
-              onClick={onEditClick}
-              className="px-4 py-2 bg-neutral-700 hover:bg-neutral-600 rounded text-white text-sm transition-colors"
-            >
-              Edit
-            </button>
-          )}
-        </div>
+        <button
+          onClick={() => setShowStatusPicker(!showStatusPicker)}
+          className={`flex cursor-pointer items-center gap-1 rounded px-4 py-2 text-sm font-semibold text-white transition-colors ${STATUS_COLORS[listEntry.status]}`}
+        >
+          Series: {STATUS_LABELS[listEntry.status]}
+          <ChevronDown className="size-4" />
+        </button>
       ) : (
         <button
           onClick={() => setShowStatusPicker(!showStatusPicker)}
-          className="px-4 py-2 bg-neutral-800 hover:bg-neutral-700 border border-rose-500/50 rounded text-white text-sm font-semibold transition-colors"
+          className="cursor-pointer rounded border border-rose-500/50 bg-neutral-800 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-neutral-700"
         >
           + Track Whole Series
         </button>
@@ -101,23 +91,11 @@ export const FranchiseListButton = ({
       {/* Status Picker Dropdown */}
       {showStatusPicker && (
         <div className="absolute top-full mt-2 left-0 bg-neutral-900 border border-neutral-800 rounded shadow-lg z-100 min-w-[200px]">
-          <div className="py-1">
-            {(Object.keys(STATUS_LABELS) as AnimeStatus[]).map((status) => (
-              <button
-                key={status}
-                onClick={() => handleStatusSelect(status)}
-                disabled={isMutating}
-                className={`flex w-full items-center justify-between gap-2 text-left px-4 py-2 text-sm hover:bg-neutral-800 transition-colors ${
-                  listEntry?.status === status ? "bg-neutral-800" : ""
-                }`}
-              >
-                {STATUS_LABELS[status]}
-                {listEntry?.status === status && (
-                  <Check className="size-4 text-rose-400" />
-                )}
-              </button>
-            ))}
-          </div>
+          <StatusPickerDropdown
+            currentStatus={listEntry?.status}
+            onSelect={handleStatusSelect}
+            isMutating={isMutating}
+          />
         </div>
       )}
 

@@ -1,3 +1,4 @@
+import { Check, CircleDot, CircleX, Star, type LucideIcon } from "lucide-react";
 import type { AnimeStatus } from "../types/database.types";
 
 export const STATUS_LABELS: Record<AnimeStatus, string> = {
@@ -12,4 +13,29 @@ export const STATUS_COLORS: Record<AnimeStatus, string> = {
   watching: "bg-blue-400 text-neutral-900",
   completed: "bg-green-400 text-neutral-900",
   dropped: "border border-red-900 bg-red-900/25 text-red-400",
+};
+
+// Bordered/translucent variant + icon, used by WatchStatusBadge on detail-page
+// heroes. Kept alongside STATUS_COLORS so both variants stay in the same
+// blue/green/red hue family per status rather than drifting independently.
+export const STATUS_BADGE_STYLES: Record<
+  AnimeStatus,
+  { className: string; icon: LucideIcon }
+> = {
+  completed: {
+    className: "border-green-400/20 bg-green-400/[0.08] text-green-300",
+    icon: Check,
+  },
+  watching: {
+    className: "border-blue-400/20 bg-blue-400/[0.08] text-blue-300",
+    icon: CircleDot,
+  },
+  not_started: {
+    className: "border-zinc-700 bg-zinc-800 text-zinc-300",
+    icon: Star,
+  },
+  dropped: {
+    className: "border-red-900 bg-red-900/25 text-red-400",
+    icon: CircleX,
+  },
 };

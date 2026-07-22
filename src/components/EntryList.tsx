@@ -65,6 +65,78 @@ const EmptyFeedState = ({
   </div>
 );
 
+// Compact prev/next control folded into the section header, so paging
+// doesn't require a trip down to the full control below the grid.
+const CompactPager = ({
+  pageNumber,
+  hasMore,
+  onPrevPage,
+  onNextPage,
+}: {
+  pageNumber: number;
+  hasMore: boolean;
+  onPrevPage: () => void;
+  onNextPage: () => void;
+}) => (
+  <div className="flex items-center gap-1 font-mono text-xs text-neutral-600">
+    <button
+      onClick={onPrevPage}
+      disabled={pageNumber === 0}
+      aria-label="Previous page"
+      className="flex items-center justify-center size-6 rounded text-neutral-500 transition-colors hover:text-white disabled:cursor-not-allowed disabled:opacity-30 cursor-pointer"
+    >
+      <ChevronLeft className="size-3.5" />
+    </button>
+
+    <span className="w-4 text-center text-neutral-400">{pageNumber + 1}</span>
+
+    <button
+      onClick={onNextPage}
+      disabled={!hasMore}
+      aria-label="Next page"
+      className="flex items-center justify-center size-6 rounded text-neutral-500 transition-colors hover:text-white disabled:cursor-not-allowed disabled:opacity-30 cursor-pointer"
+    >
+      <ChevronRight className="size-3.5" />
+    </button>
+  </div>
+);
+
+const PaginationControls = ({
+  pageNumber,
+  hasMore,
+  onPrevPage,
+  onNextPage,
+}: {
+  pageNumber: number;
+  hasMore: boolean;
+  onPrevPage: () => void;
+  onNextPage: () => void;
+}) => (
+  <div className="flex justify-center items-center gap-2 py-4">
+    <button
+      onClick={onPrevPage}
+      disabled={pageNumber === 0}
+      aria-label="Previous page"
+      className="flex items-center justify-center size-9 cursor-pointer bg-zinc-900 border border-zinc-800 rounded-md text-white hover:border-rose-500 disabled:opacity-40 disabled:cursor-not-allowed transition"
+    >
+      <ChevronLeft className="size-4" />
+    </button>
+
+    <span className="flex items-center justify-center size-9 rounded-md bg-rose-500 font-mono text-xs font-semibold text-white">
+      {pageNumber + 1}
+    </span>
+
+    <button
+      onClick={onNextPage}
+      disabled={!hasMore}
+      aria-label="Next page"
+      className="flex items-center justify-center size-9 cursor-pointer bg-zinc-900 border border-zinc-800 rounded-md text-white hover:border-rose-500 disabled:opacity-40 disabled:cursor-not-allowed transition"
+    >
+      <ChevronRight className="size-4" />
+    </button>
+  </div>
+);
+
 // #region Component Logic
 export const EntryList = ({ filter }: EntryListProps) => {
   const [pageNumber, setPageNumber] = useState(0);
@@ -136,14 +208,12 @@ export const EntryList = ({ filter }: EntryListProps) => {
   const handlePrevPage = () => {
     if (pageNumber > 0) {
       setPageNumber(pageNumber - 1);
-      window.scrollTo({ top: 0, behavior: "smooth" });
     }
   };
 
   const handleNextPage = () => {
     if (hasMore) {
       setPageNumber(pageNumber + 1);
-      window.scrollTo({ top: 0, behavior: "smooth" });
     }
   };
   // #endregion Component Logic
@@ -189,6 +259,12 @@ export const EntryList = ({ filter }: EntryListProps) => {
     return <div>Error loading entries: {error.message}</div>;
   }
 
+  const featuredEntries = entries.slice(0, 5);
+  // Keying on the actual entry ids (rather than relying on array identity,
+  // which changes on every render via .slice()) lets the carousel remount
+  // and reset its rotation only when the underlying entries truly change.
+  const featuredKey = featuredEntries.map((e) => e.id).join(",");
+
   return (
     <div className="flex flex-col gap-6">
       {!entries || entries.length === 0 ? (
@@ -198,18 +274,28 @@ export const EntryList = ({ filter }: EntryListProps) => {
           {pageNumber === 0 &&
             (user && profile ? (
               <div className="grid gap-4 lg:grid-cols-[minmax(0,1.65fr)_minmax(290px,0.85fr)]">
-                <FeaturedEntry entry={entries[0]} anonymized={anonymized} />
+                <FeaturedEntry
+                  key={featuredKey}
+                  entries={featuredEntries}
+                  anonymized={anonymized}
+                />
+
                 <div className="grid gap-4 lg:grid-rows-[minmax(0,1fr)_auto]">
                   <FollowingPanel
                     userId={user.id}
                     username={profile.username}
                     recentActivityCount={recentActivityCount}
                   />
+
                   <CreateEntryCta />
                 </div>
               </div>
             ) : (
-              <FeaturedEntry entry={entries[0]} anonymized={anonymized} />
+              <FeaturedEntry
+                key={featuredKey}
+                entries={featuredEntries}
+                anonymized={anonymized}
+              />
             ))}
 
           <div className="flex items-center justify-between">
@@ -217,9 +303,17 @@ export const EntryList = ({ filter }: EntryListProps) => {
               {ACTIVITY_FILTERS.find((f) => f.value === filter)?.label ??
                 "Activity"}
             </h3>
-            <p className="font-mono text-xs text-neutral-600">
-              {entries.length} {entries.length === 1 ? "entry" : "entries"}
-            </p>
+            <div className="flex items-center gap-3">
+              <p className="font-mono text-xs text-neutral-600">
+                {entries.length} {entries.length === 1 ? "entry" : "entries"}
+              </p>
+              <CompactPager
+                pageNumber={pageNumber}
+                hasMore={hasMore}
+                onPrevPage={handlePrevPage}
+                onNextPage={handleNextPage}
+              />
+            </div>
           </div>
 
           <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
@@ -227,34 +321,14 @@ export const EntryList = ({ filter }: EntryListProps) => {
               <EntryItem entry={entry} key={entry.id} anonymized={anonymized} />
             ))}
           </div>
+
+          <PaginationControls
+            pageNumber={pageNumber}
+            hasMore={hasMore}
+            onPrevPage={handlePrevPage}
+            onNextPage={handleNextPage}
+          />
         </>
-      )}
-
-      {/* Pagination Controls */}
-      {entries.length > 0 && (
-        <div className="flex justify-center items-center gap-2 py-4">
-          <button
-            onClick={handlePrevPage}
-            disabled={pageNumber === 0}
-            aria-label="Previous page"
-            className="flex items-center justify-center size-9 bg-zinc-900 border border-zinc-800 rounded-md text-white hover:border-rose-500 disabled:opacity-40 disabled:cursor-not-allowed transition"
-          >
-            <ChevronLeft className="size-4" />
-          </button>
-
-          <span className="flex items-center justify-center size-9 rounded-md bg-rose-500 font-mono text-xs font-semibold text-white">
-            {pageNumber + 1}
-          </span>
-
-          <button
-            onClick={handleNextPage}
-            disabled={!hasMore}
-            aria-label="Next page"
-            className="flex items-center justify-center size-9 bg-zinc-900 border border-zinc-800 rounded-md text-white hover:border-rose-500 disabled:opacity-40 disabled:cursor-not-allowed transition"
-          >
-            <ChevronRight className="size-4" />
-          </button>
-        </div>
       )}
     </div>
   );

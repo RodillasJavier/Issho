@@ -30,7 +30,13 @@ export interface EntryEditModalProps<TPostSaveProps extends object = object> {
     review: string | null;
   }) => Promise<unknown>;
   onRemove: () => Promise<unknown>;
-  onInvalidate: () => void;
+  /**
+   * Called after a successful save or remove. `statusChanged` is true when
+   * the status was created, changed, or removed — i.e. when the shared
+   * activity-feed cache may need invalidating too, as opposed to a
+   * rating/notes-only edit that never touches it.
+   */
+  onInvalidate: (statusChanged: boolean) => void;
   onClose: () => void;
   /**
    * Rendered instead of auto-closing when the update just transitioned
@@ -82,7 +88,7 @@ export const EntryEditModal = <TPostSaveProps extends object = object>({
     mutationFn: () =>
       onUpdate({ status, rating: rating || null, review: review || null }),
     onSuccess: () => {
-      onInvalidate();
+      onInvalidate(status !== initialStatus);
       const justCompleted =
         initialStatus !== "completed" && status === "completed";
       if (PostSaveStep && justCompleted) {
@@ -96,7 +102,7 @@ export const EntryEditModal = <TPostSaveProps extends object = object>({
   const deleteMutation = useMutation({
     mutationFn: onRemove,
     onSuccess: () => {
-      onInvalidate();
+      onInvalidate(true);
       onClose();
     },
   });

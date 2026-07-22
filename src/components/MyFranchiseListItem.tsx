@@ -76,7 +76,7 @@ export const MyFranchiseListItem = ({
   return (
     <>
       <ProfileListCard
-        href={`/anime/${lead.anime_id}`}
+        href={`/series/${franchiseKey}`}
         coverUrl={lead?.anime?.cover_image_url}
         coverAlt={title}
         title={title}

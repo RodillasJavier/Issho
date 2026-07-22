@@ -10,7 +10,7 @@ export const AnimePage = () => {
   }
 
   return (
-    <div className="flex flex-col items-center w-full space-y-6">
+    <div className="w-full">
       <AnimeFeed animeId={animeId} />
     </div>
   );

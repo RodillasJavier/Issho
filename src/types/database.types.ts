@@ -60,7 +60,8 @@ export interface Entry {
   user_id: string;
   rating_value: number | null; // For "rating" entries (1-10)
   status_value: AnimeStatus | null; // For "status_update" entries
-  anime?: Anime; // When joined
+  franchise_key: number | null; // Set when the entry is about a whole series
+  anime?: Anime; // When joined (the anchor season for series entries)
   profile?: Profile; // When joined
   likes_count?: number; // When aggregated
   dislikes_count?: number; // When aggregated

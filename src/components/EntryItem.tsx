@@ -91,9 +91,11 @@ export const EntryItem = ({ entry, anonymized = false }: EntryItemProps) => {
               {getEntryTypeLabel(entry.entry_type)}
             </div>
 
-            {/* Title */}
+            {/* Title — the franchise title for series-level entries */}
             <div className="mt-1 line-clamp-1 text-base font-semibold text-white transition-colors group-hover:text-rose-300">
-              {entry.anime?.name ?? "Unknown Anime"}
+              {(entry.franchise_key
+                ? (entry.anime?.franchise_title ?? entry.anime?.name)
+                : entry.anime?.name) ?? "Unknown Anime"}
             </div>
 
             {/* Status + rating — reserved height, present or not */}

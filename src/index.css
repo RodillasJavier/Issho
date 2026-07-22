@@ -21,9 +21,11 @@
       opacity: 0;
     }
   }
+  
   .animate-blink {
     animation: blink 0.8s step-end infinite;
   }
+
   @keyframes loading {
     0% {
       transform: translateX(-100%);
@@ -32,9 +34,11 @@
       transform: translateX(250%);
     }
   }
+
   .animate-loading-bar {
     animation: loading 0.8s ease infinite;
   }
+
   @keyframes entry-fade-in {
     from {
       opacity: 0;
@@ -45,12 +49,30 @@
       transform: none;
     }
   }
+
+  @keyframes featured-progress {
+    from {
+      transform: scaleX(0);
+    }
+    to {
+      transform: scaleX(1);
+    }
+  }
+
+  .animate-featured-progress {
+    animation-name: featured-progress;
+    animation-timing-function: linear;
+    animation-fill-mode: forwards;
+    transform-origin: left;
+  }
 }
 
 .reveal {
   opacity: 0;
   transform: translateY(20px);
-  transition: opacity 0.7s ease, transform 0.7s ease;
+  transition:
+    opacity 0.7s ease,
+    transform 0.7s ease;
 }
 
 .reveal.visible {

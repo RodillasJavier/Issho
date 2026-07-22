@@ -13,6 +13,7 @@ import { EntryPage } from "./pages/EntryPage";
 import { AnimeListPage } from "./pages/AnimeListPage";
 import { CreateAnimePage } from "./pages/CreateAnimePage";
 import { AnimePage } from "./pages/AnimePage";
+import { FranchisePage } from "./pages/FranchisePage";
 import { UserProfilePage } from "./pages/UserProfilePage";
 import { EditProfilePage } from "./pages/EditProfilePage";
 import { FriendsPage } from "./pages/FriendsPage";
@@ -38,6 +39,7 @@ function App() {
           <Route path="/anime" element={<AnimeListPage />} />
           <Route path="/anime/create" element={<CreateAnimePage />} />
           <Route path="/anime/:id" element={<AnimePage />} />
+          <Route path="/series/:franchiseKey" element={<FranchisePage />} />
 
           {/* User Profiles */}
           <Route path="/profile/:username" element={<UserProfilePage />} />

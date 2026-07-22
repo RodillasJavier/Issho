@@ -5,7 +5,6 @@
  * series (FranchisePage) detail views — identical chrome, only the empty
  * state copy differs per caller.
  */
-import { Link } from "react-router";
 import { EntryItem } from "./EntryItem";
 import type { Entry } from "../types/database.types";
 
@@ -27,6 +26,7 @@ export const CommunityEntriesSection = ({
         <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-rose-400">
           From the community
         </p>
+
         <h2
           id="activity-heading"
           className="mt-1 text-2xl font-semibold tracking-tight text-zinc-100"
@@ -34,12 +34,6 @@ export const CommunityEntriesSection = ({
           Recent entries
         </h2>
       </div>
-      <Link
-        to="/entry/create"
-        className="text-sm font-medium text-zinc-500 transition-colors hover:text-rose-300"
-      >
-        Write one
-      </Link>
     </div>
 
     {entries && entries.length > 0 ? (

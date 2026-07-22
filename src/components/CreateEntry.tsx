@@ -9,7 +9,7 @@
  */
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link, useNavigate } from "react-router";
+import { Link, useNavigate, useSearchParams } from "react-router";
 import {
   CheckCircle2,
   CircleDot,
@@ -21,6 +21,7 @@ import {
 import supabase from "../supabase-client";
 import { useAuth } from "../hooks/useAuth";
 import { useFranchiseMembers } from "../hooks/useFranchiseMembers";
+import { fetchAnime } from "../services/supabase/anime";
 import {
   getUserAnimeEntry,
   fetchAllUserAnimeEntries,
@@ -202,6 +203,7 @@ export const CreateEntry = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [searchParams] = useSearchParams();
 
   const [selectedAnime, setSelectedAnime] = useState<Anime | null>(null);
   const [scope, setScope] = useState<Scope>("season");
@@ -212,6 +214,52 @@ export const CreateEntry = () => {
   const [search, setSearch] = useState("");
   // null = search the whole catalogue; a status = search within that list
   const [activeTab, setActiveTab] = useState<AnimeStatus | null>(null);
+
+  // Arriving from a season or series page pre-fills step 01 so the user
+  // isn't forced to re-find the anime they were just looking at. Applied at
+  // most once per URL (tracked via appliedPrefillKey) so a manual "Change"
+  // afterward isn't fought by the prefill re-applying itself.
+  const prefillAnimeId = searchParams.get("animeId");
+  const prefillFranchiseKeyParam = searchParams.get("franchiseKey");
+  const prefillFranchiseKey = prefillFranchiseKeyParam
+    ? Number(prefillFranchiseKeyParam)
+    : null;
+  const prefillKey = prefillAnimeId
+    ? `anime:${prefillAnimeId}`
+    : prefillFranchiseKey != null
+      ? `franchise:${prefillFranchiseKey}`
+      : null;
+  const [appliedPrefillKey, setAppliedPrefillKey] = useState<string | null>(
+    null
+  );
+  const prefillPending = prefillKey != null && prefillKey !== appliedPrefillKey;
+
+  const { data: prefillAnime } = useQuery<Anime, Error>({
+    queryKey: ["anime", prefillAnimeId],
+    queryFn: () => fetchAnime(prefillAnimeId!),
+    enabled: !!prefillAnimeId && prefillPending,
+  });
+
+  const { franchiseMembers: prefillFranchiseMembers } = useFranchiseMembers(
+    prefillFranchiseKey != null && prefillPending ? prefillFranchiseKey : null
+  );
+
+  // Adjusting state during render (not in an effect) so the prefill lands on
+  // the same commit its data arrives in, per React's "adjusting state when a
+  // prop changes" pattern — guarded by appliedPrefillKey so it fires once.
+  if (prefillPending) {
+    const prefillTarget =
+      prefillAnime ??
+      (prefillFranchiseKey != null && prefillFranchiseMembers
+        ? (franchiseRootMember(prefillFranchiseMembers, prefillFranchiseKey) ??
+          null)
+        : null);
+    if (prefillTarget) {
+      setAppliedPrefillKey(prefillKey);
+      setSelectedAnime(prefillTarget);
+      setScope(prefillFranchiseKey != null ? "franchise" : "season");
+    }
+  }
 
   const { data: allAnime } = useQuery<Anime[], Error>({
     queryKey: ["anime"],

@@ -98,14 +98,14 @@ export const FranchisePage = () => {
         description={root.description}
         actions={
           <>
-            {user && <FranchiseListButton franchiseKey={franchiseKey} />}
             <Link
-              to="/entry/create"
+              to={`/entry/create?franchiseKey=${franchiseKey}`}
               className="inline-flex items-center gap-2 rounded-md border border-zinc-700 bg-zinc-950/45 px-3 py-2 text-sm font-semibold text-zinc-200 transition-colors hover:border-zinc-500 hover:bg-zinc-800"
             >
               <Plus aria-hidden className="size-4 text-rose-300" />
               Create an entry
             </Link>
+            {user && <FranchiseListButton franchiseKey={franchiseKey} />}
           </>
         }
       />

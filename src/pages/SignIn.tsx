@@ -2,24 +2,57 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { useAuth } from "../hooks/useAuth";
+import { useResendableAction } from "../hooks/useResendableAction";
+import { AuthLayout } from "../components/auth/AuthLayout";
+import { AuthInput } from "../components/auth/AuthInput";
+import { AuthButton } from "../components/auth/AuthButton";
+import { AuthErrorBanner } from "../components/auth/AuthErrorBanner";
+import { EMAIL_RE } from "../utils/authValidation";
 
 export const SignIn = () => {
+  const navigate = useNavigate();
+  const { signInWithEmail, resendConfirmationEmail } = useAuth();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<{
+    email?: string;
+    password?: string;
+  }>({});
+  const [authError, setAuthError] = useState<{
+    message: string;
+    code?: string;
+  } | null>(null);
   const [loading, setLoading] = useState(false);
-  const { signInWithEmail } = useAuth();
-  const navigate = useNavigate();
+
+  const {
+    resendState,
+    resend: handleResend,
+    reset: resetResend,
+  } = useResendableAction(async () => {
+    await resendConfirmationEmail(email);
+  });
+
+  const validate = () => {
+    const next: typeof fieldErrors = {};
+    if (!EMAIL_RE.test(email)) next.email = "Enter a valid email address.";
+    if (!password) next.password = "Enter your password.";
+    setFieldErrors(next);
+    return Object.keys(next).length === 0;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault(); // Stop page reload
-    setError("");
-    setLoading(true);
+    e.preventDefault();
+    setAuthError(null);
+    resetResend();
 
+    if (!validate()) return;
+
+    setLoading(true);
     const { error } = await signInWithEmail(email, password);
 
     if (error) {
-      setError(error.message);
+      setAuthError({ message: error.message, code: error.code });
       setLoading(false);
     } else {
       navigate("/");
@@ -27,78 +60,75 @@ export const SignIn = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4">
-      <div className="max-w-md w-full space-y-8">
-        <div>
-          <h2 className="text-center text-3xl font-bold text-white cursor-default">
-            Sign in to your account
-          </h2>
+    <AuthLayout title="Sign in to your account">
+      <form onSubmit={handleSubmit} className="space-y-5" noValidate>
+        {authError && (
+          <AuthErrorBanner
+            message={authError.message}
+            action={
+              authError.code === "email_not_confirmed"
+                ? {
+                    label:
+                      resendState === "sent"
+                        ? "Confirmation email sent"
+                        : "Resend confirmation email",
+                    onClick: handleResend,
+                    disabled: resendState !== "idle",
+                  }
+                : undefined
+            }
+          />
+        )}
 
-          <p className="mt-2 text-center text-sm text-gray-300 cursor-default">
-            New to Issho?{" "}
+        <AuthInput
+          label="Email address"
+          type="email"
+          autoComplete="email"
+          placeholder="you@example.com"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          error={fieldErrors.email}
+        />
+
+        <div>
+          <div className="mb-2 flex items-center justify-between">
+            <span className="text-xs font-semibold uppercase tracking-[0.08em] text-neutral-300">
+              Password
+            </span>
+            <Link
+              to="/forgot-password"
+              className="text-xs font-semibold text-rose-500 transition-colors hover:text-rose-400"
+            >
+              Forgot password?
+            </Link>
+          </div>
+          <AuthInput
+            label="Password"
+            hideLabel
+            type="password"
+            autoComplete="current-password"
+            placeholder="••••••••"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            error={fieldErrors.password}
+          />
+        </div>
+
+        <div className="pt-3">
+          <AuthButton type="submit" loading={loading}>
+            {loading ? "Signing in…" : "Sign in"}
+          </AuthButton>
+          <p className="mt-5 text-center text-sm text-neutral-500">
+            Don&apos;t have an account?{" "}
             <Link
               to="/signup"
-              className="font-medium text-rose-400 hover:text-rose-300 transition-colors"
+              className="font-medium text-rose-500 transition-colors hover:text-rose-400"
             >
-              create a new account
+              Create one
             </Link>
           </p>
         </div>
-
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          {error && (
-            <div className="rounded-md bg-red-900/20 border border-red-500 p-3">
-              <p className="text-sm text-red-100">{error}</p>
-            </div>
-          )}
-
-          <div className="space-y-4">
-            <div>
-              <label htmlFor="email" className="sr-only">
-                Email address
-              </label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                autoComplete="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="appearance-none relative block w-full px-3 py-2 border border-gray-700 bg-gray-900 placeholder-gray-500 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-rose-400 focus:border-transparent"
-                placeholder="Email address"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="password" className="sr-only">
-                Password
-              </label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                autoComplete="current-password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="appearance-none relative block w-full px-3 py-2 border border-gray-700 bg-gray-900 placeholder-gray-500 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-rose-400 focus:border-transparent"
-                placeholder="Password"
-              />
-            </div>
-          </div>
-
-          <div>
-            <button
-              type="submit"
-              disabled={loading}
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-rose-500 hover:bg-rose-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-rose-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
-            >
-              {loading ? "Signing in..." : "Sign in"}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+      </form>
+    </AuthLayout>
   );
 };

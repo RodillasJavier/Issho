@@ -14,6 +14,7 @@ import {
   CheckCircle2,
   CircleDot,
   CircleX,
+  Lock,
   Search,
   Send,
   Star,
@@ -581,15 +582,50 @@ export const CreateEntry = () => {
           <button
             type="button"
             onClick={() => mutate()}
-            disabled={!canPublish || isPending}
+            disabled={!user || !canPublish || isPending}
+            title={!user ? "Sign in to publish" : undefined}
             className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-rose-500 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-rose-600 disabled:cursor-not-allowed disabled:opacity-40"
           >
             <Send className="size-4" />
             {isPending ? "Publishing..." : "Publish entry"}
           </button>
-          <p className="mt-3 text-center text-xs text-zinc-600">
-            You can publish a status, rating, review—or any combination.
-          </p>
+
+          {user ? (
+            <p className="mt-3 text-center text-xs text-zinc-600">
+              You can publish a status, rating, review—or any combination.
+            </p>
+          ) : (
+            <div className="mt-3 flex items-start gap-3 rounded-xl border border-rose-400/25 bg-rose-400/[0.04] p-4">
+              <Lock
+                aria-hidden
+                className="mt-0.5 size-4 shrink-0 text-rose-400"
+              />
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-zinc-200">
+                  Sign in to publish
+                </p>
+                <p className="mt-1 text-xs leading-5 text-zinc-500">
+                  Create an account or sign in to save this to your list and
+                  share it with the community.
+                </p>
+                <div className="mt-3 flex items-center gap-4 text-xs font-semibold">
+                  <Link
+                    to="/signin"
+                    className="text-rose-300 transition-colors hover:text-rose-200"
+                  >
+                    Sign in
+                  </Link>
+                  <Link
+                    to="/signup"
+                    className="text-zinc-400 transition-colors hover:text-zinc-200"
+                  >
+                    Create account
+                  </Link>
+                </div>
+              </div>
+            </div>
+          )}
+
           {isError && (
             <p className="mt-3 text-center text-sm text-red-400">
               {error?.message ?? "Something went wrong."} Please try again.

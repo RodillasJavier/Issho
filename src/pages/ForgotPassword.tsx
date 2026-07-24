@@ -53,14 +53,19 @@ export const ForgotPassword = () => {
         <AuthStatusCard
           icon={MailCheckIcon}
           action={
-            <AuthButton
-              type="button"
-              variant="ghost"
-              onClick={handleResend}
-              disabled={resendState !== "idle"}
-            >
-              {resendState === "sent" ? "Reset link sent" : "Resend reset link"}
-            </AuthButton>
+            <>
+              <AuthButton
+                type="button"
+                variant="ghost"
+                onClick={handleResend}
+                disabled={resendState !== "idle"}
+              >
+                {resendState === "sent"
+                  ? "Reset link sent"
+                  : "Resend reset link"}
+              </AuthButton>
+              {formError && <p className="text-sm text-red-400">{formError}</p>}
+            </>
           }
           footer={
             <Link

@@ -30,7 +30,12 @@ export const SignIn = () => {
     resend: handleResend,
     reset: resetResend,
   } = useResendableAction(async () => {
-    await resendConfirmationEmail(email);
+    const { error } = await resendConfirmationEmail(email);
+    if (error) {
+      setAuthError({ message: error.message, code: "email_not_confirmed" });
+      return false;
+    }
+    return true;
   });
 
   const validate = () => {

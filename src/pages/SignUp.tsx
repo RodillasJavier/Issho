@@ -31,10 +31,17 @@ export const SignUp = () => {
   const [formError, setFormError] = useState("");
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [resendError, setResendError] = useState("");
 
   const { resendState, resend: handleResend } = useResendableAction(
     async () => {
-      await resendConfirmationEmail(email);
+      const { error } = await resendConfirmationEmail(email);
+      if (error) {
+        setResendError(error.message);
+        return false;
+      }
+      setResendError("");
+      return true;
     }
   );
 
@@ -74,16 +81,21 @@ export const SignUp = () => {
         <AuthStatusCard
           icon={MailCheckIcon}
           action={
-            <AuthButton
-              type="button"
-              variant="ghost"
-              onClick={handleResend}
-              disabled={resendState !== "idle"}
-            >
-              {resendState === "sent"
-                ? "Confirmation email sent"
-                : "Resend confirmation email"}
-            </AuthButton>
+            <>
+              <AuthButton
+                type="button"
+                variant="ghost"
+                onClick={handleResend}
+                disabled={resendState !== "idle"}
+              >
+                {resendState === "sent"
+                  ? "Confirmation email sent"
+                  : "Resend confirmation email"}
+              </AuthButton>
+              {resendError && (
+                <p className="text-sm text-red-400">{resendError}</p>
+              )}
+            </>
           }
           footer={
             <Link
@@ -157,7 +169,11 @@ export const SignUp = () => {
         <AuthButton
           type="submit"
           loading={loading}
-          disabled={!isPasswordValid(password) || confirm !== password}
+          disabled={
+            !EMAIL_RE.test(email) ||
+            !isPasswordValid(password) ||
+            confirm !== password
+          }
         >
           {loading ? "Creating account…" : "Sign up"}
         </AuthButton>

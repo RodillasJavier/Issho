@@ -32,8 +32,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       password,
     });
 
-    if (!error && data.user) {
-      setUser(data.user);
+    if (!error && data.session) {
+      setUser(data.session.user);
     }
 
     return { data, error };

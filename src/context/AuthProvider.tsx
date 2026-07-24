@@ -32,8 +32,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       password,
     });
 
-    if (!error && data.user) {
-      setUser(data.user);
+    if (!error && data.session) {
+      setUser(data.session.user);
     }
 
     return { data, error };
@@ -43,10 +43,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
+      options: {
+        emailRedirectTo: window.location.origin,
+      },
     });
 
-    if (!error && data.user) {
-      setUser(data.user);
+    if (!error && data.session) {
+      setUser(data.session.user);
     }
 
     return { data, error };
@@ -60,9 +63,41 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
+  const resetPasswordForEmail = async (email: string) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+
+    return { error };
+  };
+
+  const updatePassword = async (password: string) => {
+    const { error } = await supabase.auth.updateUser({ password });
+
+    return { error };
+  };
+
+  const resendConfirmationEmail = async (email: string) => {
+    const { error } = await supabase.auth.resend({
+      type: "signup",
+      email,
+      options: { emailRedirectTo: window.location.origin },
+    });
+
+    return { error };
+  };
+
   return (
     <AuthContext.Provider
-      value={{ user, signInWithEmail, signUpWithEmail, signOut }}
+      value={{
+        user,
+        signInWithEmail,
+        signUpWithEmail,
+        signOut,
+        resetPasswordForEmail,
+        updatePassword,
+        resendConfirmationEmail,
+      }}
     >
       {children}
     </AuthContext.Provider>

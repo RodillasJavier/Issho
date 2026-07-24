@@ -17,6 +17,13 @@ export interface AuthContextType {
     password: string
   ) => Promise<{ data: AuthResponse["data"]; error: AuthError | null }>;
   signOut: () => Promise<void>;
+  resetPasswordForEmail: (
+    email: string
+  ) => Promise<{ error: AuthError | null }>;
+  updatePassword: (password: string) => Promise<{ error: AuthError | null }>;
+  resendConfirmationEmail: (
+    email: string
+  ) => Promise<{ error: AuthError | null }>;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(

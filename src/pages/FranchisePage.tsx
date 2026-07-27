@@ -22,7 +22,10 @@ import { SeasonsGrid } from "../components/SeasonsGrid";
 import { WatchStatusBadge } from "../components/WatchStatusBadge";
 import { CommunityEntriesSection } from "../components/CommunityEntriesSection";
 import { FranchiseListButton } from "../components/FranchiseListButton";
-import { fetchEntriesWithCounts } from "../services/supabase/entries";
+import {
+  entriesQueryKey,
+  fetchEntriesWithCounts,
+} from "../services/supabase/entries";
 import { getUserFranchiseEntry } from "../services/supabase/userFranchiseList";
 
 export const FranchisePage = () => {
@@ -43,12 +46,15 @@ export const FranchisePage = () => {
     enabled: !!user && validKey,
   });
 
-  // Shares the ["entries"] cache with the homepage feed/Friends page (per
+  // Shares the feed cache with the homepage feed/Friends page (per
   // CLAUDE.md), so this never triggers its own fetch once that's warm, and
-  // gets the same accurate like/dislike/comment counts they do.
+  // gets the same accurate like/dislike/comment counts they do. Being the
+  // same RLS-scoped fetch, the community posts below are the viewer's
+  // friends' posts, not everyone's.
   const { data: allEntries } = useQuery({
-    queryKey: ["entries"],
+    queryKey: entriesQueryKey(user?.id),
     queryFn: fetchEntriesWithCounts,
+    enabled: !!user,
   });
   const seriesEntries = useMemo(
     () =>
@@ -114,7 +120,11 @@ export const FranchisePage = () => {
 
       <CommunityEntriesSection
         entries={seriesEntries}
-        emptyMessage="No series-level posts yet. Share your thoughts on the whole series!"
+        emptyMessage={
+          user
+            ? "No series-level posts from you or your friends yet. Share your thoughts on the whole series!"
+            : "Sign in to see series posts from your friends."
+        }
       />
     </div>
   );

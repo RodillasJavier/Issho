@@ -18,7 +18,6 @@ interface CommentItemProps {
     children?: Comment[];
   };
   entryId: string;
-  anonymized?: boolean;
 }
 // #endregion Types
 
@@ -57,11 +56,7 @@ const createReply = async (
   }
 };
 
-export const CommentItem = ({
-  comment,
-  entryId,
-  anonymized = false,
-}: CommentItemProps) => {
+export const CommentItem = ({ comment, entryId }: CommentItemProps) => {
   const [showReply, setShowReply] = useState<boolean>(false);
   const [replyText, setReplyText] = useState<string>("");
   const [isCollapsed, setIsCollapsed] = useState<boolean>(true);
@@ -95,22 +90,12 @@ export const CommentItem = ({
     <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4">
       {/* Author + timestamp */}
       <div className="flex items-start justify-between gap-3">
-        {anonymized ? (
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-full bg-gray-600 flex items-center justify-center text-xs">
-              ?
-            </div>
-
-            <span className="text-xs text-gray-400">Anonymous User</span>
-          </div>
-        ) : (
-          comment.profile && (
-            <UserInfo
-              username={comment.profile.username}
-              avatarUrl={comment.profile.avatar_url}
-              size="sm"
-            />
-          )
+        {comment.profile && (
+          <UserInfo
+            username={comment.profile.username}
+            avatarUrl={comment.profile.avatar_url}
+            size="sm"
+          />
         )}
 
         <span className="shrink-0 text-xs text-neutral-500">
@@ -188,12 +173,7 @@ export const CommentItem = ({
           {!isCollapsed && (
             <div className="mt-2 space-y-2 border-l border-neutral-800 pl-3">
               {comment.children.map((child) => (
-                <CommentItem
-                  key={child.id}
-                  comment={child}
-                  entryId={entryId}
-                  anonymized={anonymized}
-                />
+                <CommentItem key={child.id} comment={child} entryId={entryId} />
               ))}
             </div>
           )}

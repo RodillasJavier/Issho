@@ -1,9 +1,13 @@
 /**
  * src/components/CommunityEntriesSection.tsx
  *
- * "From the community" entries grid shared by the season (AnimeFeed) and
+ * "From your circle" entries grid shared by the season (AnimeFeed) and
  * series (FranchisePage) detail views — identical chrome, only the empty
  * state copy differs per caller.
+ *
+ * "Community" here means the viewer's friends, not every user: the callers
+ * pass in the same RLS-scoped feed fetch the homepage uses, filtered by
+ * anime/franchise.
  */
 import { EntryItem } from "./EntryItem";
 import type { Entry } from "../types/database.types";
@@ -24,7 +28,7 @@ export const CommunityEntriesSection = ({
     <div className="mb-5 flex items-end justify-between gap-4">
       <div>
         <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-rose-400">
-          From the community
+          From your circle
         </p>
 
         <h2

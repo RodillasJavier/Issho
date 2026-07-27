@@ -7,7 +7,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ThumbsUp, ThumbsDown } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import { getVotes, castVote } from "../services/supabase/votes";
-import { applyVoteToEntriesCache } from "../services/supabase/entries";
+import {
+  applyVoteToEntriesCache,
+  entriesQueryKey,
+} from "../services/supabase/entries";
 import type { Entry } from "../types/database.types";
 
 // #region Types
@@ -46,7 +49,7 @@ export const LikeButton = ({ entryId }: LikeButtonProps) => {
 
       // Keep the cached feed list's counts in sync so navigating back
       // shows the up-to-date numbers instead of the stale initial fetch.
-      queryClient.setQueryData<Entry[]>(["entries"], (old) =>
+      queryClient.setQueryData<Entry[]>(entriesQueryKey(user?.id), (old) =>
         applyVoteToEntriesCache(old, entryId, userVote, nextVote)
       );
     },

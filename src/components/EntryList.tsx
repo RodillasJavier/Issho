@@ -4,10 +4,15 @@
  * Component that fetches and displays a list of recent entries with their
  * associated anime data: a featured entry + following panel + create-entry
  * CTA on the first page, a grid of activity cards, and pagination. The
- * All/Friends/You filter is owned by Home (rendered in the page header) and
- * passed in as a prop. Every entry is fetched once and filter/pagination
- * are applied client-side, so switching tabs or pages never re-hits the
- * network.
+ * Friends & you/Friends/You filter is owned by Home (rendered in the page
+ * header) and passed in as a prop. Every entry is fetched once and
+ * filter/pagination are applied client-side, so switching tabs or pages
+ * never re-hits the network.
+ *
+ * Signed-in only. What the fetch returns is already limited by RLS to the
+ * viewer's own entries plus their friends'; the client-side filtering below
+ * splits that set into tabs and is not itself the privacy boundary. Logged-out
+ * visitors get PublicFeed instead.
  */
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -24,7 +29,10 @@ import {
 import { useAuth } from "../hooks/useAuth";
 import { getFriendIds } from "../services/supabase/friendships";
 import { getProfileById } from "../services/supabase/profiles";
-import { fetchEntriesWithCounts } from "../services/supabase/entries";
+import {
+  entriesQueryKey,
+  fetchEntriesWithCounts,
+} from "../services/supabase/entries";
 
 const ENTRIES_PER_PAGE = 30;
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
@@ -37,7 +45,7 @@ interface EntryListProps {
 }
 // #endregion Types
 
-const EmptyFeedState = ({
+export const EmptyFeedState = ({
   title,
   subtitle,
   ctaHref,
@@ -141,7 +149,6 @@ const PaginationControls = ({
 export const EntryList = ({ filter }: EntryListProps) => {
   const [pageNumber, setPageNumber] = useState(0);
   const { user } = useAuth();
-  const anonymized = !user;
 
   // Reset to page 1 whenever the filter (owned by Home) changes. Adjusting
   // state during render (rather than in an effect) avoids an extra
@@ -163,8 +170,9 @@ export const EntryList = ({ filter }: EntryListProps) => {
     error,
     isLoading,
   } = useQuery({
-    queryKey: ["entries"],
+    queryKey: entriesQueryKey(user?.id),
     queryFn: fetchEntriesWithCounts,
+    enabled: !!user,
   });
 
   const { data: friendIds, isLoading: isFriendIdsLoading } = useQuery({
@@ -174,17 +182,17 @@ export const EntryList = ({ filter }: EntryListProps) => {
   });
 
   const filteredEntries = useMemo(() => {
-    if (!allEntries) return [];
+    if (!allEntries || !user) return [];
     if (filter === "mine") {
-      return user
-        ? allEntries.filter((entry) => entry.user_id === user.id)
-        : [];
+      return allEntries.filter((entry) => entry.user_id === user.id);
     }
     if (filter === "friends") {
       return friendIds
         ? allEntries.filter((entry) => friendIds.includes(entry.user_id))
         : [];
     }
+    // allEntries is already RLS-scoped to the viewer + their friends, so
+    // "all" (Friends & you) needs no further client-side filtering.
     return allEntries;
   }, [allEntries, filter, user, friendIds]);
 
@@ -246,6 +254,17 @@ export const EntryList = ({ filter }: EntryListProps) => {
       );
     }
 
+    if (filter === "all" && pageNumber === 0) {
+      return (
+        <EmptyFeedState
+          title="Nothing here yet"
+          subtitle="Your feed is made up of your own entries and your friends'. Add a few friends or post something to get it started."
+          ctaHref={profile ? `/profile/${profile.username}/friends` : undefined}
+          ctaLabel="Find Friends"
+        />
+      );
+    }
+
     return (
       <div className="text-gray-400 text-center py-8">No entries found</div>
     );
@@ -274,11 +293,7 @@ export const EntryList = ({ filter }: EntryListProps) => {
           {pageNumber === 0 &&
             (user && profile ? (
               <div className="grid gap-4 lg:grid-cols-[minmax(0,1.65fr)_minmax(290px,0.85fr)]">
-                <FeaturedEntry
-                  key={featuredKey}
-                  entries={featuredEntries}
-                  anonymized={anonymized}
-                />
+                <FeaturedEntry key={featuredKey} entries={featuredEntries} />
 
                 <div className="grid gap-4 lg:grid-rows-[minmax(0,1fr)_auto]">
                   <FollowingPanel
@@ -291,11 +306,7 @@ export const EntryList = ({ filter }: EntryListProps) => {
                 </div>
               </div>
             ) : (
-              <FeaturedEntry
-                key={featuredKey}
-                entries={featuredEntries}
-                anonymized={anonymized}
-              />
+              <FeaturedEntry key={featuredKey} entries={featuredEntries} />
             ))}
 
           <div className="flex items-center justify-between">
@@ -318,7 +329,7 @@ export const EntryList = ({ filter }: EntryListProps) => {
 
           <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
             {entries.map((entry) => (
-              <EntryItem entry={entry} key={entry.id} anonymized={anonymized} />
+              <EntryItem entry={entry} key={entry.id} />
             ))}
           </div>
 

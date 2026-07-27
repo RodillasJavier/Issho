@@ -3,14 +3,20 @@
  *
  * Bulk activity-feed fetch: entries with vote/comment counts (via the
  * get_entries_with_counts RPC) joined with anime and profile data in
- * memory. Shared under the ["entries"] query key by EntryList (the
+ * memory. Shared under the entriesQueryKey(userId) key by EntryList (the
  * homepage feed), FriendsPage (per-friend channel previews), and
  * FranchisePage (series-level posts, filtered client-side by
  * franchise_key), so the second consumer to mount never triggers an extra
  * network fetch once the first has warmed the cache.
+ *
+ * What comes back is already friend-scoped: RLS on `entries` only exposes
+ * rows the viewer authored or whose author they're friends with, and
+ * get_entries_with_counts is deliberately NOT security definer so it
+ * inherits that. Logged-out visitors take the separate fetchPublicFeed
+ * path, which never receives author identity at all.
  */
 import supabase from "../../supabase-client";
-import type { Entry } from "../../types/database.types";
+import type { Entry, PublicEntry } from "../../types/database.types";
 
 // #region Types
 interface EntryWithCounts {
@@ -45,6 +51,35 @@ interface ProfileData {
 }
 // #endregion Types
 
+/**
+ * Query key for the shared feed cache. Keyed on the viewer because the rows
+ * are RLS-scoped to them — without this, signing out and back in as someone
+ * else would serve the previous user's entries from cache.
+ */
+export const entriesQueryKey = (userId: string | undefined) =>
+  ["entries", userId] as const;
+
+/** Query key for the de-identified logged-out feed. */
+export const publicEntriesQueryKey = ["publicEntries"] as const;
+
+/** Attach anime rows (public data) to a set of entries, joined in memory. */
+const attachAnime = async <T extends { anime_id: string }>(
+  entries: T[]
+): Promise<(T & { anime?: AnimeData })[]> => {
+  const animeIds = [...new Set(entries.map((entry) => entry.anime_id))];
+  const { data: animeData } = await supabase
+    .from("anime")
+    .select(
+      "id, name, cover_image_url, franchise_title, franchise_key, banner_image_url"
+    )
+    .in("id", animeIds);
+
+  return entries.map((entry) => ({
+    ...entry,
+    anime: animeData?.find((a: AnimeData) => a.id === entry.anime_id),
+  }));
+};
+
 export const fetchEntriesWithCounts = async (): Promise<Entry[]> => {
   const { data: entriesWithCounts, error } = await supabase.rpc(
     "get_entries_with_counts"
@@ -58,31 +93,55 @@ export const fetchEntriesWithCounts = async (): Promise<Entry[]> => {
 
   // Fetch anime and profile data separately (independent, so run them
   // concurrently) and join in memory
-  const animeIds = [...new Set(entries.map((entry) => entry.anime_id))];
   const userIds = [...new Set(entries.map((entry) => entry.user_id))];
 
-  const [{ data: animeData }, { data: profileData }] = await Promise.all([
-    supabase
-      .from("anime")
-      .select(
-        "id, name, cover_image_url, franchise_title, franchise_key, banner_image_url"
-      )
-      .in("id", animeIds),
+  const [withAnime, { data: profileData }] = await Promise.all([
+    attachAnime(entries),
     supabase
       .from("profiles")
       .select("id, username, avatar_url")
       .in("id", userIds),
   ]);
 
-  return entries.map((entry) => ({
+  return withAnime.map((entry) => ({
     ...entry,
-    anime: animeData?.find((a: AnimeData) => a.id === entry.anime_id),
     profile: profileData?.find((p: ProfileData) => p.id === entry.user_id),
   })) as Entry[];
 };
 
 /**
- * Patch a cached ["entries"] list with the result of casting a vote,
+ * The logged-out feed. Goes through get_public_feed rather than the entries
+ * table: that RPC's return type has no user_id column and there is no
+ * profiles lookup here, so no author identity ever reaches the browser.
+ * Anime art is still joined — it carries nothing identifying.
+ */
+export const fetchPublicFeed = async (): Promise<PublicEntry[]> => {
+  const { data, error } = await supabase.rpc("get_public_feed");
+  if (error) throw new Error(error.message);
+
+  const entries = (data ?? []) as PublicEntry[];
+  if (entries.length === 0) return [];
+
+  return (await attachAnime(entries)) as PublicEntry[];
+};
+
+/** Single de-identified entry, for /entry/:id when logged out. */
+export const fetchPublicEntry = async (
+  entryId: string
+): Promise<PublicEntry | null> => {
+  const { data, error } = await supabase.rpc("get_public_entry", {
+    e_id: entryId,
+  });
+  if (error) throw new Error(error.message);
+
+  const entries = (data ?? []) as PublicEntry[];
+  if (entries.length === 0) return null;
+
+  return (await attachAnime(entries))[0] as PublicEntry;
+};
+
+/**
+ * Patch a cached feed list with the result of casting a vote,
  * computing the new like/dislike counts from the vote delta rather than
  * refetching. Shared by every vote surface (LikeButton, EntryVoteButtons)
  * so there's one place that knows how to reconcile a vote into this cache.
@@ -111,7 +170,7 @@ export const applyVoteToEntriesCache = (
     };
   });
 
-/** Patch a cached ["entries"] list after a new comment is posted. */
+/** Patch a cached feed list after a new comment is posted. */
 export const incrementEntryCommentCount = (
   entries: Entry[] | undefined,
   entryId: string

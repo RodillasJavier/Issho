@@ -2,6 +2,11 @@
  * src/pages/UserProfilePage.tsx
  *
  * Page to view a user's profile, anime list, and stats.
+ *
+ * Lists are friends-only: RLS on user_anime_entries/user_franchise_entries
+ * returns nothing for a stranger's profile, so the friendship check here is
+ * purely so the page can say "private" rather than misreport an empty list
+ * as "no anime in list yet".
  */
 import { useMemo, useState } from "react";
 import { useParams, Link } from "react-router";
@@ -11,7 +16,10 @@ import { useAuth } from "../hooks/useAuth";
 import { getProfileByUsername } from "../services/supabase/profiles";
 import { fetchAllUserAnimeEntries } from "../services/supabase/userAnimeList";
 import { fetchUserFranchiseList } from "../services/supabase/userFranchiseList";
-import { getFriends } from "../services/supabase/friendships";
+import {
+  getFriends,
+  getFriendshipStatus,
+} from "../services/supabase/friendships";
 import { UserAvatar } from "../components/UserAvatar";
 import { MyAnimeListItem } from "../components/MyAnimeListItem";
 import { MyFranchiseListItem } from "../components/MyFranchiseListItem";
@@ -42,6 +50,18 @@ export const UserProfilePage = () => {
     enabled: !!username,
   });
   const isOwnProfile = user?.id === profile?.id;
+
+  const { data: friendshipStatus } = useQuery({
+    queryKey: ["friendshipStatus", user?.id, profile?.id],
+    queryFn: () => getFriendshipStatus(profile!.id),
+    enabled: !!user && !!profile?.id && !isOwnProfile,
+  });
+
+  // Whether this list is ours to see at all. Mirrors the RLS predicate on
+  // user_anime_entries; the server is what actually enforces it — this only
+  // decides which message to show, so it doesn't gate the queries below
+  // (that would serialize them behind friendshipStatus for no real benefit).
+  const canViewList = isOwnProfile || !!friendshipStatus?.isFriend;
 
   const { data: allEntries, isLoading: listLoading } = useQuery({
     queryKey: ["userAnimeList", profile?.id, "all"],
@@ -220,7 +240,7 @@ export const UserProfilePage = () => {
       </div>
 
       {/* Stats Cards (series-level) */}
-      {allEntries && (
+      {canViewList && allEntries && (
         <AnimeListStats
           stats={stats}
           activeFilter={activeFilter}
@@ -232,7 +252,16 @@ export const UserProfilePage = () => {
       <div className="flex flex-col gap-4">
         <h2 className="text-2xl font-semibold text-rose-400">Anime List</h2>
 
-        {listLoading ? (
+        {!canViewList ? (
+          <div className="flex flex-col items-center gap-3 rounded-lg border border-neutral-800 bg-neutral-950 px-4 py-12 text-center">
+            <p className="text-lg text-gray-400">This list is private</p>
+            <p className="max-w-md text-sm text-gray-500">
+              {user
+                ? `Add ${profile.username} as a friend to see what they're watching.`
+                : `Sign in and add ${profile.username} as a friend to see what they're watching.`}
+            </p>
+          </div>
+        ) : listLoading ? (
           <div>Loading anime list...</div>
         ) : paginatedCards.length > 0 ? (
           <>

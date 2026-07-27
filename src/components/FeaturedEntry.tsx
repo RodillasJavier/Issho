@@ -15,21 +15,21 @@ import { getEntryVerbPhrase } from "../constants/entryTypes";
 import { formatRelativeTime } from "../utils/formatRelativeTime";
 
 // #region Types
-import type { Entry } from "../types/database.types";
+import {
+  hasAuthor,
+  type Entry,
+  type PublicEntry,
+} from "../types/database.types";
 
 interface FeaturedEntryProps {
-  entries: Entry[];
-  anonymized?: boolean;
+  entries: (Entry | PublicEntry)[];
 }
 // #endregion
 
 const ROTATE_INTERVAL_MS = 6000;
 
 // #region Component Logic
-export const FeaturedEntry = ({
-  entries,
-  anonymized = false,
-}: FeaturedEntryProps) => {
+export const FeaturedEntry = ({ entries }: FeaturedEntryProps) => {
   const [activeIndex, setActiveIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
 
@@ -44,9 +44,9 @@ export const FeaturedEntry = ({
   const entry = entries[activeIndex];
   if (!entry) return null;
 
-  const authorLabel = anonymized
-    ? "Someone"
-    : (entry.profile?.username ?? "Unknown");
+  const authorLabel = hasAuthor(entry)
+    ? (entry.profile?.username ?? "Unknown")
+    : "Someone";
 
   // Arrow/dot clicks sit inside the card-wide link; stop them from also
   // triggering navigation to the entry.

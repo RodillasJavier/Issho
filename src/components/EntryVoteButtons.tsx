@@ -11,12 +11,19 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { ThumbsDown, ThumbsUp } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import { castVote } from "../services/supabase/votes";
-import { applyVoteToEntriesCache } from "../services/supabase/entries";
-import type { Entry } from "../types/database.types";
+import {
+  applyVoteToEntriesCache,
+  entriesQueryKey,
+} from "../services/supabase/entries";
+import {
+  hasAuthor,
+  type Entry,
+  type PublicEntry,
+} from "../types/database.types";
 
 // #region Types
 interface EntryVoteButtonsProps {
-  entry: Entry;
+  entry: Entry | PublicEntry;
 }
 // #endregion Types
 
@@ -24,6 +31,10 @@ interface EntryVoteButtonsProps {
 export const EntryVoteButtons = ({ entry }: EntryVoteButtonsProps) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+
+  // Public (logged-out) entries carry no viewer vote — the buttons render
+  // disabled for them anyway, since voting requires a session.
+  const userVote = hasAuthor(entry) ? (entry.user_vote ?? null) : null;
 
   const { mutate, isPending } = useMutation({
     mutationFn: (voteValue: 1 | -1) => {
@@ -33,10 +44,8 @@ export const EntryVoteButtons = ({ entry }: EntryVoteButtonsProps) => {
       return castVote(entry.id, user.id, voteValue);
     },
     onSuccess: (nextVote) => {
-      const prevVote = entry.user_vote ?? null;
-
-      queryClient.setQueryData<Entry[]>(["entries"], (old) =>
-        applyVoteToEntriesCache(old, entry.id, prevVote, nextVote)
+      queryClient.setQueryData<Entry[]>(entriesQueryKey(user?.id), (old) =>
+        applyVoteToEntriesCache(old, entry.id, userVote, nextVote)
       );
     },
   });
@@ -61,10 +70,10 @@ export const EntryVoteButtons = ({ entry }: EntryVoteButtonsProps) => {
     <>
       <button
         type="button"
-        aria-pressed={entry.user_vote === 1}
+        aria-pressed={userVote === 1}
         disabled={!user || isPending}
         title={!user ? "Sign in to react" : "Helpful"}
-        className={buttonClasses(entry.user_vote === 1)}
+        className={buttonClasses(userVote === 1)}
         onClick={(e) => handleVote(e, 1)}
       >
         <ThumbsUp className="size-3.5" />
@@ -73,10 +82,10 @@ export const EntryVoteButtons = ({ entry }: EntryVoteButtonsProps) => {
 
       <button
         type="button"
-        aria-pressed={entry.user_vote === -1}
+        aria-pressed={userVote === -1}
         disabled={!user || isPending}
         title={!user ? "Sign in to react" : "Not helpful"}
-        className={buttonClasses(entry.user_vote === -1)}
+        className={buttonClasses(userVote === -1)}
         onClick={(e) => handleVote(e, -1)}
       >
         <ThumbsDown className="size-3.5" />

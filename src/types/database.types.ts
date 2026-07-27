@@ -69,6 +69,23 @@ export interface Entry {
   user_vote?: number | null; // Current user's vote on this entry: 1, -1, or null
 }
 
+/**
+ * An entry as served to logged-out visitors by the get_public_feed /
+ * get_public_entry RPCs. The author's identity is absent from the data
+ * itself — not merely withheld by the UI — so there is nothing to un-hide.
+ */
+export type PublicEntry = Omit<Entry, "user_id" | "profile" | "user_vote">;
+
+/**
+ * Narrows Entry | PublicEntry — the one place that knows how to tell them
+ * apart. Declared against Entry (not PublicEntry) so narrowing works both
+ * ways: PublicEntry's fields are a subset of Entry's, so Entry is
+ * structurally assignable to PublicEntry, which breaks the "false" branch
+ * if the predicate targets PublicEntry instead.
+ */
+export const hasAuthor = (entry: Entry | PublicEntry): entry is Entry =>
+  "user_id" in entry;
+
 export interface Vote {
   id: string;
   created_at: string;

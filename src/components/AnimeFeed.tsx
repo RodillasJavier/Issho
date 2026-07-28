@@ -12,7 +12,7 @@ import { ArrowRight, Plus } from "lucide-react";
 import type { Anime } from "../types/database.types";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "../hooks/useAuth";
-import { AddToListButton } from "./AddToListButton";
+import { ListStatusButton } from "./ListStatusButton";
 import { DetailHero } from "./DetailHero";
 import { SeasonsGrid } from "./SeasonsGrid";
 import { WatchStatusBadge } from "./WatchStatusBadge";
@@ -127,7 +127,9 @@ export const AnimeFeed = ({ animeId }: AnimeFeedProps) => {
               <Plus aria-hidden className="size-4 text-rose-300" />
               Create an entry
             </Link>
-            {user && <AddToListButton animeId={animeId} />}
+            {user && (
+              <ListStatusButton target={{ kind: "anime", anime_id: animeId }} />
+            )}
           </>
         }
       />

@@ -132,14 +132,18 @@ export const getUserAnimeEntry = async (
 };
 
 /**
- * Add an anime to the user's list
+ * Add an anime to the user's list without posting to the feed.
+ *
+ * The list-state half of `addUserAnimeEntry`. Surfaces that are not
+ * publishing an entry — the profile page, the Create composer, which posts
+ * its own combined entry — go through this instead.
  *
  * @param animeId uuid of the anime
  * @param userId uuid of the user
  * @param status status of the anime in the user's list (default: "not_started")
  * @returns the newly created UserAnimeEntry
  */
-export const addUserAnimeEntry = async (
+export const addUserAnimeEntryListOnly = async (
   animeId: string,
   userId: string,
   status: AnimeStatus = "not_started"
@@ -156,14 +160,64 @@ export const addUserAnimeEntry = async (
 
   if (error) throw new Error(error.message);
 
+  return data as UserAnimeEntry;
+};
+
+/**
+ * Add an anime to the user's list and announce it in the feed. Used by the
+ * detail-page list button, where adding a show is itself the statement.
+ *
+ * @param animeId uuid of the anime
+ * @param userId uuid of the user
+ * @param status status of the anime in the user's list (default: "not_started")
+ * @returns the newly created UserAnimeEntry
+ */
+export const addUserAnimeEntry = async (
+  animeId: string,
+  userId: string,
+  status: AnimeStatus = "not_started"
+): Promise<UserAnimeEntry> => {
+  const entry = await addUserAnimeEntryListOnly(animeId, userId, status);
+
   // Create status_update entry in feed
   await createStatusUpdateEntry(userId, animeId, status);
+
+  return entry;
+};
+
+/**
+ * Update a user anime entry's fields without posting to the feed.
+ *
+ * The list-state half of `updateUserAnimeEntry`. Editing from the profile
+ * goes through this: it is a correction to your own list, not a statement
+ * worth broadcasting, and /entry/:id already renders the author's live
+ * status and rating rather than the frozen post values.
+ *
+ * @param entryId uuid of the user anime entry
+ * @param updates partial updates to apply (status, rating, or review)
+ * @returns the updated UserAnimeEntry
+ */
+export const updateUserAnimeEntryFields = async (
+  entryId: string,
+  updates: Partial<Pick<UserAnimeEntry, "status" | "rating" | "review">>
+): Promise<UserAnimeEntry> => {
+  // updated_at is maintained by the update_user_anime_entries_updated_at
+  // trigger, unlike user_franchise_entries which has none and stamps by hand.
+  const { data, error } = await supabase
+    .from("user_anime_entries")
+    .update(updates)
+    .eq("id", entryId)
+    .select("*, anime(*)")
+    .single();
+
+  if (error) throw new Error(error.message);
 
   return data as UserAnimeEntry;
 };
 
 /**
- * Update an existing user anime entry
+ * Update an existing user anime entry, posting a status_update to the feed
+ * when the status actually changed.
  *
  * @param entryId uuid of the user anime entry
  * @param updates partial updates to apply (status, rating, or review)
@@ -181,14 +235,7 @@ export const updateUserAnimeEntry = async (
     .single();
   if (fetchError) throw new Error(fetchError.message);
 
-  // Update the entry
-  const { data, error } = await supabase
-    .from("user_anime_entries")
-    .update(updates)
-    .eq("id", entryId)
-    .select("*, anime(*)")
-    .single();
-  if (error) throw new Error(error.message);
+  const data = await updateUserAnimeEntryFields(entryId, updates);
 
   // Status changes still post feed events; rating changes don't create
   // posts — the entry page displays the author's current rating live
@@ -203,7 +250,7 @@ export const updateUserAnimeEntry = async (
     );
   }
 
-  return data as UserAnimeEntry;
+  return data;
 };
 
 /**

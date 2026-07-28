@@ -1,12 +1,14 @@
 /**
  * src/components/AnimeListStats.tsx
  *
- * Reusable stats cards component for anime lists
+ * The six stat tiles above a profile's list. Five of them double as the
+ * status filter — they are the only one on the page — so they stay buttons
+ * with an active state rather than plain figures. Avg Rating is a readout,
+ * not a filter, and is styled apart to say so.
  */
 import type { AnimeStatus } from "../types/database.types";
 
 // #region Types
-
 type FilterTab = "all" | AnimeStatus;
 
 interface AnimeListStatsProps {
@@ -21,90 +23,96 @@ interface AnimeListStatsProps {
   activeFilter: FilterTab;
   onFilterChange: (filter: FilterTab) => void;
 }
-
 // #endregion Types
 
 // #region Component
-
 export const AnimeListStats = ({
   stats,
   activeFilter,
   onFilterChange,
 }: AnimeListStatsProps) => {
+  const tiles: {
+    filter: FilterTab;
+    label: string;
+    value: number;
+    valueClass: string;
+    activeClass: string;
+  }[] = [
+    {
+      filter: "all",
+      label: "Total",
+      value: stats.total,
+      valueClass: "text-rose-400",
+      activeClass: "border-rose-500 bg-rose-500/15",
+    },
+    {
+      filter: "watching",
+      label: "Watching",
+      value: stats.watching,
+      valueClass: "text-blue-400",
+      activeClass: "border-blue-500 bg-blue-500/15",
+    },
+    {
+      filter: "completed",
+      label: "Completed",
+      value: stats.completed,
+      valueClass: "text-green-400",
+      activeClass: "border-green-500 bg-green-500/15",
+    },
+    {
+      filter: "not_started",
+      label: "To Watch",
+      value: stats.notStarted,
+      valueClass: "text-yellow-400",
+      activeClass: "border-yellow-500 bg-yellow-500/15",
+    },
+    {
+      filter: "dropped",
+      label: "Dropped",
+      value: stats.dropped,
+      valueClass: "text-red-400",
+      activeClass: "border-red-500 bg-red-500/15",
+    },
+  ];
+
   return (
-    <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
-      <button
-        onClick={() => onFilterChange("all")}
-        className={`p-4 border rounded-lg text-center transition-all cursor-pointer ${
-          activeFilter === "all"
-            ? "bg-rose-500/20 border-rose-500 shadow-lg shadow-rose-500/20"
-            : "bg-neutral-950 border-neutral-800 hover:border-neutral-700 hover:shadow-lg"
-        }`}
-      >
-        <div className="text-3xl font-bold text-rose-400">{stats.total}</div>
-        <div className="text-sm text-gray-400">Total</div>
-      </button>
+    <div className="grid grid-cols-3 gap-2 sm:grid-cols-6 sm:gap-3">
+      {tiles.map((tile) => {
+        const active = activeFilter === tile.filter;
+        return (
+          <button
+            key={tile.filter}
+            type="button"
+            onClick={() => onFilterChange(tile.filter)}
+            aria-pressed={active}
+            className={`flex cursor-pointer flex-col items-center justify-center rounded-lg border px-2 py-3.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-400 ${
+              active
+                ? tile.activeClass
+                : "border-zinc-800 bg-[#0c0c0f] hover:border-zinc-700"
+            }`}
+          >
+            <span
+              className={`text-2xl leading-none font-bold ${tile.valueClass}`}
+            >
+              {tile.value}
+            </span>
+            <span className="mt-1.5 text-center font-mono text-[10px] tracking-[0.14em] text-zinc-500 uppercase">
+              {tile.label}
+            </span>
+          </button>
+        );
+      })}
 
-      <button
-        onClick={() => onFilterChange("watching")}
-        className={`p-4 border rounded-lg text-center transition-all cursor-pointer ${
-          activeFilter === "watching"
-            ? "bg-blue-500/20 border-blue-500 shadow-lg shadow-blue-500/20"
-            : "bg-neutral-950 border-neutral-800 hover:border-neutral-700 hover:shadow-lg"
-        }`}
-      >
-        <div className="text-3xl font-bold text-blue-400">{stats.watching}</div>
-        <div className="text-sm text-gray-400">Watching</div>
-      </button>
-
-      <button
-        onClick={() => onFilterChange("completed")}
-        className={`p-4 border rounded-lg text-center transition-all cursor-pointer ${
-          activeFilter === "completed"
-            ? "bg-green-500/20 border-green-500 shadow-lg shadow-green-500/20"
-            : "bg-neutral-950 border-neutral-800 hover:border-neutral-700 hover:shadow-lg"
-        }`}
-      >
-        <div className="text-3xl font-bold text-green-400">
-          {stats.completed}
-        </div>
-        <div className="text-sm text-gray-400">Completed</div>
-      </button>
-
-      <button
-        onClick={() => onFilterChange("not_started")}
-        className={`p-4 border rounded-lg text-center transition-all cursor-pointer ${
-          activeFilter === "not_started"
-            ? "bg-yellow-500/20 border-yellow-500 shadow-lg shadow-yellow-500/20"
-            : "bg-neutral-950 border-neutral-800 hover:border-neutral-700 hover:shadow-lg"
-        }`}
-      >
-        <div className="text-3xl font-bold text-yellow-400">
-          {stats.notStarted}
-        </div>
-        <div className="text-sm text-gray-400">To Watch</div>
-      </button>
-
-      <button
-        onClick={() => onFilterChange("dropped")}
-        className={`p-4 border rounded-lg text-center transition-all cursor-pointer ${
-          activeFilter === "dropped"
-            ? "bg-red-500/20 border-red-500 shadow-lg shadow-red-500/20"
-            : "bg-neutral-950 border-neutral-800 hover:border-neutral-700 hover:shadow-lg"
-        }`}
-      >
-        <div className="text-3xl font-bold text-red-400">{stats.dropped}</div>
-        <div className="text-sm text-gray-400">Dropped</div>
-      </button>
-
-      <div className="p-4 bg-gradient-to-br from-rose-500/10 to-purple-500/10 border border-rose-500/30 rounded-lg text-center transition">
-        <div className="text-3xl font-bold bg-gradient-to-r from-rose-400 to-purple-400 bg-clip-text text-transparent">
+      {/* A readout, not a filter — hence the different treatment. */}
+      <div className="flex flex-col items-center justify-center rounded-lg border border-rose-500/30 bg-gradient-to-br from-rose-500/10 to-purple-500/10 px-2 py-3.5">
+        <span className="bg-gradient-to-r from-rose-400 to-purple-400 bg-clip-text text-2xl leading-none font-bold text-transparent">
           {stats.avgRating}
-        </div>
-        <div className="text-sm text-gray-400">Avg Rating</div>
+        </span>
+        <span className="mt-1.5 text-center font-mono text-[10px] tracking-[0.14em] text-zinc-500 uppercase">
+          Avg Rating
+        </span>
       </div>
     </div>
   );
 };
-
 // #endregion Component

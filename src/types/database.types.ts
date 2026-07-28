@@ -51,6 +51,21 @@ export interface AnimeInsert {
   banner_image_url?: string | null;
 }
 
+/**
+ * A row of the `franchises` view — one per sequel/prequel chain, derived from
+ * anime.franchise_key. Read-only: there is no table behind it.
+ */
+export interface Franchise {
+  anilist_root_id: number; // AniList id of the chain root; the /series/:key value
+  title: string | null; // The root's own title (often an OVA — a poor headline)
+  display_title: string | null; // Earliest TV member's title — what the UI shows
+  member_count: number;
+  first_year: number | null;
+  last_year: number | null;
+  cover_image_url: string | null; // Flagship member's art, matching display_title
+  banner_image_url: string | null;
+}
+
 export interface Entry {
   id: string;
   created_at: string;

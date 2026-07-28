@@ -15,11 +15,12 @@ import { StatusPickerDropdown } from "./StatusPickerDropdown";
 import { getAnimeByAnilistId } from "../api/animeImport";
 import { addAniListAnimeToList } from "../api/watchlist";
 import {
-  getUserAnimeEntry,
-  addUserAnimeEntry,
-  updateUserAnimeEntry,
-  removeUserAnimeEntry,
-} from "../services/supabase/userAnimeList";
+  getListEntry,
+  addListEntry,
+  updateListEntry,
+  removeListEntry,
+  listInvalidationKeys,
+} from "../services/supabase/userLists";
 import { STATUS_LABELS, STATUS_COLORS } from "../constants/animeStatus";
 import { splitGenres } from "../utils/anime";
 import type { AnimeStatus, Anime } from "../types/database.types";
@@ -77,17 +78,23 @@ export const SearchResultCard = ({
         localAnime ??
         (anilistId != null ? await getAnimeByAnilistId(anilistId) : null);
       if (!local) return null;
-      return getUserAnimeEntry(local.id, user!.id);
+      return getListEntry({ kind: "anime", anime_id: local.id }, user!.id);
     },
     addEntry: (status: AnimeStatus) =>
       localAnime
-        ? addUserAnimeEntry(localAnime.id, user!.id, status)
+        ? addListEntry(
+            { kind: "anime", anime_id: localAnime.id },
+            user!.id,
+            status,
+            { announce: true }
+          )
         : addAniListAnimeToList(anilistId!, user!.id, status),
-    updateEntry: (entryId, status) => updateUserAnimeEntry(entryId, { status }),
-    removeEntry: (entryId) => removeUserAnimeEntry(entryId),
+    updateEntry: (entry, status) =>
+      updateListEntry(entry, { status }, { announce: true }),
+    removeEntry: (entry) => removeListEntry(entry),
     invalidateKeys: [
       ["searchListEntry", anilistId ?? localAnime?.id, user?.id],
-      ["userAnimeList", user?.id],
+      ...listInvalidationKeys(user?.id),
       ["anime"],
       ["entries"],
     ],

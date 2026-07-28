@@ -7,11 +7,20 @@
  * context from user_franchise_entries — rather than values frozen into the
  * post. Frozen post values only appear as a fallback when the author no
  * longer tracks the anime.
+ *
+ * Two fetch paths. Signed in, it reads `entries` directly and RLS decides:
+ * you get the row only if you wrote it or you're friends with whoever did,
+ * so a link to a stranger's entry resolves to the not-visible state below.
+ * Signed out, it goes through get_public_entry, which returns no author at
+ * all — so the sidebar has no identity to show and falls back to the frozen
+ * post values.
  */
 import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router";
 import { ArrowLeft, Star } from "lucide-react";
 import supabase from "../supabase-client";
+import { useAuth } from "../hooks/useAuth";
+import { fetchPublicEntry } from "../services/supabase/entries";
 import { LikeButton } from "./LikeButton";
 import { CommentSection } from "./CommentSection";
 import { getEntryTypeLabel } from "../constants/entryTypes";
@@ -27,16 +36,21 @@ import { useFranchiseMembers } from "../hooks/useFranchiseMembers";
 import { franchiseDisplayTitle } from "../utils/franchise";
 
 // #region Types
-import type { Entry } from "../types/database.types";
+import {
+  hasAuthor,
+  type Entry,
+  type PublicEntry,
+} from "../types/database.types";
 
 interface EntryDetailProps {
   entryId: string;
-  anonymized?: boolean;
 }
 // #endregion Types
 
 // #region Component Logic
-const fetchEntryById = async (id: string): Promise<Entry> => {
+// Returns null rather than throwing when RLS hides the row, so the caller can
+// tell "not visible to you" apart from a genuine fetch failure.
+const fetchEntryById = async (id: string): Promise<Entry | null> => {
   const { data, error } = await supabase
     .from("entries")
     .select(
@@ -47,24 +61,26 @@ const fetchEntryById = async (id: string): Promise<Entry> => {
     `
     )
     .eq("id", id)
-    .single();
+    .maybeSingle();
 
   if (error) throw new Error(error.message);
 
-  return data as Entry;
+  return (data as Entry) ?? null;
 };
 
-export const EntryDetail = ({
-  entryId,
-  anonymized = false,
-}: EntryDetailProps) => {
+export const EntryDetail = ({ entryId }: EntryDetailProps) => {
   const navigate = useNavigate();
-  const { data, error, isLoading } = useQuery<Entry, Error>({
-    queryKey: ["entry", entryId],
-    queryFn: () => fetchEntryById(entryId),
+  const { user } = useAuth();
+
+  const { data, error, isLoading } = useQuery<
+    Entry | PublicEntry | null,
+    Error
+  >({
+    queryKey: ["entry", entryId, user?.id],
+    queryFn: () => (user ? fetchEntryById(entryId) : fetchPublicEntry(entryId)),
   });
 
-  const authorId = data?.user_id;
+  const authorId = data && hasAuthor(data) ? data.user_id : undefined;
   const animeId = data?.anime_id;
   const franchiseKey = data?.anime?.franchise_key ?? null;
 
@@ -120,8 +136,25 @@ export const EntryDetail = ({
     return <div>Error loading entry: {error.message}</div>;
   }
 
+  // RLS returns no row for an entry belonging to someone you aren't friends
+  // with — indistinguishable from a deleted entry, and deliberately so.
   if (!data) {
-    return <div>Entry not found</div>;
+    return (
+      <div className="flex flex-col items-center justify-center gap-4 px-4 py-16 text-center">
+        <p className="text-lg text-gray-400">This entry isn't visible to you</p>
+        <p className="max-w-md text-sm text-gray-500">
+          {user
+            ? "It may have been deleted, or it belongs to someone you're not friends with."
+            : "Sign in to see entries from your friends."}
+        </p>
+        <Link
+          to={user ? "/" : "/signin"}
+          className="rounded-lg bg-rose-600 px-6 py-3 font-semibold text-white transition hover:bg-rose-700"
+        >
+          {user ? "Back to feed" : "Sign in"}
+        </Link>
+      </div>
+    );
   }
 
   const bannerUrl = data.anime?.banner_image_url ?? data.anime?.cover_image_url;
@@ -146,7 +179,7 @@ export const EntryDetail = ({
 
         {/* Author Card */}
         <section className="rounded-xl border border-neutral-800 bg-neutral-950 p-4">
-          {anonymized ? (
+          {!("profile" in data) || !data.profile ? (
             <div className="flex items-center gap-2">
               <div className="w-10 h-10 rounded-full bg-gray-600 flex items-center justify-center text-sm">
                 ?
@@ -154,13 +187,11 @@ export const EntryDetail = ({
               <span className="text-md text-gray-400">Anonymous User</span>
             </div>
           ) : (
-            data.profile && (
-              <UserInfo
-                username={data.profile.username}
-                avatarUrl={data.profile.avatar_url}
-                size="md"
-              />
-            )
+            <UserInfo
+              username={data.profile.username}
+              avatarUrl={data.profile.avatar_url}
+              size="md"
+            />
           )}
 
           <p className="mt-2 flex items-center gap-1 text-[11px] font-medium uppercase tracking-widest text-rose-400">
@@ -322,7 +353,7 @@ export const EntryDetail = ({
 
         {/* Comments */}
         <div className="mt-12 max-w-3xl border-t border-neutral-800 pt-8">
-          <CommentSection entryId={entryId} anonymized={anonymized} />
+          <CommentSection entryId={entryId} />
         </div>
       </article>
     </div>

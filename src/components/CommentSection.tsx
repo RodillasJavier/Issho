@@ -13,7 +13,10 @@ import supabase from "../supabase-client";
 import { CommentItem } from "./CommentItem";
 import { UserAvatar } from "./UserAvatar";
 import { getProfileById } from "../services/supabase/profiles";
-import { incrementEntryCommentCount } from "../services/supabase/entries";
+import {
+  entriesQueryKey,
+  incrementEntryCommentCount,
+} from "../services/supabase/entries";
 import type { Entry } from "../types/database.types";
 
 // #region Types
@@ -21,7 +24,6 @@ import type { Comment } from "../types/database.types";
 
 interface CommentSectionProps {
   entryId: string;
-  anonymized?: boolean;
 }
 
 interface NewComment {
@@ -72,10 +74,7 @@ const fetchComments = async (entryId: string): Promise<Comment[]> => {
   return data as Comment[];
 };
 
-export const CommentSection = ({
-  entryId,
-  anonymized = false,
-}: CommentSectionProps) => {
+export const CommentSection = ({ entryId }: CommentSectionProps) => {
   const [newCommentText, setNewCommentText] = useState<string>("");
   const [showAll, setShowAll] = useState<boolean>(false);
   const { user } = useAuth();
@@ -88,6 +87,10 @@ export const CommentSection = ({
   } = useQuery<Comment[], Error>({
     queryKey: ["comments", entryId],
     queryFn: () => fetchComments(entryId),
+    // Comments carry their author's identity, so logged-out visitors don't
+    // get them at all — RLS would return an empty list regardless, and not
+    // asking keeps the anonymous entry view genuinely anonymous.
+    enabled: !!user,
   });
 
   // Own profile for the composer avatar
@@ -105,7 +108,7 @@ export const CommentSection = ({
 
       // Keep the cached feed list's comment count in sync so navigating
       // back shows the up-to-date number instead of the stale initial fetch.
-      queryClient.setQueryData<Entry[]>(["entries"], (old) =>
+      queryClient.setQueryData<Entry[]>(entriesQueryKey(user?.id), (old) =>
         incrementEntryCommentCount(old, entryId)
       );
     },
@@ -190,7 +193,9 @@ export const CommentSection = ({
           </span>
         </div>
         <p className="mt-1 text-sm text-neutral-500">
-          Join the conversation about this entry.
+          {user
+            ? "Join the conversation about this entry."
+            : "Sign in to read and join the conversation."}
         </p>
       </div>
 
@@ -241,7 +246,7 @@ export const CommentSection = ({
         </form>
       ) : (
         <p className="rounded-xl border border-neutral-800 bg-neutral-950 p-4 text-sm text-neutral-500">
-          You must be logged in to post a comment
+          You must be logged in to read or post comments
         </p>
       )}
 
@@ -249,12 +254,7 @@ export const CommentSection = ({
       <div className="mt-6 space-y-3">
         {visibleComments.map((comment) => {
           return (
-            <CommentItem
-              key={comment.id}
-              comment={comment}
-              entryId={entryId}
-              anonymized={anonymized}
-            />
+            <CommentItem key={comment.id} comment={comment} entryId={entryId} />
           );
         })}
       </div>

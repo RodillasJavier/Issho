@@ -1,4 +1,11 @@
-import { Check, CircleDot, CircleX, Star, type LucideIcon } from "lucide-react";
+import {
+  Check,
+  CheckCircle2,
+  CircleDot,
+  CircleX,
+  Star,
+  type LucideIcon,
+} from "lucide-react";
 import type { AnimeStatus } from "../types/database.types";
 
 export const STATUS_LABELS: Record<AnimeStatus, string> = {
@@ -7,6 +14,43 @@ export const STATUS_LABELS: Record<AnimeStatus, string> = {
   completed: "Completed",
   dropped: "Dropped",
 };
+
+/**
+ * The status picker's options, in the order they're offered: roughly the
+ * order a show moves through a list. Shared by the Create composer and the
+ * list edit modal via StatusOptionList, so the two can't drift.
+ */
+export const STATUS_OPTIONS: {
+  value: AnimeStatus;
+  label: string;
+  subtitle: string;
+  icon: LucideIcon;
+}[] = [
+  {
+    value: "watching",
+    label: "Watching",
+    subtitle: "I'm partway through",
+    icon: CircleDot,
+  },
+  {
+    value: "completed",
+    label: "Completed",
+    subtitle: "I finished it",
+    icon: CheckCircle2,
+  },
+  {
+    value: "not_started",
+    label: "Plan to watch",
+    subtitle: "Saving it for later",
+    icon: Star,
+  },
+  {
+    value: "dropped",
+    label: "Dropped",
+    subtitle: "Not for me",
+    icon: CircleX,
+  },
+];
 
 export const STATUS_COLORS: Record<AnimeStatus, string> = {
   not_started: "border border-neutral-400 bg-neutral-400/25 text-white",

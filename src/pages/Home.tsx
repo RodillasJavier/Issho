@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { Link } from "react-router";
 import { EntryList } from "../components/EntryList";
+import { PublicFeed } from "../components/PublicFeed";
 import { ActivityFilterTabs } from "../components/ActivityFilterTabs";
 import type { ActivityFilter } from "../constants/activityFilters";
 import { useAuth } from "../hooks/useAuth";
@@ -24,7 +25,7 @@ export const Home = () => {
             <p className="text-sm text-neutral-500">
               {user
                 ? "Fresh entries from you and your friends."
-                : "Sign in to personalize your feed and follow friends."}
+                : "Anonymous activity. Sign in to see who's behind it."}
             </p>
           </div>
         </div>
@@ -35,7 +36,7 @@ export const Home = () => {
       {!user && (
         <div className="rounded-lg border border-neutral-800 bg-neutral-950 p-4">
           <p className="text-center text-gray-300">
-            Viewing anonymous public feed.{" "}
+            Authors are hidden on the public feed.{" "}
             <Link to="/signin" className="text-rose-400 hover:text-rose-300">
               Sign in
             </Link>{" "}
@@ -44,7 +45,7 @@ export const Home = () => {
         </div>
       )}
 
-      <EntryList filter={user ? filter : "all"} />
+      {user ? <EntryList filter={filter} /> : <PublicFeed />}
     </div>
   );
 };

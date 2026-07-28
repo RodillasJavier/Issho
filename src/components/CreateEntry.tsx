@@ -10,22 +10,19 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useSearchParams } from "react-router";
-import {
-  CheckCircle2,
-  CircleDot,
-  CircleX,
-  Lock,
-  Search,
-  Send,
-  Star,
-} from "lucide-react";
+import { Lock, Search, Send } from "lucide-react";
 import supabase from "../supabase-client";
 import { useAuth } from "../hooks/useAuth";
 import { useFranchiseMembers } from "../hooks/useFranchiseMembers";
+import { StatusOptionList } from "./StatusOptionList";
+import { RatingPicker } from "./RatingPicker";
+import { REVIEW_MAX } from "../constants/listEntry";
 import { fetchAnime } from "../services/supabase/anime";
 import {
   getUserAnimeEntry,
   fetchAllUserAnimeEntries,
+  addUserAnimeEntryListOnly,
+  updateUserAnimeEntryFields,
 } from "../services/supabase/userAnimeList";
 import {
   getUserFranchiseEntry,
@@ -49,40 +46,7 @@ interface PublishInput {
   review: string;
 }
 
-const REVIEW_MAX = 2000;
 const PICKER_LIMIT = 10;
-
-const STATUS_OPTIONS: {
-  value: AnimeStatus;
-  label: string;
-  subtitle: string;
-  icon: typeof CircleDot;
-}[] = [
-  {
-    value: "watching",
-    label: "Watching",
-    subtitle: "I'm partway through",
-    icon: CircleDot,
-  },
-  {
-    value: "completed",
-    label: "Completed",
-    subtitle: "I finished it",
-    icon: CheckCircle2,
-  },
-  {
-    value: "not_started",
-    label: "Plan to watch",
-    subtitle: "Saving it for later",
-    icon: Star,
-  },
-  {
-    value: "dropped",
-    label: "Dropped",
-    subtitle: "Not for me",
-    icon: CircleX,
-  },
-];
 
 const LIST_TABS: { value: AnimeStatus; label: string }[] = [
   { value: "not_started", label: "To watch" },
@@ -103,8 +67,9 @@ const fetchAllAnime = async (): Promise<Anime[]> => {
   return data as Anime[];
 };
 
-// Upsert the per-season list row directly (no auto status_update entries — we
-// post one combined entry below instead).
+// Upsert the per-season list row (no auto status_update entries — we post one
+// combined entry below instead). Goes through the shared list-only service so
+// this stays one implementation rather than a second copy of it.
 const upsertSeasonList = async (
   animeId: string,
   userId: string,
@@ -117,21 +82,21 @@ const upsertSeasonList = async (
   const existing = await getUserAnimeEntry(animeId, userId);
   if (existing) {
     if (Object.keys(updates).length > 0) {
-      const { error } = await supabase
-        .from("user_anime_entries")
-        .update(updates)
-        .eq("id", existing.id);
-      if (error) throw new Error(error.message);
+      await updateUserAnimeEntryFields(existing.id, updates);
     }
-  } else {
-    const { error } = await supabase.from("user_anime_entries").insert({
-      anime_id: animeId,
-      user_id: userId,
-      status: updates.status ?? "not_started",
-      rating: updates.rating ?? null,
-      review: updates.review ?? null,
-    });
-    if (error) throw new Error(error.message);
+    return;
+  }
+
+  const created = await addUserAnimeEntryListOnly(
+    animeId,
+    userId,
+    updates.status ?? "not_started"
+  );
+  const postCreate: typeof updates = {};
+  if (updates.rating != null) postCreate.rating = updates.rating;
+  if (updates.review) postCreate.review = updates.review;
+  if (Object.keys(postCreate).length > 0) {
+    await updateUserAnimeEntryFields(created.id, postCreate);
   }
 };
 
@@ -487,35 +452,8 @@ export const CreateEntry = () => {
             Where are you?
           </h2>
 
-          <div className="mt-4 space-y-2">
-            {STATUS_OPTIONS.map((option) => {
-              const active = status === option.value;
-              const Icon = option.icon;
-              return (
-                <button
-                  key={option.value}
-                  type="button"
-                  onClick={() => setStatus(active ? null : option.value)}
-                  className={`flex w-full cursor-pointer items-center gap-3 rounded-lg border px-4 py-3 text-left transition-colors ${
-                    active
-                      ? "border-rose-400/60 bg-rose-400/10"
-                      : "border-zinc-800 bg-[#101014] hover:border-zinc-700"
-                  }`}
-                >
-                  <Icon
-                    className={`size-5 shrink-0 ${active ? "text-rose-300" : "text-zinc-500"}`}
-                  />
-                  <span className="min-w-0">
-                    <span className="block text-sm font-semibold text-zinc-100">
-                      {option.label}
-                    </span>
-                    <span className="block text-xs text-zinc-500">
-                      {option.subtitle}
-                    </span>
-                  </span>
-                </button>
-              );
-            })}
+          <div className="mt-4">
+            <StatusOptionList value={status} onChange={setStatus} clearable />
           </div>
         </section>
 
@@ -541,40 +479,12 @@ export const CreateEntry = () => {
             )}
           </div>
 
-          <div className="mt-4 flex items-center gap-4">
-            <div
-              className="grid size-24 shrink-0 place-items-center rounded-full p-[5px] shadow-[0_0_28px_rgba(244,63,94,0.14)]"
-              style={{
-                background: `conic-gradient(#f43f5e 0deg ${(rating ?? 0) * 36}deg, #27272a ${(rating ?? 0) * 36}deg 360deg)`,
-              }}
-            >
-              <div className="grid size-full place-items-center rounded-full bg-[#0c0c0f]">
-                <p className="font-mono text-2xl font-semibold text-rose-400">
-                  {rating ?? "—"}
-                  <span className="ml-0.5 text-sm text-zinc-500">/10</span>
-                </p>
-              </div>
-            </div>
-            <p className="text-xs text-zinc-500">
-              Tap a score. You can still share an entry without one.
-            </p>
-          </div>
-
-          <div className="mt-4 grid grid-cols-5 gap-2">
-            {Array.from({ length: 10 }, (_, i) => i + 1).map((value) => (
-              <button
-                key={value}
-                type="button"
-                onClick={() => setRating(rating === value ? null : value)}
-                className={`cursor-pointer rounded-md border py-2 text-sm font-semibold transition-colors ${
-                  rating === value
-                    ? "border-rose-400/60 bg-rose-400/10 text-rose-200"
-                    : "border-zinc-800 bg-[#101014] text-zinc-300 hover:border-zinc-700"
-                }`}
-              >
-                {value}
-              </button>
-            ))}
+          <div className="mt-4">
+            <RatingPicker
+              value={rating}
+              onChange={setRating}
+              hint="Tap a score. You can still share an entry without one."
+            />
           </div>
         </section>
 

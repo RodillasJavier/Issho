@@ -32,8 +32,12 @@ export const IncomingFriendRequests = ({
   const acceptMutation = useMutation({
     mutationFn: (friendshipId: string) => acceptFriendRequest(friendshipId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["pendingRequests"] });
       queryClient.invalidateQueries({ queryKey: ["friends", profileId] });
+    },
+    // Refetch on failure too: an accept fails when the request is already gone,
+    // and the stale row would otherwise sit there un-acceptable until reload.
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["pendingRequests"] });
     },
   });
 
@@ -43,6 +47,10 @@ export const IncomingFriendRequests = ({
       queryClient.invalidateQueries({ queryKey: ["pendingRequests"] });
     },
   });
+
+  // Without this, a failed accept/dismiss is silent: the button re-enables and
+  // the request stays put, which reads as "the click did nothing".
+  const actionError = acceptMutation.error ?? rejectMutation.error;
   // #endregion Component Logic
 
   // #region Render
@@ -59,6 +67,12 @@ export const IncomingFriendRequests = ({
           {requests?.length ?? 0}
         </span>
       </div>
+
+      {actionError && (
+        <p role="alert" className="mt-3 text-xs text-rose-400">
+          {actionError.message}
+        </p>
+      )}
 
       {isLoading ? (
         <p className="mt-4 text-xs text-neutral-600">Loading...</p>

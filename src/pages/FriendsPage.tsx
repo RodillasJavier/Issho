@@ -4,7 +4,9 @@
  * Page displaying a user's friends: on your own page, tools to add friends
  * by username and respond to incoming requests, plus a "channels" view
  * (each friend's latest activity) or a compact "directory" list. Viewing
- * someone else's friends page shows the same list/channels, read-only.
+ * someone else's friends page shows the same list/channels, read-only —
+ * though the channels there stay empty unless you're also friends with the
+ * person, since RLS only hands over your own friends' entries.
  */
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -16,7 +18,10 @@ import {
   getOtherProfile,
   unfriend,
 } from "../services/supabase/friendships";
-import { fetchEntriesWithCounts } from "../services/supabase/entries";
+import {
+  entriesQueryKey,
+  fetchEntriesWithCounts,
+} from "../services/supabase/entries";
 import { getEntryActivityLabel } from "../constants/entryTypes";
 import { FriendRequestForm } from "../components/FriendRequestForm";
 import { IncomingFriendRequests } from "../components/IncomingFriendRequests";
@@ -50,8 +55,9 @@ export const FriendsPage = () => {
   });
 
   const { data: allEntries, isLoading: entriesLoading } = useQuery({
-    queryKey: ["entries"],
+    queryKey: entriesQueryKey(user?.id),
     queryFn: fetchEntriesWithCounts,
+    enabled: !!user,
   });
 
   const unfriendMutation = useMutation({

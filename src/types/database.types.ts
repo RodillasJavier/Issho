@@ -51,6 +51,21 @@ export interface AnimeInsert {
   banner_image_url?: string | null;
 }
 
+/**
+ * A row of the `franchises` view — one per sequel/prequel chain, derived from
+ * anime.franchise_key. Read-only: there is no table behind it.
+ */
+export interface Franchise {
+  anilist_root_id: number; // AniList id of the chain root; the /series/:key value
+  title: string | null; // The root's own title (often an OVA — a poor headline)
+  display_title: string | null; // Earliest TV member's title — what the UI shows
+  member_count: number;
+  first_year: number | null;
+  last_year: number | null;
+  cover_image_url: string | null; // Flagship member's art, matching display_title
+  banner_image_url: string | null;
+}
+
 export interface Entry {
   id: string;
   created_at: string;
@@ -68,6 +83,23 @@ export interface Entry {
   comment_count?: number; // When aggregated
   user_vote?: number | null; // Current user's vote on this entry: 1, -1, or null
 }
+
+/**
+ * An entry as served to logged-out visitors by the get_public_feed /
+ * get_public_entry RPCs. The author's identity is absent from the data
+ * itself — not merely withheld by the UI — so there is nothing to un-hide.
+ */
+export type PublicEntry = Omit<Entry, "user_id" | "profile" | "user_vote">;
+
+/**
+ * Narrows Entry | PublicEntry — the one place that knows how to tell them
+ * apart. Declared against Entry (not PublicEntry) so narrowing works both
+ * ways: PublicEntry's fields are a subset of Entry's, so Entry is
+ * structurally assignable to PublicEntry, which breaks the "false" branch
+ * if the predicate targets PublicEntry instead.
+ */
+export const hasAuthor = (entry: Entry | PublicEntry): entry is Entry =>
+  "user_id" in entry;
 
 export interface Vote {
   id: string;

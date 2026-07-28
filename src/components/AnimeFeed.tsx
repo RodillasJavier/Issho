@@ -12,13 +12,16 @@ import { ArrowRight, Plus } from "lucide-react";
 import type { Anime } from "../types/database.types";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "../hooks/useAuth";
-import { AddToListButton } from "./AddToListButton";
+import { ListStatusButton } from "./ListStatusButton";
 import { DetailHero } from "./DetailHero";
 import { SeasonsGrid } from "./SeasonsGrid";
 import { WatchStatusBadge } from "./WatchStatusBadge";
 import { CommunityEntriesSection } from "./CommunityEntriesSection";
 import { fetchAnime } from "../services/supabase/anime";
-import { fetchEntriesWithCounts } from "../services/supabase/entries";
+import {
+  entriesQueryKey,
+  fetchEntriesWithCounts,
+} from "../services/supabase/entries";
 import { getUserAnimeEntry } from "../services/supabase/userAnimeList";
 import { useFranchiseMembers } from "../hooks/useFranchiseMembers";
 import { franchiseDisplayTitle } from "../utils/franchise";
@@ -34,12 +37,15 @@ interface AnimeFeedProps {
 export const AnimeFeed = ({ animeId }: AnimeFeedProps) => {
   const { user } = useAuth();
 
-  // Shares the ["entries"] cache with the homepage feed/Friends page/Series
-  // page (per CLAUDE.md), so this never triggers its own fetch once that's
-  // warm, and gets the same accurate like/dislike/comment counts they do.
+  // Shares the feed cache with the homepage feed/Friends page/Series page
+  // (per CLAUDE.md), so this never triggers its own fetch once that's warm,
+  // and gets the same accurate like/dislike/comment counts they do. Being
+  // the same RLS-scoped fetch, the community posts below are the viewer's
+  // friends' posts, not everyone's.
   const { data: allEntries } = useQuery({
-    queryKey: ["entries"],
+    queryKey: entriesQueryKey(user?.id),
     queryFn: fetchEntriesWithCounts,
+    enabled: !!user,
   });
   const entries = useMemo(
     () =>
@@ -121,7 +127,9 @@ export const AnimeFeed = ({ animeId }: AnimeFeedProps) => {
               <Plus aria-hidden className="size-4 text-rose-300" />
               Create an entry
             </Link>
-            {user && <AddToListButton animeId={animeId} />}
+            {user && (
+              <ListStatusButton target={{ kind: "anime", anime_id: animeId }} />
+            )}
           </>
         }
       />
@@ -132,7 +140,11 @@ export const AnimeFeed = ({ animeId }: AnimeFeedProps) => {
 
       <CommunityEntriesSection
         entries={entries}
-        emptyMessage="No activity for this season yet. Be the first to post!"
+        emptyMessage={
+          user
+            ? "No activity for this season from you or your friends yet. Be the first to post!"
+            : "Sign in to see activity for this season from your friends."
+        }
       />
     </div>
   );

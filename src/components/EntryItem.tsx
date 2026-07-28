@@ -17,19 +17,23 @@ import { EntryTypeIcon } from "./EntryTypeIcon";
 import { EntryVoteButtons } from "./EntryVoteButtons";
 
 // #region Types
-import type { Entry } from "../types/database.types";
+import {
+  hasAuthor,
+  type Entry,
+  type PublicEntry,
+} from "../types/database.types";
 
 interface EntryItemProps {
-  entry: Entry;
-  anonymized?: boolean;
+  entry: Entry | PublicEntry;
 }
 // #endregion
 
 // #region Component Logic
-export const EntryItem = ({ entry, anonymized = false }: EntryItemProps) => {
+export const EntryItem = ({ entry }: EntryItemProps) => {
   const { user } = useAuth();
-  const isCurrentUser = !anonymized && entry.user_id === user?.id;
-  const authorLabel = anonymized
+  const isAnonymous = !hasAuthor(entry);
+  const isCurrentUser = !isAnonymous && entry.user_id === user?.id;
+  const authorLabel = isAnonymous
     ? "Anonymous"
     : isCurrentUser
       ? "You"
@@ -64,7 +68,7 @@ export const EntryItem = ({ entry, anonymized = false }: EntryItemProps) => {
             {/* Author row */}
             <div className="flex items-center justify-between gap-3">
               <div className="flex min-w-0 items-center gap-2">
-                {anonymized ? (
+                {isAnonymous ? (
                   <div className="flex size-6 shrink-0 items-center justify-center rounded-full bg-neutral-700 text-[10px] text-neutral-300">
                     ?
                   </div>

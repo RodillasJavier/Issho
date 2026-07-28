@@ -55,7 +55,12 @@ export const sendFriendRequest = async (
 };
 
 /**
- * Accept a friend request
+ * Accept a friend request.
+ *
+ * Idempotent: the UPDATE policy on `friendships` exposes only rows that are
+ * still `pending`, so accepting twice (two tabs, a stale list) matches zero
+ * rows rather than erroring. An already-accepted row counts as success; a row
+ * that has vanished means the other party withdrew the request.
  *
  * @param friendshipId - The ID of the friendship to accept
  * @returns The updated friendship object
@@ -68,10 +73,25 @@ export const acceptFriendRequest = async (
     .update({ status: "accepted" })
     .eq("id", friendshipId)
     .select()
-    .single();
+    .maybeSingle();
 
   if (error) throw new Error(error.message);
-  return data as Friendship;
+  if (data) return data as Friendship;
+
+  // Zero rows updated — re-read to tell "already accepted" (fine) apart from
+  // "gone" (not fine). Safe to read: friendships are world-readable.
+  const { data: existing, error: readError } = await supabase
+    .from("friendships")
+    .select()
+    .eq("id", friendshipId)
+    .maybeSingle();
+
+  if (readError) throw new Error(readError.message);
+
+  const friendship = existing as Friendship | null;
+  if (friendship?.status === "accepted") return friendship;
+
+  throw new Error("That friend request is no longer available.");
 };
 
 /**

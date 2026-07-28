@@ -63,13 +63,19 @@ export interface ProfileListCardModel {
  * franchises they track season-by-season without ever setting a series
  * status. Display only — never written back, so the two levels stay
  * independent.
+ *
+ * Deliberately never returns "completed". Having watched every season in your
+ * list does not mean the series is finished — it may still be airing, and
+ * plenty of people keep an ongoing show at "watching" precisely because
+ * they're caught up rather than done. Declaring a series complete is a claim
+ * only its owner can make, so the most this will infer is "watching".
  */
-const deriveSeriesStatus = (statuses: AnimeStatus[]): AnimeStatus => {
+export const deriveSeriesStatus = (statuses: AnimeStatus[]): AnimeStatus => {
   if (statuses.length === 0) return "not_started";
-  if (statuses.some((status) => status === "watching")) return "watching";
-  if (statuses.every((status) => status === "completed")) return "completed";
-  // Some finished, some not: they're partway through the series.
-  if (statuses.some((status) => status === "completed")) return "watching";
+  // Caught up counts the same as mid-way: in progress, not finished.
+  if (statuses.some((s) => s === "watching" || s === "completed")) {
+    return "watching";
+  }
   if (statuses.every((status) => status === "dropped")) return "dropped";
   return "not_started";
 };

@@ -28,6 +28,17 @@ export interface UseListStatusEntryParams<TEntry extends ListStatusEntryLike> {
   removeEntry: (entry: TEntry) => Promise<unknown>;
   /** Caller-owned query keys to invalidate after a successful add/update/remove. */
   invalidateKeys: readonly (readonly unknown[])[];
+  /**
+   * Called after a status is successfully added or changed, with the status
+   * applied and the one it replaced (null when there was no entry). Lets a
+   * caller react to a specific transition — offering to sweep a franchise's
+   * seasons when it *becomes* completed, say — without this hook knowing
+   * anything about franchises. Not called on removal.
+   */
+  onApplied?: (applied: {
+    status: AnimeStatus;
+    previousStatus: AnimeStatus | null;
+  }) => void;
   enabled: boolean;
 }
 
@@ -38,6 +49,7 @@ export const useListStatusEntry = <TEntry extends ListStatusEntryLike>({
   updateEntry,
   removeEntry,
   invalidateKeys,
+  onApplied,
   enabled,
 }: UseListStatusEntryParams<TEntry>) => {
   const [showStatusPicker, setShowStatusPicker] = useState(false);
@@ -61,14 +73,22 @@ export const useListStatusEntry = <TEntry extends ListStatusEntryLike>({
     setShowStatusPicker(false);
   };
 
+  /** Reports what was applied, and what it replaced, once the write lands. */
+  const applied = (status: AnimeStatus, previousStatus: AnimeStatus | null) => {
+    invalidate();
+    onApplied?.({ status, previousStatus });
+  };
+
   const addMutation = useMutation({
     mutationFn: (status: AnimeStatus) => addEntry(status),
-    onSuccess: invalidate,
+    onSuccess: (_data, status) => applied(status, null),
   });
 
   const updateMutation = useMutation({
     mutationFn: (status: AnimeStatus) => updateEntry(entry!, status),
-    onSuccess: invalidate,
+    // `entry` is the pre-update row: the mutation invalidates rather than
+    // writing through the cache, so it hasn't been replaced yet.
+    onSuccess: (_data, status) => applied(status, entry?.status ?? null),
   });
 
   const removeMutation = useMutation({

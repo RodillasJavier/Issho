@@ -92,9 +92,13 @@ export const ListToolbar = ({
           aria-live="polite"
           className="font-mono text-[10px] tracking-[0.18em] whitespace-nowrap text-zinc-500 uppercase"
         >
-          {query
-            ? `${resultCount} of ${totalCount}`
-            : `${totalCount} ${totalCount === 1 ? "series" : "series"}`}
+          {/* Narrows for a status filter as well as a search — otherwise it
+              reads "57 series" while nine are on screen. The `!query` keeps a
+              search that happens to match everything from reading identically
+              to no search at all, which would leave this live region silent. */}
+          {resultCount === totalCount && !query
+            ? `${totalCount} series`
+            : `${resultCount} of ${totalCount}`}
         </span>
 
         {/* Sort */}

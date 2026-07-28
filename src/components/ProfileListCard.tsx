@@ -49,7 +49,11 @@ export const ProfileListCard = ({
   onEdit,
 }: ProfileListCardProps) => (
   <motion.article
-    layout
+    // No `layout` prop: paired with the grid's AnimatePresence it pulled
+    // exiting cards out of flow and over the page header (see the note in
+    // UserProfilePage), and it costs a measurement pass per card. This fade
+    // runs on mount, so it plays for cards entering the page but not for ones
+    // a re-sort merely moves.
     initial={{ opacity: 0, y: 10 }}
     animate={{ opacity: 1, y: 0 }}
     transition={{ duration: 0.25 }}

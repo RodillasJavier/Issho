@@ -8,11 +8,17 @@
  *
  * The feed is per-anime, so only season adds post. Adding a season also seeds
  * the series row for its franchise; `addListEntry` owns that rule.
+ *
+ * Marking a series completed here offers the same "mark all seasons completed
+ * too?" prompt the profile's edit modal does — it's the same transition, so it
+ * shouldn't depend on which screen you made it from.
  */
+import { useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import { useListStatusEntry } from "../hooks/useListStatusEntry";
 import { StatusPickerDropdown } from "./StatusPickerDropdown";
+import { SeasonsCompletedPrompt } from "./SeasonsCompletedPrompt";
 import {
   getListEntry,
   addListEntry,
@@ -28,6 +34,8 @@ import type { AnimeStatus } from "../types/database.types";
 // #region Types
 interface ListStatusButtonProps {
   target: ListTarget;
+  /** Series display title, for the seasons prompt. Franchise targets only. */
+  franchiseTitle?: string;
 }
 // #endregion Types
 
@@ -38,12 +46,16 @@ const targetQueryKey = (target: ListTarget, userId: string | undefined) =>
     : ["userAnimeList", target.anime_id, userId];
 
 // #region Component Logic
-export const ListStatusButton = ({ target }: ListStatusButtonProps) => {
+export const ListStatusButton = ({
+  target,
+  franchiseTitle,
+}: ListStatusButtonProps) => {
   const { user } = useAuth();
   const copy = LIST_ENTRY_COPY[target.kind];
   // Adding a season is itself the statement; tracking a series is not, since
   // the feed has no series-level post for it to become.
   const announce = target.kind === "anime";
+  const [showSeasonsPrompt, setShowSeasonsPrompt] = useState(false);
 
   const {
     entry: listEntry,
@@ -66,6 +78,18 @@ export const ListStatusButton = ({ target }: ListStatusButtonProps) => {
       ...listInvalidationKeys(user?.id),
       ...(announce ? [["entries"]] : []),
     ],
+    onApplied: ({ status, previousStatus }) => {
+      // Same transition the profile's edit modal watches for: a series that
+      // has just *become* completed. Re-completing an already-completed
+      // series isn't news, so previousStatus has to differ.
+      if (
+        target.kind === "franchise" &&
+        status === "completed" &&
+        previousStatus !== "completed"
+      ) {
+        setShowSeasonsPrompt(true);
+      }
+    },
     enabled: !!user,
   });
   // #endregion Component Logic
@@ -123,6 +147,17 @@ export const ListStatusButton = ({ target }: ListStatusButtonProps) => {
         <div
           className="fixed inset-0 z-0"
           onClick={() => setShowStatusPicker(false)}
+        />
+      )}
+
+      {/* Offered on the series → completed transition, same as the profile's
+          edit modal. Dismissing changes nothing; the seasons keep their own
+          statuses unless the user asks for the sweep. */}
+      {showSeasonsPrompt && target.kind === "franchise" && (
+        <SeasonsCompletedPrompt
+          franchiseKey={target.franchise_key}
+          franchiseTitle={franchiseTitle ?? "this series"}
+          onClose={() => setShowSeasonsPrompt(false)}
         />
       )}
     </div>

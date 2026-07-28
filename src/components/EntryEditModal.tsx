@@ -80,19 +80,15 @@ export const EntryEditModal = <TPostSaveProps extends object = object>({
   const [review, setReview] = useState<string>(initialReview || "");
   const [showPostSave, setShowPostSave] = useState(false);
 
+  // Body scroll lock, mount to unmount. Kept apart from the key listener so
+  // that re-subscribing the latter can't toggle overflow off and on and jump
+  // the page's scroll position.
   useEffect(() => {
-    // Prevent body scroll, and let Escape dismiss the modal.
     document.body.style.overflow = "hidden";
-    const handleKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", handleKey);
-
     return () => {
       document.body.style.overflow = "unset";
-      document.removeEventListener("keydown", handleKey);
     };
-  }, [onClose]);
+  }, []);
 
   const updateMutation = useMutation({
     mutationFn: () =>
@@ -117,7 +113,22 @@ export const EntryEditModal = <TPostSaveProps extends object = object>({
     },
   });
 
+  // Dismissing mid-save is not just a lost keystroke: unmounting before
+  // updateMutation.onSuccess runs means setShowPostSave never takes effect, and
+  // because the write already landed the entry now *starts* as "completed" —
+  // so `justCompleted` can never be true again and the seasons prompt becomes
+  // permanently unreachable for that franchise. Escape and the backdrop are
+  // both gated on this, matching the already-disabled Save/Remove buttons.
   const isBusy = updateMutation.isPending || deleteMutation.isPending;
+
+  useEffect(() => {
+    if (isBusy) return; // Escape is inert while a mutation is in flight.
+    const handleKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", handleKey);
+    return () => document.removeEventListener("keydown", handleKey);
+  }, [onClose, isBusy]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault(); // Prevent page reload
@@ -142,7 +153,14 @@ export const EntryEditModal = <TPostSaveProps extends object = object>({
   }
 
   return (
-    <ModalShell panelClassName="w-full max-w-xl max-h-[90vh] overflow-y-auto">
+    <ModalShell
+      onClose={onClose}
+      dismissible={!isBusy}
+      // scrollbar-slim opts back in to a visible scrollbar against the global
+      // hide in index.css — this form's actions sit below the fold on a short
+      // viewport, so it needs the affordance.
+      panelClassName="w-full max-w-xl max-h-[90vh] overflow-y-auto scrollbar-slim"
+    >
       <form onSubmit={handleSubmit} className="p-6 sm:p-8">
         {/* Header */}
         <div className="flex items-start justify-between gap-4">

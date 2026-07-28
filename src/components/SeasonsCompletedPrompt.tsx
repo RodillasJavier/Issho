@@ -43,7 +43,13 @@ export const SeasonsCompletedPrompt = ({
 
   // #region Render
   return (
-    <ModalShell panelClassName="w-full max-w-md p-6 sm:p-8">
+    <ModalShell
+      onClose={onClose}
+      // Same guard as the Yes button: a backdrop click mid-sweep would drop
+      // the user out with the update still in flight.
+      dismissible={!markSeasonsMutation.isPending}
+      panelClassName="w-full max-w-md p-6 sm:p-8"
+    >
       <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-rose-400">
         Series completed
       </p>

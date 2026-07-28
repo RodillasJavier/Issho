@@ -15,7 +15,6 @@
 import { useMemo, useState } from "react";
 import { useParams } from "react-router";
 import { useQuery } from "@tanstack/react-query";
-import { AnimatePresence, motion } from "framer-motion";
 import { ChevronLeft, ChevronRight, SearchX } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import { useDebouncedValue } from "../hooks/useDebouncedValue";
@@ -275,20 +274,25 @@ export const UserProfilePage = () => {
                 )}
               </div>
             ) : (
-              <motion.div
-                layout
-                className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4"
-              >
-                <AnimatePresence mode="popLayout">
-                  {paginatedCards.map((card) => (
-                    <ProfileListItem
-                      key={card.groupKey}
-                      card={card}
-                      isOwnProfile={isOwnProfile}
-                    />
-                  ))}
-                </AnimatePresence>
-              </motion.div>
+              // No AnimatePresence/layout here. `mode="popLayout"` gives
+              // exiting cards `position: absolute`, and since this grid is not
+              // a positioned ancestor they resolved against the page and flew
+              // over the header — with no `exit` variant to fade them, they
+              // just sat there. Filtering and paging drop a dozen cards at
+              // once, so that happened a dozen times over.
+              //
+              // Cards are keyed by groupKey, so a re-sort *moves* the nodes
+              // that stay on the page rather than remounting them: they don't
+              // re-fade, only cards genuinely entering the page do.
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+                {paginatedCards.map((card) => (
+                  <ProfileListItem
+                    key={card.groupKey}
+                    card={card}
+                    isOwnProfile={isOwnProfile}
+                  />
+                ))}
+              </div>
             )}
 
             {pageCount > 1 && (

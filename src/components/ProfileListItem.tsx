@@ -96,9 +96,11 @@ export const ProfileListItem = ({
         }
         coverUrl={card.coverUrl}
         title={card.title}
+        // No backdrop-blur on the badge: at bg-black/70 it is invisible, and
+        // it made every card its own backdrop-filter layer — a dozen per page.
         badge={
           card.isFranchise && card.seasons.length > 0 ? (
-            <span className="absolute top-2 right-2 rounded-md bg-black/70 px-2 py-1 font-mono text-[10px] tracking-[0.14em] text-zinc-300 uppercase backdrop-blur">
+            <span className="absolute top-2 right-2 rounded-md bg-black/70 px-2 py-1 font-mono text-[10px] tracking-[0.14em] text-zinc-300 uppercase">
               {card.seasons.length} in list
             </span>
           ) : undefined

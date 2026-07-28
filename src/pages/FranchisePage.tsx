@@ -21,7 +21,7 @@ import { DetailHero } from "../components/DetailHero";
 import { SeasonsGrid } from "../components/SeasonsGrid";
 import { WatchStatusBadge } from "../components/WatchStatusBadge";
 import { CommunityEntriesSection } from "../components/CommunityEntriesSection";
-import { FranchiseListButton } from "../components/FranchiseListButton";
+import { ListStatusButton } from "../components/ListStatusButton";
 import {
   entriesQueryKey,
   fetchEntriesWithCounts,
@@ -111,7 +111,11 @@ export const FranchisePage = () => {
               <Plus aria-hidden className="size-4 text-rose-300" />
               Create an entry
             </Link>
-            {user && <FranchiseListButton franchiseKey={franchiseKey} />}
+            {user && (
+              <ListStatusButton
+                target={{ kind: "franchise", franchise_key: franchiseKey }}
+              />
+            )}
           </>
         }
       />

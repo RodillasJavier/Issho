@@ -17,14 +17,17 @@ interface ListStatusEntryLike {
 }
 
 export interface UseListStatusEntryParams<TEntry extends ListStatusEntryLike> {
-  queryKey: unknown[];
+  queryKey: readonly unknown[];
   getEntry: () => Promise<TEntry | null>;
   addEntry: (status: AnimeStatus) => Promise<unknown>;
-  updateEntry: (entryId: string, status: AnimeStatus) => Promise<unknown>;
+  /** Receives the whole entry, not just its id, so callers that need more of
+   * it (which table it came from, say) don't have to re-fetch or close over
+   * the hook's own return value. */
+  updateEntry: (entry: TEntry, status: AnimeStatus) => Promise<unknown>;
   /** Called when the user picks the already-active status, to remove it. */
-  removeEntry: (entryId: string) => Promise<unknown>;
+  removeEntry: (entry: TEntry) => Promise<unknown>;
   /** Caller-owned query keys to invalidate after a successful add/update/remove. */
-  invalidateKeys: unknown[][];
+  invalidateKeys: readonly (readonly unknown[])[];
   enabled: boolean;
 }
 
@@ -64,12 +67,12 @@ export const useListStatusEntry = <TEntry extends ListStatusEntryLike>({
   });
 
   const updateMutation = useMutation({
-    mutationFn: (status: AnimeStatus) => updateEntry(entry!.id, status),
+    mutationFn: (status: AnimeStatus) => updateEntry(entry!, status),
     onSuccess: invalidate,
   });
 
   const removeMutation = useMutation({
-    mutationFn: () => removeEntry(entry!.id),
+    mutationFn: () => removeEntry(entry!),
     onSuccess: invalidate,
   });
 

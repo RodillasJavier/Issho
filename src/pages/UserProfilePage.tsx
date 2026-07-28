@@ -3,34 +3,47 @@
  *
  * Page to view a user's profile, anime list, and stats.
  *
+ * The list is series-level: one card per franchise, or per standalone show.
+ * It is fetched once and then searched, sorted, filtered and paginated in
+ * memory, so none of those interactions costs a request.
+ *
  * Lists are friends-only: RLS on user_anime_entries/user_franchise_entries
  * returns nothing for a stranger's profile, so the friendship check here is
  * purely so the page can say "private" rather than misreport an empty list
  * as "no anime in list yet".
  */
 import { useMemo, useState } from "react";
-import { useParams, Link } from "react-router";
+import { useParams } from "react-router";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import { ChevronLeft, ChevronRight, SearchX } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
+import { useDebouncedValue } from "../hooks/useDebouncedValue";
 import { getProfileByUsername } from "../services/supabase/profiles";
-import { fetchAllUserAnimeEntries } from "../services/supabase/userAnimeList";
-import { fetchUserFranchiseList } from "../services/supabase/userFranchiseList";
+import {
+  fetchUserListEntries,
+  userListQueryKey,
+} from "../services/supabase/userLists";
+import { fetchFranchises } from "../services/supabase/franchises";
 import {
   getFriends,
   getFriendshipStatus,
 } from "../services/supabase/friendships";
-import { UserAvatar } from "../components/UserAvatar";
-import { MyAnimeListItem } from "../components/MyAnimeListItem";
-import { MyFranchiseListItem } from "../components/MyFranchiseListItem";
+import { ProfileHeader } from "../components/ProfileHeader";
 import { AnimeListStats } from "../components/AnimeListStats";
-import { FriendButton } from "../components/FriendButton";
-import { groupUserEntriesByFranchise } from "../utils/franchise";
+import { ListToolbar } from "../components/ListToolbar";
+import { ProfileListItem } from "../components/ProfileListItem";
+import {
+  buildProfileListCards,
+  franchiseKeysNeedingMembers,
+} from "../utils/listEntries";
+import { DEFAULT_SORT_KEY, sortProfileCards } from "../constants/listSort";
+import type { SortKey } from "../constants/listSort";
 import type { AnimeStatus } from "../types/database.types";
 
 type FilterTab = "all" | AnimeStatus;
 
-const ITEMS_PER_PAGE = 20;
+const ITEMS_PER_PAGE = 12;
 
 // #region Component Logic
 
@@ -38,7 +51,10 @@ export const UserProfilePage = () => {
   const { username } = useParams<{ username: string }>();
   const { user } = useAuth();
   const [activeFilter, setActiveFilter] = useState<FilterTab>("all");
+  const [query, setQuery] = useState("");
+  const [sortKey, setSortKey] = useState<SortKey>(DEFAULT_SORT_KEY);
   const [pageNumber, setPageNumber] = useState(0);
+  const debouncedQuery = useDebouncedValue(query, 200);
 
   const {
     data: profile,
@@ -63,43 +79,30 @@ export const UserProfilePage = () => {
   // (that would serialize them behind friendshipStatus for no real benefit).
   const canViewList = isOwnProfile || !!friendshipStatus?.isFriend;
 
-  const { data: allEntries, isLoading: listLoading } = useQuery({
-    queryKey: ["userAnimeList", profile?.id, "all"],
-    queryFn: () => fetchAllUserAnimeEntries(profile!.id),
+  const { data: listEntries, isLoading: listLoading } = useQuery({
+    queryKey: userListQueryKey(profile?.id),
+    queryFn: () => fetchUserListEntries(profile!.id),
     enabled: !!profile?.id,
   });
 
-  const { data: userFranchiseEntries } = useQuery({
-    queryKey: ["userFranchiseList", profile?.id],
-    queryFn: () => fetchUserFranchiseList(profile!.id),
-    enabled: !!profile?.id,
+  // Series tracked with none of their seasons in the list carry no metadata of
+  // their own. The franchises view derives title/art/year span in SQL, so this
+  // is one small row per series rather than every member anime.
+  const orphanFranchiseKeys = useMemo(
+    () => franchiseKeysNeedingMembers(listEntries ?? []),
+    [listEntries]
+  );
+
+  const { data: orphanFranchises } = useQuery({
+    queryKey: ["franchises", orphanFranchiseKeys],
+    queryFn: () => fetchFranchises(orphanFranchiseKeys),
+    enabled: orphanFranchiseKeys.length > 0,
   });
-  // The profile list is series-level: one card per franchise. A card's
-  // effective status/rating is the user-set series value for multi-entry
-  // franchises, or the entry's own for standalone shows (where entry = series).
-  const seriesCards = useMemo(() => {
-    const franchiseEntryByKey = new Map(
-      (userFranchiseEntries ?? []).map((entry) => [entry.franchise_key, entry])
-    );
-    return groupUserEntriesByFranchise(allEntries ?? []).map((group) => {
-      const isFranchise =
-        group.entries.length > 1 && group.franchiseKey != null;
-      const franchiseEntry = isFranchise
-        ? (franchiseEntryByKey.get(group.franchiseKey!) ?? null)
-        : null;
-      return {
-        group,
-        isFranchise,
-        franchiseEntry,
-        status: isFranchise
-          ? (franchiseEntry?.status ?? "not_started")
-          : group.entries[0].status,
-        rating: isFranchise
-          ? (franchiseEntry?.rating ?? null)
-          : group.entries[0].rating,
-      };
-    });
-  }, [allEntries, userFranchiseEntries]);
+
+  const seriesCards = useMemo(
+    () => buildProfileListCards(listEntries ?? [], orphanFranchises ?? []),
+    [listEntries, orphanFranchises]
+  );
 
   // Stats count series, matching what the list displays
   const stats = useMemo(() => {
@@ -119,16 +122,33 @@ export const UserProfilePage = () => {
     };
   }, [seriesCards]);
 
-  const filteredCards =
-    activeFilter === "all"
-      ? seriesCards
-      : seriesCards.filter((card) => card.status === activeFilter);
-  const startIndex = pageNumber * ITEMS_PER_PAGE;
-  const paginatedCards = filteredCards.slice(
-    startIndex,
-    startIndex + ITEMS_PER_PAGE
+  // Filter, then search, then sort — all in memory over the single fetch.
+  const visibleCards = useMemo(() => {
+    const search = debouncedQuery.trim().toLowerCase();
+    const matched = seriesCards.filter((card) => {
+      if (activeFilter !== "all" && card.status !== activeFilter) return false;
+      if (!search) return true;
+      return (
+        card.title.toLowerCase().includes(search) ||
+        card.seasons.some(
+          (season) =>
+            season.anime?.name.toLowerCase().includes(search) ||
+            season.anime?.name_japanese?.toLowerCase().includes(search)
+        )
+      );
+    });
+    return sortProfileCards(matched, sortKey);
+  }, [seriesCards, activeFilter, debouncedQuery, sortKey]);
+
+  const pageCount = Math.max(
+    1,
+    Math.ceil(visibleCards.length / ITEMS_PER_PAGE)
   );
-  const hasMore = startIndex + ITEMS_PER_PAGE < filteredCards.length;
+  const safePage = Math.min(pageNumber, pageCount - 1);
+  const paginatedCards = visibleCards.slice(
+    safePage * ITEMS_PER_PAGE,
+    (safePage + 1) * ITEMS_PER_PAGE
+  );
 
   const { data: friends } = useQuery({
     queryKey: ["friends", profile?.id],
@@ -138,20 +158,30 @@ export const UserProfilePage = () => {
 
   const handleFilterChange = (filter: FilterTab) => {
     setActiveFilter(filter);
-    setPageNumber(0); // Reset to first page when filter changes
+    setPageNumber(0);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
+  const handleQueryChange = (value: string) => {
+    setQuery(value);
+    setPageNumber(0);
+  };
+
+  const handleSortChange = (key: SortKey) => {
+    setSortKey(key);
+    setPageNumber(0);
+  };
+
   const handlePrevPage = () => {
-    if (pageNumber > 0) {
-      setPageNumber(pageNumber - 1);
+    if (safePage > 0) {
+      setPageNumber(safePage - 1);
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
   };
 
   const handleNextPage = () => {
-    if (hasMore) {
-      setPageNumber(pageNumber + 1);
+    if (safePage < pageCount - 1) {
+      setPageNumber(safePage + 1);
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
   };
@@ -161,86 +191,24 @@ export const UserProfilePage = () => {
   // #region Render
 
   if (profileLoading) {
-    return <div>Loading profile...</div>;
+    return <div className="text-zinc-400">Loading profile...</div>;
   }
 
   if (profileError || !profile) {
-    return <div>User not found</div>;
+    return <div className="text-zinc-400">User not found</div>;
   }
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Profile Header */}
-      <div className="flex flex-col p-4 md:p-6 bg-neutral-950 border border-neutral-800 rounded-lg relative">
-        {/* Profile Info */}
-        <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4">
-          <UserAvatar
-            username={profile.username}
-            avatarUrl={profile.avatar_url}
-            size="profile"
-            linkToProfile={false}
-          />
-
-          <div className="flex flex-col gap-2 text-center sm:text-left w-full">
-            <div className="flex flex-row justify-between gap-2">
-              <div className="flex flex-col text-left">
-                <h1 className="text-2xl md:text-4xl font-semibold text-rose-400">
-                  {profile.username}'s List
-                </h1>
-
-                {profile.bio && (
-                  <p className="text-sm md:text-base text-gray-300">
-                    {profile.bio}
-                  </p>
-                )}
-              </div>
-
-              {/* Edit Profile Button (when viewing own profile) */}
-              {isOwnProfile && (
-                <Link
-                  to="/profile/edit"
-                  className="p-2 text-neutral-400 hover:text-rose-400 transition-colors self-center sm:self-auto"
-                  aria-label="Edit profile"
-                >
-                  <svg
-                    className="w-6 h-6 md:w-8 md:h-8"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-                    />
-                  </svg>
-                </Link>
-              )}
-            </div>
-
-            {/* Friends and Friend Action Buttons */}
-            <div className="flex flex-row flex-wrap items-center gap-2 justify-center sm:justify-start">
-              {/* Friends Link Button */}
-              <Link
-                to={`/profile/${profile.username}/friends`}
-                className="px-3 py-2 bg-rose-500 hover:bg-rose-950 border border-rose-500 text-white hover:text-rose-100 text-sm rounded transition flex items-center gap-2"
-              >
-                {isOwnProfile ? "Manage Friends" : "View Friends"} (
-                {friends ? friends.length : 0})
-              </Link>
-
-              {/* Friend Button (when viewing another user) */}
-              {!isOwnProfile && user && (
-                <FriendButton targetUserId={profile.id} />
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
+      <ProfileHeader
+        profile={profile}
+        friendCount={friends?.length ?? 0}
+        isOwnProfile={isOwnProfile}
+        canAddFriend={!!user}
+      />
 
       {/* Stats Cards (series-level) */}
-      {canViewList && allEntries && (
+      {canViewList && listEntries && (
         <AnimeListStats
           stats={stats}
           activeFilter={activeFilter}
@@ -249,69 +217,111 @@ export const UserProfilePage = () => {
       )}
 
       {/* Anime List */}
-      <div className="flex flex-col gap-4">
-        <h2 className="text-2xl font-semibold text-rose-400">Anime List</h2>
+      <section className="flex flex-col gap-4">
+        <div>
+          <p className="font-mono text-[10px] tracking-[0.18em] text-zinc-600 uppercase">
+            Watchlist
+          </p>
+          <h2 className="mt-1 text-2xl font-semibold text-rose-400">
+            Anime List
+          </h2>
+        </div>
 
         {!canViewList ? (
-          <div className="flex flex-col items-center gap-3 rounded-lg border border-neutral-800 bg-neutral-950 px-4 py-12 text-center">
-            <p className="text-lg text-gray-400">This list is private</p>
-            <p className="max-w-md text-sm text-gray-500">
+          <div className="flex flex-col items-center gap-3 rounded-xl border border-zinc-800 bg-[#0c0c0f] px-4 py-12 text-center">
+            <p className="text-lg text-zinc-400">This list is private</p>
+            <p className="max-w-md text-sm text-zinc-500">
               {user
                 ? `Add ${profile.username} as a friend to see what they're watching.`
                 : `Sign in and add ${profile.username} as a friend to see what they're watching.`}
             </p>
           </div>
         ) : listLoading ? (
-          <div>Loading anime list...</div>
-        ) : paginatedCards.length > 0 ? (
-          <>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {paginatedCards.map((card) =>
-                card.isFranchise ? (
-                  <MyFranchiseListItem
-                    key={card.group.groupKey}
-                    franchiseKey={card.group.franchiseKey!}
-                    title={card.group.title}
-                    entries={card.group.entries}
-                    franchiseEntry={card.franchiseEntry}
-                    isOwnProfile={isOwnProfile}
-                  />
-                ) : (
-                  <MyAnimeListItem
-                    key={card.group.groupKey}
-                    entry={card.group.entries[0]}
-                  />
-                )
-              )}
-            </div>
-
-            {/* Pagination Controls */}
-            <div className="flex justify-center items-center gap-4 py-4">
-              <button
-                onClick={handlePrevPage}
-                disabled={pageNumber === 0}
-                className="flex items-center gap-1 cursor-pointer px-4 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-white hover:border-rose-500 disabled:opacity-50 disabled:cursor-not-allowed transition"
-              >
-                <ChevronLeft className="size-4" />
-                Prev
-              </button>
-
-              <span className="text-gray-400">Page {pageNumber + 1}</span>
-
-              <button
-                onClick={handleNextPage}
-                disabled={!hasMore}
-                className="flex items-center gap-1 cursor-pointer px-4 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-white hover:border-rose-500 disabled:opacity-50 disabled:cursor-not-allowed transition"
-              >
-                Next
-                <ChevronRight className="size-4" />
-              </button>
-            </div>
-          </>
+          <div className="text-zinc-400">Loading anime list...</div>
+        ) : seriesCards.length === 0 ? (
+          <div className="text-zinc-400">No anime in list yet</div>
         ) : (
-          <div className="text-gray-400">No anime in list yet</div>
+          <>
+            <ListToolbar
+              query={query}
+              onQueryChange={handleQueryChange}
+              sortKey={sortKey}
+              onSortChange={handleSortChange}
+              resultCount={visibleCards.length}
+              totalCount={seriesCards.length}
+            />
+
+            {paginatedCards.length === 0 ? (
+              <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-zinc-800 px-6 py-16 text-center">
+                <SearchX aria-hidden className="size-7 text-zinc-700" />
+                <p className="mt-4 text-sm font-medium text-zinc-300">
+                  {query
+                    ? `No series match "${query}"`
+                    : "Nothing in this filter yet"}
+                </p>
+                <p className="mt-1 text-sm text-zinc-600">
+                  {query
+                    ? "Try a different title, or clear your search to see the whole list."
+                    : "Pick another status above to see the rest of the list."}
+                </p>
+                {query && (
+                  <button
+                    type="button"
+                    onClick={() => handleQueryChange("")}
+                    className="mt-4 inline-flex h-8 cursor-pointer items-center rounded-md border border-zinc-800 bg-neutral-950/60 px-3 text-xs font-medium text-zinc-400 transition-colors hover:border-zinc-700 hover:text-zinc-100"
+                  >
+                    Clear search
+                  </button>
+                )}
+              </div>
+            ) : (
+              <motion.div
+                layout
+                className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4"
+              >
+                <AnimatePresence mode="popLayout">
+                  {paginatedCards.map((card) => (
+                    <ProfileListItem
+                      key={card.groupKey}
+                      card={card}
+                      isOwnProfile={isOwnProfile}
+                    />
+                  ))}
+                </AnimatePresence>
+              </motion.div>
+            )}
+
+            {pageCount > 1 && (
+              <nav
+                aria-label="Pagination"
+                className="flex items-center justify-center gap-4 pt-2"
+              >
+                <button
+                  onClick={handlePrevPage}
+                  disabled={safePage === 0}
+                  className="inline-flex h-9 cursor-pointer items-center gap-1 rounded-md border border-zinc-800 bg-neutral-950/60 px-3 text-sm text-zinc-400 transition-colors hover:border-zinc-700 hover:text-zinc-100 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <ChevronLeft aria-hidden className="size-4" />
+                  Prev
+                </button>
+
+                <span className="font-mono text-[10px] tracking-[0.18em] text-zinc-600 uppercase">
+                  Page {safePage + 1} / {pageCount}
+                </span>
+
+                <button
+                  onClick={handleNextPage}
+                  disabled={safePage >= pageCount - 1}
+                  className="inline-flex h-9 cursor-pointer items-center gap-1 rounded-md border border-zinc-800 bg-neutral-950/60 px-3 text-sm text-zinc-400 transition-colors hover:border-zinc-700 hover:text-zinc-100 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Next
+                  <ChevronRight aria-hidden className="size-4" />
+                </button>
+              </nav>
+            )}
+          </>
         )}
-      </div>
+      </section>
     </div>
   );
 };

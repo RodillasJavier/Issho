@@ -16,6 +16,7 @@ import { useAuth } from "../hooks/useAuth";
 import { useFranchiseMembers } from "../hooks/useFranchiseMembers";
 import { StatusOptionList } from "./StatusOptionList";
 import { RatingPicker } from "./RatingPicker";
+import { SeasonsCompletedPrompt } from "./SeasonsCompletedPrompt";
 import { REVIEW_MAX } from "../constants/listEntry";
 import { fetchAnime } from "../services/supabase/anime";
 import {
@@ -101,6 +102,9 @@ const upsertSeasonList = async (
 };
 
 // Upsert the series-level list row (these service calls create no feed rows).
+// Returns the status the row held beforehand — null when there wasn't one —
+// so the caller can tell a series that *became* completed from one that
+// already was.
 const upsertFranchiseList = async (
   franchiseKey: number,
   userId: string,
@@ -109,13 +113,13 @@ const upsertFranchiseList = async (
     rating?: number | null;
     review?: string | null;
   }
-) => {
+): Promise<AnimeStatus | null> => {
   const existing = await getUserFranchiseEntry(franchiseKey, userId);
   if (existing) {
     if (Object.keys(updates).length > 0) {
       await updateUserFranchiseEntry(existing.id, updates);
     }
-    return;
+    return existing.status;
   }
   const created = await addUserFranchiseEntry(
     franchiseKey,
@@ -128,6 +132,7 @@ const upsertFranchiseList = async (
   if (Object.keys(postCreate).length > 0) {
     await updateUserFranchiseEntry(created.id, postCreate);
   }
+  return null;
 };
 
 const publishEntry = async (input: PublishInput, userId: string) => {
@@ -141,15 +146,26 @@ const publishEntry = async (input: PublishInput, userId: string) => {
     ...(trimmedReview ? { review: trimmedReview } : {}),
   };
 
+  // True when this publish is what turned the series completed, so the caller
+  // can offer to sweep its seasons — the same offer the profile's edit modal
+  // and the series page's status picker make.
+  let seriesJustCompleted = false;
+
   if (scope === "franchise" && franchiseKey != null) {
-    await upsertFranchiseList(franchiseKey, userId, listUpdates);
+    const previousStatus = await upsertFranchiseList(
+      franchiseKey,
+      userId,
+      listUpdates
+    );
+    seriesJustCompleted =
+      status === "completed" && previousStatus !== "completed";
   } else {
     await upsertSeasonList(anime.id, userId, listUpdates);
   }
 
   // A rating alone never creates a post — the entry page shows current rating
   // live. Only status and/or review produce a feed entry.
-  if (!trimmedReview && !status) return;
+  if (!trimmedReview && !status) return { seriesJustCompleted };
 
   const { error } = await supabase.from("entries").insert({
     user_id: userId,
@@ -161,6 +177,8 @@ const publishEntry = async (input: PublishInput, userId: string) => {
     franchise_key: scope === "franchise" ? franchiseKey : null,
   });
   if (error) throw new Error(error.message);
+
+  return { seriesJustCompleted };
 };
 // #endregion
 
@@ -176,6 +194,9 @@ export const CreateEntry = () => {
   const [status, setStatus] = useState<AnimeStatus | null>(null);
   const [rating, setRating] = useState<number | null>(null);
   const [review, setReview] = useState("");
+
+  // Shown after publishing a whole-series entry that just turned it completed.
+  const [showSeasonsPrompt, setShowSeasonsPrompt] = useState(false);
 
   const [search, setSearch] = useState("");
   // null = search the whole catalogue; a status = search within that list
@@ -296,12 +317,20 @@ export const CreateEntry = () => {
         user.id
       );
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["entries"] });
       queryClient.invalidateQueries({ queryKey: ["animeEntries"] });
       queryClient.invalidateQueries({ queryKey: ["franchiseEntries"] });
       queryClient.invalidateQueries({ queryKey: ["userAnimeList"] });
       queryClient.invalidateQueries({ queryKey: ["userFranchiseList"] });
+      queryClient.invalidateQueries({ queryKey: ["userList"] });
+
+      // Ask about sweeping the seasons before leaving — navigating first would
+      // unmount the prompt, and the transition is only offered once.
+      if (result?.seriesJustCompleted) {
+        setShowSeasonsPrompt(true);
+        return;
+      }
       navigate("/");
     },
   });
@@ -543,6 +572,20 @@ export const CreateEntry = () => {
           )}
         </div>
       </div>
+
+      {/* Offered when this publish is what turned the series completed. The
+          entry is already published either way — answering just decides
+          whether the seasons follow, and we head home afterwards. */}
+      {showSeasonsPrompt && selectedAnime?.franchise_key != null && (
+        <SeasonsCompletedPrompt
+          franchiseKey={selectedAnime.franchise_key}
+          franchiseTitle={displayTitle ?? selectedAnime.name}
+          onClose={() => {
+            setShowSeasonsPrompt(false);
+            navigate("/");
+          }}
+        />
+      )}
     </div>
   );
   // #endregion Render

@@ -114,6 +114,7 @@ export const FranchisePage = () => {
             {user && (
               <ListStatusButton
                 target={{ kind: "franchise", franchise_key: franchiseKey }}
+                franchiseTitle={title}
               />
             )}
           </>

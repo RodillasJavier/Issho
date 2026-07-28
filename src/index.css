@@ -9,6 +9,51 @@
   html {
     font-family: var(--font-sans);
   }
+
+  /* Scrollbars hidden outright everywhere (not just the page), including
+     scrollable panels like the edit modal's — a visible scrollbar there has
+     no width to add or remove in the first place, so a modal's scroll-lock
+     can't shift anything by toggling it. */
+  * {
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* legacy Edge */
+  }
+
+  *::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, current Edge */
+  }
+}
+
+@layer utilities {
+  /* Opts a scroll container back in to a visible scrollbar, against the
+     blanket hide above. The rule above is what stops a scroll-lock from
+     shifting the page, but it also strips the only affordance from the app's
+     one real scroll container — the edit modal's panel, whose Save/Cancel
+     controls sit below the fold on a short viewport. On platforms with
+     classic (non-overlay) scrollbars there would otherwise be no indication
+     they exist. Class beats `*`, so this wins without !important. */
+  .scrollbar-slim {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-zinc-700) transparent;
+  }
+
+  .scrollbar-slim::-webkit-scrollbar {
+    display: block;
+    width: 8px;
+  }
+
+  .scrollbar-slim::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-slim::-webkit-scrollbar-thumb {
+    background-color: var(--color-zinc-700);
+    border-radius: 9999px;
+  }
+
+  .scrollbar-slim::-webkit-scrollbar-thumb:hover {
+    background-color: var(--color-zinc-600);
+  }
 }
 
 @layer utilities {

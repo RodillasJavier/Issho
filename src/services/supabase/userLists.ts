@@ -107,6 +107,21 @@ export const getListEntry = async (
 };
 
 /**
+ * What one season's status may imply about the series it belongs to.
+ *
+ * Finishing a season never means the series is finished — it may still be
+ * airing, and a viewer who is merely caught up is still "watching". Only the
+ * user can declare a series complete, so a seeded row is capped at "watching".
+ * Mirrors `deriveSeriesStatus` in src/utils/listEntries.ts, which applies the
+ * same rule on the display side.
+ *
+ * @param seasonStatus the status the season was added with
+ * @returns the status to seed the series row with
+ */
+const seriesStatusFor = (seasonStatus: AnimeStatus): AnimeStatus =>
+  seasonStatus === "completed" ? "watching" : seasonStatus;
+
+/**
  * Seed a series-level row for the franchise a freshly-added season belongs
  * to, so the franchise lands on the user's profile rather than a lone season.
  *
@@ -123,7 +138,8 @@ export const getListEntry = async (
  *   just inserted (already joined against `anime`, so this never re-queries
  *   it)
  * @param userId uuid of the user
- * @param status status to seed the series row with
+ * @param status the season's status, narrowed to what it can imply about the
+ *   series as a whole (see `seriesStatusFor`)
  */
 const seedFranchiseEntry = async (
   franchiseKey: number | null | undefined,
@@ -145,7 +161,7 @@ const seedFranchiseEntry = async (
   if ((count ?? 0) < 2) return;
   if (existing) return;
 
-  await addUserFranchiseEntry(franchiseKey, userId, status);
+  await addUserFranchiseEntry(franchiseKey, userId, seriesStatusFor(status));
 };
 
 /**

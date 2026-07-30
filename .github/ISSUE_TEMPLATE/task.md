@@ -1,7 +1,7 @@
 ---
 name: New Task
 about: a todo
-title: ''
+title: 'Task: '
 labels: ''
 assignees: ''
 

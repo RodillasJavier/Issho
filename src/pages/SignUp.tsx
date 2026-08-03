@@ -5,11 +5,11 @@ import { MailCheckIcon, ArrowLeftIcon } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import { useResendableAction } from "../hooks/useResendableAction";
 import { AuthLayout } from "../components/auth/AuthLayout";
-import { AuthInput } from "../components/auth/AuthInput";
-import { AuthButton } from "../components/auth/AuthButton";
-import { AuthErrorBanner } from "../components/auth/AuthErrorBanner";
 import { AuthStatusCard } from "../components/auth/AuthStatusCard";
-import { PasswordChecklist } from "../components/auth/PasswordChecklist";
+import { TextField } from "../components/ui/TextField";
+import { Button } from "../components/ui/Button";
+import { Banner } from "../components/ui/Banner";
+import { PasswordChecklist } from "../components/ui/PasswordChecklist";
 import {
   EMAIL_RE,
   isPasswordValid,
@@ -82,25 +82,26 @@ export const SignUp = () => {
           icon={MailCheckIcon}
           action={
             <>
-              <AuthButton
+              <Button
                 type="button"
-                variant="ghost"
+                variant="secondary"
+                fullWidth
                 onClick={handleResend}
                 disabled={resendState !== "idle"}
               >
                 {resendState === "sent"
                   ? "Confirmation email sent"
                   : "Resend confirmation email"}
-              </AuthButton>
+              </Button>
               {resendError && (
-                <p className="text-sm text-red-400">{resendError}</p>
+                <p className="text-sm text-danger">{resendError}</p>
               )}
             </>
           }
           footer={
             <Link
               to="/signin"
-              className="mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-rose-500 hover:text-rose-400"
+              className="mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-accent hover:text-accent-line"
             >
               <ArrowLeftIcon className="h-4 w-4" aria-hidden />
               Back to sign in
@@ -111,7 +112,7 @@ export const SignUp = () => {
             We sent a confirmation link to{" "}
             <span className="font-semibold text-white">{email}</span>.
           </p>
-          <p className="mt-2 text-sm text-neutral-400">
+          <p className="mt-2 text-sm text-content-muted">
             Click the link in that email to activate your account. Be sure to
             check your spam folder if you don&apos;t see it.
           </p>
@@ -128,7 +129,7 @@ export const SignUp = () => {
           Already have an account?{" "}
           <Link
             to="/signin"
-            className="font-medium text-rose-500 hover:text-rose-400"
+            className="font-medium text-accent hover:text-accent-line"
           >
             Sign in
           </Link>
@@ -136,9 +137,9 @@ export const SignUp = () => {
       }
     >
       <form onSubmit={handleSubmit} className="space-y-5" noValidate>
-        {formError && <AuthErrorBanner message={formError} />}
+        {formError && <Banner message={formError} />}
 
-        <AuthInput
+        <TextField
           label="Email address"
           type="email"
           autoComplete="email"
@@ -147,7 +148,7 @@ export const SignUp = () => {
           onChange={(e) => setEmail(e.target.value)}
           error={fieldErrors.email}
         />
-        <AuthInput
+        <TextField
           label="Password"
           type="password"
           autoComplete="new-password"
@@ -156,7 +157,7 @@ export const SignUp = () => {
           onChange={(e) => setPassword(e.target.value)}
           error={fieldErrors.password}
         />
-        <AuthInput
+        <TextField
           label="Confirm password"
           type="password"
           autoComplete="new-password"
@@ -166,9 +167,10 @@ export const SignUp = () => {
           error={fieldErrors.confirm}
         />
         <PasswordChecklist password={password} confirmPassword={confirm} />
-        <AuthButton
+        <Button
           type="submit"
           loading={loading}
+          fullWidth
           disabled={
             !EMAIL_RE.test(email) ||
             !isPasswordValid(password) ||
@@ -176,7 +178,7 @@ export const SignUp = () => {
           }
         >
           {loading ? "Creating account…" : "Sign up"}
-        </AuthButton>
+        </Button>
       </form>
     </AuthLayout>
   );

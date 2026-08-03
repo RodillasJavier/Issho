@@ -57,7 +57,7 @@ export const UserAvatar = ({
 
   if (linkToProfile) {
     return (
-      <Link to={`/user/${username}`} className="hover:opacity-80 transition">
+      <Link to={`/profile/${username}`} className="hover:opacity-80 transition">
         {avatarElement}
       </Link>
     );

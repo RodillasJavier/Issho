@@ -5,7 +5,7 @@
  * count, and the owner-only link to edit the profile.
  */
 import { Link } from "react-router";
-import { Pencil, Users } from "lucide-react";
+import { Settings, Users } from "lucide-react";
 import { UserAvatar } from "./UserAvatar";
 import { FriendButton } from "./FriendButton";
 import type { Profile } from "../types/database.types";
@@ -52,11 +52,11 @@ export const ProfileHeader = ({
 
           {isOwnProfile && (
             <Link
-              to="/profile/edit"
-              aria-label="Edit profile"
+              to="/settings"
+              aria-label="Open settings"
               className="shrink-0 rounded-md p-2 text-zinc-600 transition-colors hover:bg-zinc-800 hover:text-zinc-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-400"
             >
-              <Pencil aria-hidden className="size-4" />
+              <Settings aria-hidden className="size-4" />
             </Link>
           )}
         </div>

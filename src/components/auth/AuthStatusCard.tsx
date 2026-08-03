@@ -7,6 +7,7 @@
  */
 import { motion } from "framer-motion";
 import type { LucideIcon } from "lucide-react";
+import { cn, radius } from "../../styles/tokens";
 
 interface AuthStatusCardProps {
   icon: LucideIcon;
@@ -28,18 +29,22 @@ export function AuthStatusCard({
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35, ease: "easeOut" }}
-      className="rounded-xl border border-neutral-800 bg-neutral-900 p-6 text-center"
+      className={cn(
+        "border border-line bg-surface p-6 text-center",
+        radius.card
+      )}
     >
       <div
-        className={`mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full ${
+        className={cn(
+          "mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full",
           iconVariant === "green"
-            ? "bg-green-500/15 text-green-400"
-            : "bg-rose-500/15 text-rose-400"
-        }`}
+            ? "bg-success/15 text-success"
+            : "bg-accent/15 text-accent-line"
+        )}
       >
         <Icon className="h-6 w-6" aria-hidden />
       </div>
-      <div className="text-neutral-200">{children}</div>
+      <div className="text-content">{children}</div>
       {action && <div className="mt-6 space-y-3">{action}</div>}
       {footer}
     </motion.div>

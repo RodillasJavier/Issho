@@ -1,14 +1,15 @@
 /**
- * src/components/auth/PasswordChecklist.tsx
+ * src/components/ui/PasswordChecklist.tsx
  *
  * Live password-requirements checklist shown while a user types a new
- * password (sign up, reset password).
+ * password (sign up, reset password, settings).
  */
 import { CheckIcon, CircleIcon } from "lucide-react";
 import {
   getPasswordChecks,
   PASSWORD_REQUIREMENTS_MESSAGE,
 } from "../../utils/authValidation";
+import { cn, radius, text } from "../../styles/tokens";
 
 interface PasswordChecklistProps {
   password: string;
@@ -31,18 +32,13 @@ export function PasswordChecklist({
 
   return (
     <section
-      className="rounded-lg border border-neutral-800 bg-[#101014] px-4 py-3"
+      className={cn("border border-line bg-field px-4 py-3", radius.inset)}
       aria-labelledby="password-requirements"
     >
-      <h2
-        id="password-requirements"
-        className="text-xs font-semibold uppercase tracking-[0.08em] text-neutral-300"
-      >
+      <h2 id="password-requirements" className={text.label}>
         Password requirements
       </h2>
-      <p className="mt-1 text-xs leading-5 text-neutral-500">
-        {PASSWORD_REQUIREMENTS_MESSAGE}
-      </p>
+      <p className={cn("mt-1", text.hint)}>{PASSWORD_REQUIREMENTS_MESSAGE}</p>
       <ul className="mt-3 space-y-2" aria-live="polite">
         {checks.map((check) => (
           <ChecklistItem
@@ -63,19 +59,22 @@ export function PasswordChecklist({
 
 function ChecklistItem({ met, label, pending = false }: ChecklistItemProps) {
   const itemColor = met
-    ? "text-green-400"
+    ? "text-success"
     : pending
-      ? "text-neutral-500"
-      : "text-neutral-400";
+      ? "text-content-subtle"
+      : "text-content-muted";
 
   return (
-    <li className={`flex items-center gap-2 text-xs ${itemColor}`}>
+    <li className={cn("flex items-center gap-2 text-xs", itemColor)}>
       {met ? (
-        <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-green-500/15 text-green-400">
+        <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-success/15 text-success">
           <CheckIcon className="h-3 w-3" strokeWidth={3} aria-hidden />
         </span>
       ) : (
-        <CircleIcon className="h-4 w-4 shrink-0 text-neutral-600" aria-hidden />
+        <CircleIcon
+          className="h-4 w-4 shrink-0 text-content-faint"
+          aria-hidden
+        />
       )}
       <span>{label}</span>
     </li>

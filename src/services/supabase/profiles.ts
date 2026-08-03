@@ -36,11 +36,11 @@ export class UsernameInvalidError extends Error {
  * failure banner over stale data.
  */
 export class PartialProfileSaveError extends Error {
-  constructor(
-    message: string,
-    public readonly profile: Profile
-  ) {
+  readonly profile: Profile;
+
+  constructor(message: string, profile: Profile) {
     super(message);
+    this.profile = profile;
     this.name = "PartialProfileSaveError";
   }
 }

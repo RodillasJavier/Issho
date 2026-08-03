@@ -3,7 +3,7 @@
  *
  * Main application component that sets up routing and layout.
  */
-import { Outlet, Route, Routes } from "react-router";
+import { Navigate, Outlet, Route, Routes } from "react-router";
 import { Navbar } from "./components/Navbar";
 import { Home } from "./pages/Home";
 import { SignIn } from "./pages/SignIn";
@@ -17,7 +17,7 @@ import { CreateAnimePage } from "./pages/CreateAnimePage";
 import { AnimePage } from "./pages/AnimePage";
 import { FranchisePage } from "./pages/FranchisePage";
 import { UserProfilePage } from "./pages/UserProfilePage";
-import { EditProfilePage } from "./pages/EditProfilePage";
+import { SettingsPage } from "./pages/SettingsPage";
 import { FriendsPage } from "./pages/FriendsPage";
 
 // The auth pages own their full-bleed layout, so they render outside this
@@ -59,7 +59,13 @@ function App() {
         {/* User Profiles */}
         <Route path="/profile/:username" element={<UserProfilePage />} />
         <Route path="/profile/:username/friends" element={<FriendsPage />} />
-        <Route path="/profile/edit" element={<EditProfilePage />} />
+
+        {/* Settings — /profile/edit predates the wider settings page. */}
+        <Route path="/settings" element={<SettingsPage />} />
+        <Route
+          path="/profile/edit"
+          element={<Navigate to="/settings" replace />}
+        />
       </Route>
     </Routes>
   );

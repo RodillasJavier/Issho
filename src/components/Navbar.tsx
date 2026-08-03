@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useLocation } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "../hooks/useAuth";
-import { getProfileById } from "../services/supabase/profiles";
+import { getProfileById, profileQueryKey } from "../services/supabase/profiles";
 
 const desktopLinkClasses = (active: boolean) =>
   `border-b-2 pb-1 transition-colors ${
@@ -29,7 +29,7 @@ export const Navbar = () => {
   const isProfileActive = location.pathname.startsWith("/profile");
 
   const { data: profile } = useQuery({
-    queryKey: ["profile", user?.id],
+    queryKey: profileQueryKey(user?.id),
     queryFn: () => getProfileById(user!.id),
     enabled: !!user?.id,
   });

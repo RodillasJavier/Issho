@@ -28,7 +28,7 @@ import {
 } from "../constants/activityFilters";
 import { useAuth } from "../hooks/useAuth";
 import { getFriendIds } from "../services/supabase/friendships";
-import { getProfileById } from "../services/supabase/profiles";
+import { getProfileById, profileQueryKey } from "../services/supabase/profiles";
 import {
   entriesQueryKey,
   fetchEntriesWithCounts,
@@ -160,7 +160,7 @@ export const EntryList = ({ filter }: EntryListProps) => {
   }
 
   const { data: profile } = useQuery({
-    queryKey: ["profile", user?.id],
+    queryKey: profileQueryKey(user?.id),
     queryFn: () => getProfileById(user!.id),
     enabled: !!user,
   });

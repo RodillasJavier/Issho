@@ -24,8 +24,8 @@ with check (
 );
 
 -- Client-side validation in AvatarField is advisory only; enforce the same
--- limits on the bucket itself. The mime list mirrors MIME_EXTENSIONS in
--- src/services/supabase/profiles.ts.
+-- limits on the bucket itself. The mime list mirrors AVATAR_MIME_EXTENSIONS
+-- in src/services/supabase/profiles.ts.
 update storage.buckets
 set
   file_size_limit = 5242880,

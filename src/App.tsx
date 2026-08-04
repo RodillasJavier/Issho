@@ -5,6 +5,7 @@
  */
 import { Navigate, Outlet, Route, Routes } from "react-router";
 import { Navbar } from "./components/Navbar";
+import { Footer } from "./components/Footer";
 import { Home } from "./pages/Home";
 import { SignIn } from "./pages/SignIn";
 import { SignUp } from "./pages/SignUp";
@@ -26,12 +27,14 @@ function AppShell() {
   return (
     // pt clears the floating navbar, which shrinks on phones: 12px offset plus
     // a 56px bar there, 24px plus 66px from sm up.
-    <div className="min-h-screen bg-black text-gray-100 transition-opacity duration-500 pt-20 sm:pt-28">
+    <div className="flex min-h-screen flex-col bg-black text-gray-100 transition-opacity duration-500 pt-20 sm:pt-28">
       <Navbar />
 
-      <div className="container mx-auto px-4 py-6">
+      <div className="container mx-auto flex-1 px-4 py-6">
         <Outlet />
       </div>
+
+      <Footer />
     </div>
   );
 }

@@ -64,7 +64,7 @@ export const AccountMenu = ({ username, avatarUrl }: AccountMenuProps) => {
           <UserAvatar
             username={username}
             avatarUrl={avatarUrl}
-            size="md"
+            size="sm"
             linkToProfile={false}
           />
         </span>

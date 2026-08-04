@@ -26,19 +26,22 @@ import { getProfileById, profileQueryKey } from "../services/supabase/profiles";
 import { AccountMenu } from "./AccountMenu";
 import { cn, control, focusRing, radius, surface } from "../styles/tokens";
 
+/** `signedOut` renders as a sign-in prompt. `pending` (signed in, but the
+ * profile that would supply the destination hasn't loaded yet) renders as an
+ * inert placeholder instead — NOT a sign-in link, since sending an
+ * already-authenticated visitor to /signin would just bounce them back to
+ * "/" via useRedirectIfAuthenticated with no explanation. */
+type NavItemState =
+  | { kind: "ready"; to: string }
+  | { kind: "pending" }
+  | { kind: "signedOut" };
+
 interface NavItem {
   label: string;
   icon: LucideIcon;
   /** Exact-match only, so a sub-route doesn't light the parent up too. */
   end?: boolean;
-  /** The real destination; `null` when signed out (renders as a sign-in
-   * prompt); `undefined` when signed in but the profile that would supply
-   * the destination hasn't loaded yet (renders as an inert placeholder —
-   * NOT a sign-in link, since the visitor is already authenticated and
-   * sending them to /signin would just bounce them back to "/" via
-   * useRedirectIfAuthenticated with no explanation). Distinguishing the two
-   * keeps a loading profile from masquerading as a signed-out visitor. */
-  to: string | null | undefined;
+  state: NavItemState;
 }
 
 /** Active and resting treatments, shared by the desktop pill and mobile sheet. */
@@ -72,6 +75,75 @@ const DesktopNavLabel = ({
   </>
 );
 
+/** Renders a `signedOut` or `pending` item: a sign-in prompt for the former,
+ * an inert placeholder for the latter — see NavItemState's doc comment.
+ * A plain element rather than a route-matching NavLink either way, since
+ * neither state has a real destination to track as active. */
+const InertNavItem = ({
+  item,
+  variant,
+  kind,
+  onNavigate,
+}: {
+  item: NavItem;
+  variant: "desktop" | "mobile";
+  kind: "pending" | "signedOut";
+  onNavigate?: () => void;
+}) => {
+  const Icon = item.icon;
+  const pendingClassName = kind === "pending" && "cursor-default opacity-50";
+
+  const content =
+    variant === "mobile" ? (
+      <>
+        <Icon aria-hidden className="h-4 w-4 shrink-0" />
+        {item.label}
+      </>
+    ) : (
+      <DesktopNavLabel icon={Icon} label={item.label} active={false} />
+    );
+
+  const className = cn(
+    variant === "mobile"
+      ? cn(
+          "flex items-center gap-2.5 rounded-2xl border px-4 py-2.5 transition-colors",
+          focusRing,
+          "border-transparent text-content-muted hover:bg-line-subtle hover:text-content"
+        )
+      : cn(
+          "flex h-10 items-center overflow-hidden px-3.5",
+          "font-medium text-sm transition-all duration-200",
+          radius.pill,
+          focusRing,
+          navItemResting
+        ),
+    pendingClassName
+  );
+
+  if (kind === "pending") {
+    return (
+      <li className={variant === "desktop" ? "group/navitem" : undefined}>
+        <span aria-disabled="true" title={item.label} className={className}>
+          {content}
+        </span>
+      </li>
+    );
+  }
+
+  return (
+    <li className={variant === "desktop" ? "group/navitem" : undefined}>
+      <Link
+        to="/signin"
+        title={item.label}
+        onClick={onNavigate}
+        className={className}
+      >
+        {content}
+      </Link>
+    </li>
+  );
+};
+
 /** One nav destination, rendered either as a desktop icon-that-unfurls pill
  * item or a mobile icon+label row. Both variants share the same data and
  * active-state logic, so a new item or a restyle only happens in one place. */
@@ -84,7 +156,19 @@ const NavItemLink = ({
   variant: "desktop" | "mobile";
   onNavigate?: () => void;
 }) => {
+  if (item.state.kind !== "ready") {
+    return (
+      <InertNavItem
+        item={item}
+        variant={variant}
+        kind={item.state.kind}
+        onNavigate={onNavigate}
+      />
+    );
+  }
+
   const Icon = item.icon;
+  const to = item.state.to;
 
   if (variant === "mobile") {
     const restingClassName = cn(
@@ -93,43 +177,10 @@ const NavItemLink = ({
       "border-transparent text-content-muted hover:bg-line-subtle hover:text-content"
     );
 
-    // A plain Link, not NavLink: there's no real destination yet, so this
-    // is a sign-in prompt rather than a route to track as active — and
-    // NavLink would still stamp aria-current on it whenever /signin happens
-    // to be the current route, even though its computed className already
-    // renders as resting (see the NavItem.to doc comment above).
-    if (item.to === null) {
-      return (
-        <li>
-          <Link to="/signin" onClick={onNavigate} className={restingClassName}>
-            <Icon aria-hidden className="h-4 w-4 shrink-0" />
-            {item.label}
-          </Link>
-        </li>
-      );
-    }
-
-    // Signed in, profile still loading: an inert placeholder, not a link —
-    // sending an already-authenticated visitor to /signin would just bounce
-    // them back to "/" via useRedirectIfAuthenticated.
-    if (item.to === undefined) {
-      return (
-        <li>
-          <span
-            aria-disabled="true"
-            className={cn(restingClassName, "cursor-default opacity-50")}
-          >
-            <Icon aria-hidden className="h-4 w-4 shrink-0" />
-            {item.label}
-          </span>
-        </li>
-      );
-    }
-
     return (
       <li>
         <NavLink
-          to={item.to}
+          to={to}
           end={item.end}
           onClick={onNavigate}
           className={({ isActive }) =>
@@ -147,52 +198,10 @@ const NavItemLink = ({
     );
   }
 
-  if (item.to === null) {
-    return (
-      <li className="group/navitem">
-        <Link
-          to="/signin"
-          title={item.label}
-          className={cn(
-            "flex h-10 items-center overflow-hidden px-3.5",
-            "font-medium text-sm transition-all duration-200",
-            radius.pill,
-            focusRing,
-            navItemResting
-          )}
-        >
-          <DesktopNavLabel icon={Icon} label={item.label} active={false} />
-        </Link>
-      </li>
-    );
-  }
-
-  // Signed in, profile still loading: an inert placeholder, not a link —
-  // sending an already-authenticated visitor to /signin would just bounce
-  // them back to "/" via useRedirectIfAuthenticated.
-  if (item.to === undefined) {
-    return (
-      <li className="group/navitem">
-        <span
-          aria-disabled="true"
-          title={item.label}
-          className={cn(
-            "flex h-10 cursor-default items-center overflow-hidden px-3.5",
-            "font-medium text-sm opacity-50",
-            radius.pill,
-            navItemResting
-          )}
-        >
-          <DesktopNavLabel icon={Icon} label={item.label} active={false} />
-        </span>
-      </li>
-    );
-  }
-
   return (
     <li className="group/navitem">
       <NavLink
-        to={item.to}
+        to={to}
         end={item.end}
         title={item.label}
         className={({ isActive }) =>
@@ -236,29 +245,33 @@ export const Navbar = ({ authPage = false }: NavbarProps = {}) => {
   });
 
   // Friends and My List need a username to link to their real destination.
-  // Signed out, `to: null` marks them as a sign-in prompt. Signed in but the
-  // profile hasn't loaded yet, `to: undefined` marks them as pending —
-  // distinct from signed-out so NavItemLink never treats an authenticated
-  // visitor as one who needs to sign in.
-  const friendsAndListTo = (suffix: "" | "/friends") =>
-    user
-      ? profile
-        ? `/profile/${profile.username}${suffix}`
-        : undefined
-      : null;
+  const friendsAndListState = (suffix: "" | "/friends"): NavItemState => {
+    if (!user) return { kind: "signedOut" };
+    if (!profile) return { kind: "pending" };
+    return { kind: "ready", to: `/profile/${profile.username}${suffix}` };
+  };
 
   const navItems: NavItem[] = [
-    { label: "Feed", to: "/", icon: RssIcon, end: true },
-    { label: "Post", to: "/entry/create", icon: PenLineIcon },
-    { label: "Anime", to: "/anime", icon: TvIcon },
+    {
+      label: "Feed",
+      state: { kind: "ready", to: "/" },
+      icon: RssIcon,
+      end: true,
+    },
+    {
+      label: "Post",
+      state: { kind: "ready", to: "/entry/create" },
+      icon: PenLineIcon,
+    },
+    { label: "Anime", state: { kind: "ready", to: "/anime" }, icon: TvIcon },
     {
       label: "Friends",
-      to: friendsAndListTo("/friends"),
+      state: friendsAndListState("/friends"),
       icon: UsersIcon,
     },
     {
       label: "My List",
-      to: friendsAndListTo(""),
+      state: friendsAndListState(""),
       icon: BookmarkIcon,
       end: true,
     },

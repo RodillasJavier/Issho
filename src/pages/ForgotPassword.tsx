@@ -83,6 +83,7 @@ export const ForgotPassword = () => {
             <span className="font-semibold text-white">{email}</span>,
             we&apos;ve sent a link to reset your password.
           </p>
+
           <p className="mt-2 text-sm text-content-muted">
             The link expires in 60 minutes. Check your spam folder if it
             doesn&apos;t arrive.

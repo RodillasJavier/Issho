@@ -61,7 +61,14 @@ export const ResetPassword = () => {
     const signedIn = Boolean(user);
 
     return (
-      <AuthLayout title="Password updated">
+      <AuthLayout
+        title="Password updated"
+        asideHeadline={
+          <>
+            You&apos;re all <span className="text-rose-400">set</span>
+          </>
+        }
+      >
         <AuthStatusCard
           icon={CheckCircle2Icon}
           iconVariant="green"
@@ -90,6 +97,11 @@ export const ResetPassword = () => {
     <AuthLayout
       title="Set a new password"
       subtitle="Choose a new password for your Issho account."
+      asideHeadline={
+        <>
+          Set a new <span className="text-rose-400">password</span>
+        </>
+      }
     >
       <form onSubmit={handleSubmit} className="space-y-5" noValidate>
         {formError && <Banner message={formError} />}

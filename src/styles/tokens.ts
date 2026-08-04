@@ -58,6 +58,10 @@ export const surface = {
   cardBody: "px-5 py-5 sm:px-6",
   cardFooter: "border-t border-line-subtle bg-surface-sunken px-5 py-4 sm:px-6",
   inset: cn("border border-line bg-surface-sunken", radius.inset),
+  /** A dropdown/sheet floating over page content. Callers add their own
+   * rounding and padding, since those vary with the panel's size. */
+  floatingPanel:
+    "border border-line bg-field/95 text-sm shadow-lg backdrop-blur-xl",
 } as const;
 
 /** Tone recipes shared by Banner and StatusPill. */
@@ -83,6 +87,10 @@ export const control = {
     primary: "bg-accent text-white hover:bg-accent-hover",
     secondary:
       "border border-line bg-surface-sunken text-content hover:border-line-strong hover:bg-surface",
+    /** `secondary`'s translucent counterpart, for controls floating over page
+     * content (e.g. the navbar) rather than sitting on a solid surface. */
+    secondaryTranslucent:
+      "border border-line bg-surface-sunken/65 text-content-muted hover:border-line-strong hover:text-content",
     ghost: "text-content-muted hover:bg-surface hover:text-content",
     danger:
       "border border-danger/40 bg-danger/10 text-danger hover:bg-danger/20",
@@ -103,4 +111,16 @@ export const page = {
   /** AppShell already supplies `container mx-auto px-4 py-6` — don't re-add it. */
   shell: "mx-auto max-w-5xl pb-12",
   header: "mb-8 border-b border-line pb-6",
+} as const;
+
+/** Top padding to clear the floating Navbar (fixed; `top-2 h-12` on phones =
+ * 56px, `top-4 h-14` from sm up = 72px). Recompute here, not per call site,
+ * if Navbar's offset or height ever change. */
+export const navbar = {
+  /** Exact clearance, no extra breathing room — for content that sits
+   * directly under the navbar (the auth pages). */
+  clearance: "pt-14 sm:pt-18",
+  /** AppShell's page content sits an extra 8px/16px below that for visual
+   * breathing room above the page header. */
+  shellClearance: "pt-16 sm:pt-22",
 } as const;

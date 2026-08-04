@@ -1,32 +1,45 @@
+/**
+ * src/components/Navbar.tsx
+ *
+ * Floating pill navigation. The centre cluster keeps its items icon-only until
+ * the group is hovered or one is active, which is what lets four destinations
+ * sit in a bar this narrow; the account menu on the right owns profile,
+ * settings, and sign out.
+ */
 import { useState } from "react";
-import { Link, useLocation } from "react-router";
+import { Link, NavLink } from "react-router";
 import { useQuery } from "@tanstack/react-query";
+import { AnimatePresence, motion } from "framer-motion";
+import {
+  BookmarkIcon,
+  MenuIcon,
+  PenLineIcon,
+  TvIcon,
+  UsersIcon,
+  XIcon,
+  type LucideIcon,
+} from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import { getProfileById, profileQueryKey } from "../services/supabase/profiles";
+import { AccountMenu } from "./AccountMenu";
+import { cn, focusRing, radius } from "../styles/tokens";
 
-const desktopLinkClasses = (active: boolean) =>
-  `border-b-2 pb-1 transition-colors ${
-    active
-      ? "border-rose-400 text-white"
-      : "border-transparent text-gray-300 hover:text-white"
-  }`;
+interface NavItem {
+  label: string;
+  to: string;
+  icon: LucideIcon;
+  /** Exact-match only, so a sub-route doesn't light the parent up too. */
+  end?: boolean;
+}
 
-const mobileLinkClasses = (active: boolean) =>
-  `block text-center px-3 py-2 rounded-md text-base font-medium transition-colors ${
-    active
-      ? "bg-neutral-800 text-white"
-      : "text-gray-300 hover:text-white hover:bg-gray-700"
-  }`;
+/** Active and resting treatments, shared by the desktop pill and mobile sheet. */
+const navItemActive = "text-accent-text-hover bg-white/5";
+const navItemResting =
+  "border-transparent text-content-muted hover:bg-white/3 hover:text-content";
 
 export const Navbar = () => {
-  const [menuOpen, setMenuOpen] = useState(false);
-  const { signOut, user } = useAuth();
-  const location = useLocation();
-
-  const isHomeActive = location.pathname === "/";
-  const isCreateActive = location.pathname.startsWith("/entry/create");
-  const isAnimeActive = location.pathname.startsWith("/anime");
-  const isProfileActive = location.pathname.startsWith("/profile");
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const { user } = useAuth();
 
   const { data: profile } = useQuery({
     queryKey: profileQueryKey(user?.id),
@@ -34,211 +47,201 @@ export const Navbar = () => {
     enabled: !!user?.id,
   });
 
+  // Friends and WatchList are addressed by username, so they only exist once
+  // the profile has loaded.
+  const navItems: NavItem[] = [
+    { label: "Post", to: "/entry/create", icon: PenLineIcon },
+    { label: "Anime", to: "/anime", icon: TvIcon },
+    ...(profile
+      ? [
+          {
+            label: "Friends",
+            to: `/profile/${profile.username}/friends`,
+            icon: UsersIcon,
+          },
+          {
+            label: "My List",
+            to: `/profile/${profile.username}`,
+            icon: BookmarkIcon,
+            end: true,
+          },
+        ]
+      : []),
+  ];
+
   return (
-    <nav className="fixed top-0 w-full bg-[rgba(10,10,10,.8)] z-40 backdrop-blur-lg border-b border-white/10 shadow-lg">
-      <div className="max-w-5xl mx-auto px-4">
-        <div className="flex justify-between items-center h-16">
-          <Link to="/" className="font-mono text-xl font-bold white">
+    <div className="fixed inset-x-0 top-3 z-40 flex justify-center px-3 sm:top-6 sm:px-4">
+      <div className="w-full max-w-[1000px]">
+        {/* Plain flex row on phones; the three-column grid that centres the
+            nav pill only earns its keep once that pill is visible at md. */}
+        <nav
+          aria-label="Main"
+          className={cn(
+            "flex h-14 items-center justify-between px-2.5",
+            "sm:h-16 sm:px-3.5 md:grid md:grid-cols-[1fr_auto_1fr]",
+            "border border-line bg-field/88 backdrop-blur-xl",
+            "shadow-[0_12px_26px_rgba(0,0,0,0.55)]",
+            radius.pill
+          )}
+        >
+          {/* Left side of the navbar */}
+          <Link
+            to="/"
+            className={cn(
+              "min-w-0 justify-self-start truncate rounded pl-2 font-mono text-base font-semibold",
+              "text-content-muted transition hover:text-content sm:pl-2.5 sm:text-lg",
+              focusRing
+            )}
+          >
             Issho
-            <span className="text-rose-400">
+            <span className="text-accent-line">
               {profile?.username ? `.${profile.username}` : ""}
             </span>
           </Link>
 
-          {/* Desktop Nav */}
-          <div className="hidden md:flex items-center space-x-8">
-            <Link to="/" className={desktopLinkClasses(isHomeActive)}>
-              Home
-            </Link>
-
-            <Link
-              to="/entry/create"
-              className={desktopLinkClasses(isCreateActive)}
-            >
-              Create
-            </Link>
-
-            <Link to="/anime" className={desktopLinkClasses(isAnimeActive)}>
-              Anime
-            </Link>
-
-            {/* Desktop Auth Buttons */}
-            {user ? (
-              <div className="flex items-center space-x-8">
-                {profile && (
-                  <Link
-                    to={`/profile/${profile.username}`}
-                    className={desktopLinkClasses(isProfileActive)}
-                  >
-                    Profile
-                  </Link>
-                )}
-
-                <button
-                  onClick={signOut}
-                  className="text-neutral-400 hover:text-white hover:scale-110 transition cursor-pointer"
-                  aria-label="Sign out"
-                  title="Sign out"
-                >
-                  <svg
-                    className="w-6 h-6"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-                    />
-                  </svg>
-                </button>
-              </div>
-            ) : (
-              <div className="flex items-center space-x-3">
-                <Link
-                  to="/signin"
-                  className="px-4 py-2 rounded-md text-rose-400 hover:text-white transition-colors"
-                >
-                  Sign In
-                </Link>
-
-                <Link
-                  to="/signup"
-                  className="px-4 py-2 rounded-md text-white hover:text-rose-400 bg-rose-500 hover:bg-rose-400/20 border-1 border-transparent hover:border-rose-400 transition:border transition-colors"
-                >
-                  Sign Up
-                </Link>
-              </div>
+          {/* Middle Column — labels unfurl on hover of the group, or when active */}
+          <ul
+            className={cn(
+              "group/nav hidden h-12 items-center gap-1 justify-self-center p-1.5 md:flex"
             )}
-          </div>
+          >
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              return (
+                <li key={item.to}>
+                  <NavLink
+                    to={item.to}
+                    end={item.end}
+                    title={item.label}
+                    className={({ isActive }) =>
+                      cn(
+                        "flex h-10 items-center overflow-hidden px-3.5",
+                        "font-medium text-sm transition-all duration-200",
+                        radius.pill,
+                        focusRing,
+                        isActive ? navItemActive : navItemResting
+                      )
+                    }
+                  >
+                    {({ isActive }) => (
+                      <>
+                        <Icon aria-hidden className="h-4 w-4 shrink-0" />
+                        <span
+                          className={cn(
+                            "overflow-hidden whitespace-nowrap transition-all duration-300 ease-out",
+                            isActive
+                              ? "ml-1.5 max-w-[90px] opacity-100"
+                              : "max-w-0 opacity-0 group-hover/nav:ml-1.5 group-hover/nav:max-w-[90px] group-hover/nav:opacity-100 group-focus-within/nav:ml-1.5 group-focus-within/nav:max-w-[90px] group-focus-within/nav:opacity-100"
+                          )}
+                        >
+                          {item.label}
+                        </span>
+                      </>
+                    )}
+                  </NavLink>
+                </li>
+              );
+            })}
+          </ul>
 
-          {/* Hamburger Menu */}
-          <div className="md:hidden">
+          {/* Right side of the navbar */}
+          <div className="flex shrink-0 items-center justify-end gap-1.5 justify-self-end pr-0.5 sm:gap-2 sm:pr-1.5">
             <button
-              onClick={() => {
-                setMenuOpen((prev) => !prev);
-              }}
-              className="cursor-pointer text-gray-300 focus:outline-none"
-              aria-label="Toggle menu"
+              type="button"
+              onClick={() => setMobileOpen((value) => !value)}
+              aria-expanded={mobileOpen}
+              aria-label={mobileOpen ? "Close navigation" : "Open navigation"}
+              className={cn(
+                "flex h-9 w-9 cursor-pointer items-center justify-center md:hidden",
+                "border border-line bg-surface-sunken/65 text-content-muted",
+                "transition hover:border-line-strong hover:text-content",
+                radius.pill,
+                focusRing
+              )}
             >
-              <svg
-                className="w-6 h-6"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                {menuOpen ? (
-                  // Close icon
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                ) : (
-                  // Hamburger icon
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M4 6h16M4 12h16M4 18h16"
-                  />
-                )}
-              </svg>
+              {mobileOpen ? (
+                <XIcon aria-hidden className="h-4 w-4" />
+              ) : (
+                <MenuIcon aria-hidden className="h-4 w-4" />
+              )}
             </button>
-          </div>
-        </div>
-      </div>
 
-      {/* Mobile Nav */}
-      {menuOpen && (
-        <div className="md:hidden bg-[rgba(10,10,10,0.9)]">
-          <div className="px-2 pt-2 pb-3 space-y-1">
-            <Link
-              to="/"
-              onClick={() => setMenuOpen(false)}
-              className={mobileLinkClasses(isHomeActive)}
-            >
-              Home
-            </Link>
-
-            <Link
-              to="/entry/create"
-              onClick={() => setMenuOpen(false)}
-              className={mobileLinkClasses(isCreateActive)}
-            >
-              Create
-            </Link>
-
-            <Link
-              to="/anime"
-              onClick={() => setMenuOpen(false)}
-              className={mobileLinkClasses(isAnimeActive)}
-            >
-              Anime
-            </Link>
-
-            {/* Mobile Auth Buttons */}
-            {user ? (
-              <div className="space-y-2">
-                {profile && (
-                  <Link
-                    to={`/profile/${profile.username}`}
-                    onClick={() => setMenuOpen(false)}
-                    className={mobileLinkClasses(isProfileActive)}
-                  >
-                    Profile
-                  </Link>
-                )}
-
-                <button
-                  onClick={() => {
-                    setMenuOpen(false);
-                    signOut();
-                  }}
-                  className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-md px-3 py-2 text-base font-medium text-gray-300 hover:bg-gray-700 hover:text-white"
-                >
-                  <svg
-                    className="w-5 h-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-                    />
-                  </svg>
-                  Sign Out
-                </button>
-              </div>
+            {user && profile ? (
+              <AccountMenu
+                username={profile.username}
+                avatarUrl={profile.avatar_url}
+              />
             ) : (
-              <>
-                <Link
-                  to="/signin"
-                  onClick={() => setMenuOpen(false)}
-                  className="block px-4 py-2 text-center rounded-md text-rose-400 hover:text-white transition-colors"
-                >
-                  Sign In
-                </Link>
+              !user && (
+                <div className="flex items-center gap-1 sm:gap-1.5">
+                  <Link
+                    to="/signin"
+                    className={cn(
+                      "px-2.5 py-2 text-sm whitespace-nowrap text-content-muted",
+                      "transition hover:text-content sm:px-3",
+                      radius.pill,
+                      focusRing
+                    )}
+                  >
+                    Sign In
+                  </Link>
 
-                <Link
-                  to="/signup"
-                  onClick={() => setMenuOpen(false)}
-                  className="block px-4 py-2 text-center rounded-md text-white hover:text-rose-400 bg-rose-500 hover:bg-rose-400/20 border-1 border-transparent hover:border-rose-400 transition:border transition-colors"
-                >
-                  Sign Up
-                </Link>
-              </>
+                  <Link
+                    to="/signup"
+                    className={cn(
+                      "bg-accent px-3 py-2 text-sm font-semibold whitespace-nowrap text-white",
+                      "transition-colors hover:bg-accent-hover sm:px-3.5",
+                      radius.pill,
+                      focusRing
+                    )}
+                  >
+                    Sign Up
+                  </Link>
+                </div>
+              )
             )}
           </div>
-        </div>
-      )}
-    </nav>
+        </nav>
+
+        {/* Mobile nav — the account menu stays in the bar, so this is only the
+            destinations the desktop pill holds. */}
+        <AnimatePresence>
+          {mobileOpen && (
+            <motion.ul
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.16, ease: "easeOut" }}
+              className="mt-2 space-y-1 rounded-3xl border border-line bg-field/95 p-2 text-sm shadow-lg backdrop-blur-xl md:hidden"
+            >
+              {navItems.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <li key={item.to}>
+                    <NavLink
+                      to={item.to}
+                      end={item.end}
+                      onClick={() => setMobileOpen(false)}
+                      className={({ isActive }) =>
+                        cn(
+                          "flex items-center gap-2.5 rounded-2xl border px-4 py-2.5 transition-colors",
+                          focusRing,
+                          isActive
+                            ? navItemActive
+                            : "border-transparent text-content-muted hover:bg-line-subtle hover:text-content"
+                        )
+                      }
+                    >
+                      <Icon aria-hidden className="h-4 w-4 shrink-0" />
+                      {item.label}
+                    </NavLink>
+                  </li>
+                );
+              })}
+            </motion.ul>
+          )}
+        </AnimatePresence>
+      </div>
+    </div>
   );
 };

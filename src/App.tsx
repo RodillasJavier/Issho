@@ -25,9 +25,9 @@ import { FriendsPage } from "./pages/FriendsPage";
 // shell rather than under the persistent Navbar/container chrome.
 function AppShell() {
   return (
-    // pt clears the floating navbar, which shrinks on phones: 12px offset plus
-    // a 56px bar there, 24px plus 64px from sm up.
-    <div className="flex min-h-screen flex-col bg-black text-gray-100 transition-opacity duration-500 pt-20 sm:pt-28">
+    // pt clears the floating navbar, which shrinks on phones: 8px offset plus
+    // a 48px bar there, 16px plus 56px from sm up.
+    <div className="flex min-h-screen flex-col bg-black text-gray-100 transition-opacity duration-500 pt-16 sm:pt-22">
       <Navbar />
 
       <div className="container mx-auto flex-1 px-4 py-6">

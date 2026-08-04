@@ -15,6 +15,7 @@ import {
   LogOutIcon,
   MenuIcon,
   PenLineIcon,
+  RssIcon,
   TvIcon,
   UsersIcon,
   XIcon,
@@ -77,7 +78,7 @@ const NavItemLink = ({
   }
 
   return (
-    <li>
+    <li className="group/navitem">
       <NavLink
         to={item.to}
         end={item.end}
@@ -100,7 +101,7 @@ const NavItemLink = ({
                 "overflow-hidden whitespace-nowrap transition-all duration-300 ease-out",
                 isActive
                   ? "ml-1.5 max-w-[90px] opacity-100"
-                  : "max-w-0 opacity-0 group-hover/nav:ml-1.5 group-hover/nav:max-w-[90px] group-hover/nav:opacity-100 group-focus-within/nav:ml-1.5 group-focus-within/nav:max-w-[90px] group-focus-within/nav:opacity-100"
+                  : "max-w-0 opacity-0 group-hover/nav:ml-1.5 group-hover/nav:max-w-[90px] group-hover/nav:opacity-100 group-focus-within/navitem:ml-1.5 group-focus-within/navitem:max-w-[90px] group-focus-within/navitem:opacity-100"
               )}
             >
               {item.label}
@@ -122,65 +123,57 @@ export const Navbar = () => {
     enabled: !!user?.id,
   });
 
-  // Friends and My List are addressed by username, so they only exist once
-  // the profile has loaded.
+  // Friends and My List need a username to link to their real destination;
+  // signed out (or before the profile loads) they still render, but point at
+  // sign-in instead — same as clicking the Sign In link directly.
   const navItems: NavItem[] = [
+    { label: "Feed", to: "/", icon: RssIcon, end: true },
     { label: "Post", to: "/entry/create", icon: PenLineIcon },
     { label: "Anime", to: "/anime", icon: TvIcon },
-    ...(profile
-      ? [
-          {
-            label: "Friends",
-            to: `/profile/${profile.username}/friends`,
-            icon: UsersIcon,
-          },
-          {
-            label: "My List",
-            to: `/profile/${profile.username}`,
-            icon: BookmarkIcon,
-            end: true,
-          },
-        ]
-      : []),
+    {
+      label: "Friends",
+      to: profile ? `/profile/${profile.username}/friends` : "/signin",
+      icon: UsersIcon,
+    },
+    {
+      label: "My List",
+      to: profile ? `/profile/${profile.username}` : "/signin",
+      icon: BookmarkIcon,
+      end: true,
+    },
   ];
 
   return (
-    <div className="fixed inset-x-0 top-3 z-40 flex justify-center px-3 sm:top-6 sm:px-4">
+    <div className="fixed inset-x-0 top-2 z-40 flex justify-center px-3 sm:top-4 sm:px-4">
       <div className="w-full max-w-[1000px]">
         {/* Plain flex row on phones; the three-column grid that centres the
             nav pill only earns its keep once that pill is visible at md. */}
         <nav
           aria-label="Main"
           className={cn(
-            "flex h-14 items-center justify-between px-2.5",
-            "sm:h-16 sm:px-3.5 md:grid md:grid-cols-[1fr_auto_1fr]",
+            "flex h-12 items-center justify-between px-2.5",
+            "sm:h-14 sm:px-3.5 md:grid md:grid-cols-[1fr_auto_1fr]",
             "border border-line bg-field/88 backdrop-blur-xl",
             "shadow-[0_12px_26px_rgba(0,0,0,0.55)]",
             radius.pill
           )}
         >
-          {/* Left side of the navbar — the logo doubles as the Home link, so
-              it carries the active state for "/" itself rather than a
-              redundant Home item in the centre pill. */}
-          <NavLink
+          {/* Left side of the navbar — the wordmark, always shown at full
+              brightness (the Feed pill item is what tracks "/"'s active
+              state now). */}
+          <Link
             to="/"
-            end
-            className={({ isActive }) =>
-              cn(
-                "min-w-0 justify-self-start truncate rounded pl-2 font-mono text-base font-semibold",
-                "transition sm:pl-2.5 sm:text-lg",
-                isActive
-                  ? "text-content"
-                  : "text-content-muted hover:text-content",
-                focusRing
-              )
-            }
+            className={cn(
+              "min-w-0 justify-self-start truncate rounded pl-2 font-mono text-base font-semibold",
+              "text-content transition sm:pl-2.5 sm:text-lg",
+              focusRing
+            )}
           >
             Issho
             <span className="text-accent-line">
               {profile?.username ? `.${profile.username}` : ""}
             </span>
-          </NavLink>
+          </Link>
 
           {/* Middle Column — labels unfurl on hover of the group, or when active */}
           <ul

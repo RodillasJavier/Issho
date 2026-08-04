@@ -4,11 +4,11 @@ import { useNavigate } from "react-router";
 import { CheckCircle2Icon } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import { AuthLayout } from "../components/auth/AuthLayout";
-import { AuthInput } from "../components/auth/AuthInput";
-import { AuthButton } from "../components/auth/AuthButton";
-import { AuthErrorBanner } from "../components/auth/AuthErrorBanner";
 import { AuthStatusCard } from "../components/auth/AuthStatusCard";
-import { PasswordChecklist } from "../components/auth/PasswordChecklist";
+import { TextField } from "../components/ui/TextField";
+import { Button } from "../components/ui/Button";
+import { Banner } from "../components/ui/Banner";
+import { PasswordChecklist } from "../components/ui/PasswordChecklist";
 import {
   isPasswordValid,
   PASSWORD_REQUIREMENTS_MESSAGE,
@@ -16,7 +16,7 @@ import {
 
 export const ResetPassword = () => {
   const navigate = useNavigate();
-  const { updatePassword } = useAuth();
+  const { updatePassword, user } = useAuth();
 
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -54,20 +54,39 @@ export const ResetPassword = () => {
   };
 
   if (done) {
+    // The reset link signs you in to authorise the change, so anyone who got
+    // this far already has a session — including a signed-in user who came
+    // here from settings because they'd forgotten their current password.
+    // Only offer the sign-in page to someone who somehow doesn't.
+    const signedIn = Boolean(user);
+
     return (
-      <AuthLayout title="Password updated">
+      <AuthLayout
+        title="Password updated"
+        asideHeadline={
+          <>
+            You&apos;re all <span className="text-rose-400">set</span>
+          </>
+        }
+      >
         <AuthStatusCard
           icon={CheckCircle2Icon}
           iconVariant="green"
           action={
-            <AuthButton type="button" onClick={() => navigate("/signin")}>
-              Continue to sign in
-            </AuthButton>
+            <Button
+              type="button"
+              fullWidth
+              onClick={() => navigate(signedIn ? "/" : "/signin")}
+            >
+              {signedIn ? "Continue to Issho" : "Continue to sign in"}
+            </Button>
           }
         >
           <p>
-            Your password has been changed. You can now sign in with your new
-            password.
+            Your password has been changed.{" "}
+            {signedIn
+              ? "You're signed in on this device — use the new password next time you sign in."
+              : "You can now sign in with your new password."}
           </p>
         </AuthStatusCard>
       </AuthLayout>
@@ -78,10 +97,15 @@ export const ResetPassword = () => {
     <AuthLayout
       title="Set a new password"
       subtitle="Choose a new password for your Issho account."
+      asideHeadline={
+        <>
+          Set a new <span className="text-rose-400">password</span>
+        </>
+      }
     >
       <form onSubmit={handleSubmit} className="space-y-5" noValidate>
-        {formError && <AuthErrorBanner message={formError} />}
-        <AuthInput
+        {formError && <Banner message={formError} />}
+        <TextField
           label="New password"
           type="password"
           autoComplete="new-password"
@@ -90,7 +114,7 @@ export const ResetPassword = () => {
           onChange={(e) => setPassword(e.target.value)}
           error={fieldErrors.password}
         />
-        <AuthInput
+        <TextField
           label="Confirm new password"
           type="password"
           autoComplete="new-password"
@@ -100,13 +124,14 @@ export const ResetPassword = () => {
           error={fieldErrors.confirm}
         />
         <PasswordChecklist password={password} confirmPassword={confirm} />
-        <AuthButton
+        <Button
           type="submit"
           loading={loading}
+          fullWidth
           disabled={!isPasswordValid(password) || confirm !== password}
         >
           {loading ? "Updating…" : "Update password"}
-        </AuthButton>
+        </Button>
       </form>
     </AuthLayout>
   );

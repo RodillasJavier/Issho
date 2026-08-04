@@ -5,10 +5,10 @@ import { MailCheckIcon, ArrowLeftIcon } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import { useResendableAction } from "../hooks/useResendableAction";
 import { AuthLayout } from "../components/auth/AuthLayout";
-import { AuthInput } from "../components/auth/AuthInput";
-import { AuthButton } from "../components/auth/AuthButton";
-import { AuthErrorBanner } from "../components/auth/AuthErrorBanner";
 import { AuthStatusCard } from "../components/auth/AuthStatusCard";
+import { TextField } from "../components/ui/TextField";
+import { Button } from "../components/ui/Button";
+import { Banner } from "../components/ui/Banner";
 import { EMAIL_RE } from "../utils/authValidation";
 
 export const ForgotPassword = () => {
@@ -54,23 +54,24 @@ export const ForgotPassword = () => {
           icon={MailCheckIcon}
           action={
             <>
-              <AuthButton
+              <Button
                 type="button"
-                variant="ghost"
+                variant="secondary"
+                fullWidth
                 onClick={handleResend}
                 disabled={resendState !== "idle"}
               >
                 {resendState === "sent"
                   ? "Reset link sent"
                   : "Resend reset link"}
-              </AuthButton>
-              {formError && <p className="text-sm text-red-400">{formError}</p>}
+              </Button>
+              {formError && <p className="text-sm text-danger">{formError}</p>}
             </>
           }
           footer={
             <Link
               to="/signin"
-              className="mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-rose-500 hover:text-rose-400"
+              className="mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-accent hover:text-accent-line"
             >
               <ArrowLeftIcon className="h-4 w-4" aria-hidden />
               Back to sign in
@@ -82,7 +83,8 @@ export const ForgotPassword = () => {
             <span className="font-semibold text-white">{email}</span>,
             we&apos;ve sent a link to reset your password.
           </p>
-          <p className="mt-2 text-sm text-neutral-400">
+
+          <p className="mt-2 text-sm text-content-muted">
             The link expires in 60 minutes. Check your spam folder if it
             doesn&apos;t arrive.
           </p>
@@ -97,8 +99,8 @@ export const ForgotPassword = () => {
       subtitle="Enter the email tied to your account and we'll send you a link to set a new password."
     >
       <form onSubmit={handleSubmit} className="space-y-5" noValidate>
-        {formError && <AuthErrorBanner message={formError} />}
-        <AuthInput
+        {formError && <Banner message={formError} />}
+        <TextField
           label="Email address"
           type="email"
           autoComplete="email"
@@ -107,12 +109,12 @@ export const ForgotPassword = () => {
           onChange={(e) => setEmail(e.target.value)}
           error={fieldError}
         />
-        <AuthButton type="submit" loading={loading}>
+        <Button type="submit" loading={loading} fullWidth>
           {loading ? "Sending link…" : "Send reset link"}
-        </AuthButton>
+        </Button>
         <Link
           to="/signin"
-          className="mt-2 flex items-center justify-center gap-1.5 text-sm font-medium text-neutral-400 hover:text-white"
+          className="mt-2 flex items-center justify-center gap-1.5 text-sm font-medium text-content-muted hover:text-content"
         >
           <ArrowLeftIcon className="h-4 w-4" aria-hidden />
           Back to sign in

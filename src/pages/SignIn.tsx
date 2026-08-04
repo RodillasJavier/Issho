@@ -2,16 +2,19 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { useAuth } from "../hooks/useAuth";
+import { useRedirectIfAuthenticated } from "../hooks/useRedirectIfAuthenticated";
 import { useResendableAction } from "../hooks/useResendableAction";
 import { AuthLayout } from "../components/auth/AuthLayout";
-import { AuthInput } from "../components/auth/AuthInput";
-import { AuthButton } from "../components/auth/AuthButton";
-import { AuthErrorBanner } from "../components/auth/AuthErrorBanner";
+import { TextField } from "../components/ui/TextField";
+import { Button } from "../components/ui/Button";
+import { Banner } from "../components/ui/Banner";
+import { text } from "../styles/tokens";
 import { EMAIL_RE } from "../utils/authValidation";
 
 export const SignIn = () => {
   const navigate = useNavigate();
   const { signInWithEmail, resendConfirmationEmail } = useAuth();
+  useRedirectIfAuthenticated();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -68,7 +71,7 @@ export const SignIn = () => {
     <AuthLayout title="Sign in to your account">
       <form onSubmit={handleSubmit} className="space-y-5" noValidate>
         {authError && (
-          <AuthErrorBanner
+          <Banner
             message={authError.message}
             action={
               authError.code === "email_not_confirmed"
@@ -85,7 +88,7 @@ export const SignIn = () => {
           />
         )}
 
-        <AuthInput
+        <TextField
           label="Email address"
           type="email"
           autoComplete="email"
@@ -97,17 +100,15 @@ export const SignIn = () => {
 
         <div>
           <div className="mb-2 flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-[0.08em] text-neutral-300">
-              Password
-            </span>
+            <span className={text.label}>Password</span>
             <Link
               to="/forgot-password"
-              className="text-xs font-semibold text-rose-500 transition-colors hover:text-rose-400"
+              className="text-xs font-semibold text-accent transition-colors hover:text-accent-line"
             >
               Forgot password?
             </Link>
           </div>
-          <AuthInput
+          <TextField
             label="Password"
             hideLabel
             type="password"
@@ -120,14 +121,14 @@ export const SignIn = () => {
         </div>
 
         <div className="pt-3">
-          <AuthButton type="submit" loading={loading}>
+          <Button type="submit" loading={loading} fullWidth>
             {loading ? "Signing in…" : "Sign in"}
-          </AuthButton>
-          <p className="mt-5 text-center text-sm text-neutral-500">
+          </Button>
+          <p className="mt-5 text-center text-sm text-content-subtle">
             Don&apos;t have an account?{" "}
             <Link
               to="/signup"
-              className="font-medium text-rose-500 transition-colors hover:text-rose-400"
+              className="font-medium text-accent transition-colors hover:text-accent-line"
             >
               Create one
             </Link>

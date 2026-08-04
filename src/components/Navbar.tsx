@@ -28,16 +28,47 @@ import { cn, control, focusRing, radius, surface } from "../styles/tokens";
 
 interface NavItem {
   label: string;
-  to: string;
   icon: LucideIcon;
   /** Exact-match only, so a sub-route doesn't light the parent up too. */
   end?: boolean;
+  /** The real destination, or `null` if this item requires a profile that
+   * hasn't loaded yet (signed out, or still fetching). `null` renders as a
+   * plain link to sign-in instead of a route-matching NavLink, so an item
+   * with nowhere real to go yet never lights up — visually or via
+   * aria-current — and two such items never collide on the same route. */
+  to: string | null;
 }
 
 /** Active and resting treatments, shared by the desktop pill and mobile sheet. */
 const navItemActive = "text-accent-text-hover bg-white/5";
 const navItemResting =
   "border-transparent text-content-muted hover:bg-white/3 hover:text-content";
+
+/** Desktop pill content — icon plus a label that unfurls on hover/focus of
+ * the group, or stays unfurled while `active`. */
+const DesktopNavLabel = ({
+  icon: Icon,
+  label,
+  active,
+}: {
+  icon: LucideIcon;
+  label: string;
+  active: boolean;
+}) => (
+  <>
+    <Icon aria-hidden className="h-4 w-4 shrink-0" />
+    <span
+      className={cn(
+        "overflow-hidden whitespace-nowrap transition-all duration-300 ease-out",
+        active
+          ? "ml-1.5 max-w-[90px] opacity-100"
+          : "max-w-0 opacity-0 group-hover/nav:ml-1.5 group-hover/nav:max-w-[90px] group-hover/nav:opacity-100 group-focus-within/navitem:ml-1.5 group-focus-within/navitem:max-w-[90px] group-focus-within/navitem:opacity-100"
+      )}
+    >
+      {label}
+    </span>
+  </>
+);
 
 /** One nav destination, rendered either as a desktop icon-that-unfurls pill
  * item or a mobile icon+label row. Both variants share the same data and
@@ -54,6 +85,28 @@ const NavItemLink = ({
   const Icon = item.icon;
 
   if (variant === "mobile") {
+    const restingClassName = cn(
+      "flex items-center gap-2.5 rounded-2xl border px-4 py-2.5 transition-colors",
+      focusRing,
+      "border-transparent text-content-muted hover:bg-line-subtle hover:text-content"
+    );
+
+    // A plain Link, not NavLink: there's no real destination yet, so this
+    // is a sign-in prompt rather than a route to track as active — and
+    // NavLink would still stamp aria-current on it whenever /signin happens
+    // to be the current route, even though its computed className already
+    // renders as resting (see the NavItem.to doc comment above).
+    if (item.to === null) {
+      return (
+        <li>
+          <Link to="/signin" onClick={onNavigate} className={restingClassName}>
+            <Icon aria-hidden className="h-4 w-4 shrink-0" />
+            {item.label}
+          </Link>
+        </li>
+      );
+    }
+
     return (
       <li>
         <NavLink
@@ -64,15 +117,33 @@ const NavItemLink = ({
             cn(
               "flex items-center gap-2.5 rounded-2xl border px-4 py-2.5 transition-colors",
               focusRing,
-              isActive
-                ? navItemActive
-                : "border-transparent text-content-muted hover:bg-line-subtle hover:text-content"
+              isActive ? navItemActive : restingClassName
             )
           }
         >
           <Icon aria-hidden className="h-4 w-4 shrink-0" />
           {item.label}
         </NavLink>
+      </li>
+    );
+  }
+
+  if (item.to === null) {
+    return (
+      <li className="group/navitem">
+        <Link
+          to="/signin"
+          title={item.label}
+          className={cn(
+            "flex h-10 items-center overflow-hidden px-3.5",
+            "font-medium text-sm transition-all duration-200",
+            radius.pill,
+            focusRing,
+            navItemResting
+          )}
+        >
+          <DesktopNavLabel icon={Icon} label={item.label} active={false} />
+        </Link>
       </li>
     );
   }
@@ -94,28 +165,28 @@ const NavItemLink = ({
         }
       >
         {({ isActive }) => (
-          <>
-            <Icon aria-hidden className="h-4 w-4 shrink-0" />
-            <span
-              className={cn(
-                "overflow-hidden whitespace-nowrap transition-all duration-300 ease-out",
-                isActive
-                  ? "ml-1.5 max-w-[90px] opacity-100"
-                  : "max-w-0 opacity-0 group-hover/nav:ml-1.5 group-hover/nav:max-w-[90px] group-hover/nav:opacity-100 group-focus-within/navitem:ml-1.5 group-focus-within/navitem:max-w-[90px] group-focus-within/navitem:opacity-100"
-              )}
-            >
-              {item.label}
-            </span>
-          </>
+          <DesktopNavLabel icon={Icon} label={item.label} active={isActive} />
         )}
       </NavLink>
     </li>
   );
 };
 
-export const Navbar = () => {
+interface NavbarProps {
+  /** Set on the sign-in/sign-up/forgot-password/reset-password pages: forces
+   * the signed-out chrome regardless of actual auth state, so the account
+   * menu's sign-out is never reachable there. It's not just cosmetic — a
+   * password-reset link signs the visitor into a one-time recovery session,
+   * and reaching sign-out from the navbar mid-flow would end that session
+   * before the new password is submitted. Also skips the profile fetch,
+   * which these pages never render anything from. */
+  authPage?: boolean;
+}
+
+export const Navbar = ({ authPage = false }: NavbarProps = {}) => {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { user, signOut } = useAuth();
+  const { user: sessionUser, signOut } = useAuth();
+  const user = authPage ? null : sessionUser;
 
   const { data: profile } = useQuery({
     queryKey: profileQueryKey(user?.id),
@@ -124,20 +195,21 @@ export const Navbar = () => {
   });
 
   // Friends and My List need a username to link to their real destination;
-  // signed out (or before the profile loads) they still render, but point at
-  // sign-in instead — same as clicking the Sign In link directly.
+  // signed out (or before the profile loads), `to: null` marks them as
+  // having nowhere real to go yet, which NavItemLink renders as a sign-in
+  // prompt rather than a route it tracks as active.
   const navItems: NavItem[] = [
     { label: "Feed", to: "/", icon: RssIcon, end: true },
     { label: "Post", to: "/entry/create", icon: PenLineIcon },
     { label: "Anime", to: "/anime", icon: TvIcon },
     {
       label: "Friends",
-      to: profile ? `/profile/${profile.username}/friends` : "/signin",
+      to: profile ? `/profile/${profile.username}/friends` : null,
       icon: UsersIcon,
     },
     {
       label: "My List",
-      to: profile ? `/profile/${profile.username}` : "/signin",
+      to: profile ? `/profile/${profile.username}` : null,
       icon: BookmarkIcon,
       end: true,
     },
@@ -163,6 +235,7 @@ export const Navbar = () => {
               state now). */}
           <Link
             to="/"
+            aria-label="Issho home"
             className={cn(
               "min-w-0 justify-self-start truncate rounded pl-2 font-mono text-base font-semibold",
               "text-content transition sm:pl-2.5 sm:text-lg",
@@ -182,7 +255,7 @@ export const Navbar = () => {
             )}
           >
             {navItems.map((item) => (
-              <NavItemLink key={item.to} item={item} variant="desktop" />
+              <NavItemLink key={item.label} item={item} variant="desktop" />
             ))}
           </ul>
 
@@ -277,7 +350,7 @@ export const Navbar = () => {
             >
               {navItems.map((item) => (
                 <NavItemLink
-                  key={item.to}
+                  key={item.label}
                   item={item}
                   variant="mobile"
                   onNavigate={() => setMobileOpen(false)}

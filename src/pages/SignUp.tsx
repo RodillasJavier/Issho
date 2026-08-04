@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { MailCheckIcon, ArrowLeftIcon } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
+import { useRedirectIfAuthenticated } from "../hooks/useRedirectIfAuthenticated";
 import { useResendableAction } from "../hooks/useResendableAction";
 import { AuthLayout } from "../components/auth/AuthLayout";
 import { AuthStatusCard } from "../components/auth/AuthStatusCard";
@@ -19,6 +20,7 @@ import {
 export const SignUp = () => {
   const navigate = useNavigate();
   const { signUpWithEmail, resendConfirmationEmail } = useAuth();
+  useRedirectIfAuthenticated();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

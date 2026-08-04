@@ -6,6 +6,7 @@
 import { Navigate, Outlet, Route, Routes } from "react-router";
 import { Navbar } from "./components/Navbar";
 import { Footer } from "./components/Footer";
+import { cn, navbar } from "./styles/tokens";
 import { Home } from "./pages/Home";
 import { SignIn } from "./pages/SignIn";
 import { SignUp } from "./pages/SignUp";
@@ -21,13 +22,17 @@ import { UserProfilePage } from "./pages/UserProfilePage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { FriendsPage } from "./pages/FriendsPage";
 
-// The auth pages own their full-bleed layout, so they render outside this
-// shell rather than under the persistent Navbar/container chrome.
+// The auth pages get the persistent Navbar too (via AuthLayout), but own
+// their own full-bleed body layout, so they render outside this shell rather
+// than under AppShell's centered container and Footer.
 function AppShell() {
   return (
-    // pt clears the floating navbar, which shrinks on phones: 8px offset plus
-    // a 48px bar there, 16px plus 56px from sm up.
-    <div className="flex min-h-screen flex-col bg-black text-gray-100 transition-opacity duration-500 pt-16 sm:pt-22">
+    <div
+      className={cn(
+        "flex min-h-screen flex-col bg-black text-gray-100 transition-opacity duration-500",
+        navbar.shellClearance
+      )}
+    >
       <Navbar />
 
       <div className="container mx-auto flex-1 px-4 py-6">

@@ -112,3 +112,15 @@ export const page = {
   shell: "mx-auto max-w-5xl pb-12",
   header: "mb-8 border-b border-line pb-6",
 } as const;
+
+/** Top padding to clear the floating Navbar (fixed; `top-2 h-12` on phones =
+ * 56px, `top-4 h-14` from sm up = 72px). Recompute here, not per call site,
+ * if Navbar's offset or height ever change. */
+export const navbar = {
+  /** Exact clearance, no extra breathing room — for content that sits
+   * directly under the navbar (the auth pages). */
+  clearance: "pt-14 sm:pt-18",
+  /** AppShell's page content sits an extra 8px/16px below that for visual
+   * breathing room above the page header. */
+  shellClearance: "pt-16 sm:pt-22",
+} as const;

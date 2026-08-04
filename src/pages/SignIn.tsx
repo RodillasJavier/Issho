@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { useAuth } from "../hooks/useAuth";
+import { useRedirectIfAuthenticated } from "../hooks/useRedirectIfAuthenticated";
 import { useResendableAction } from "../hooks/useResendableAction";
 import { AuthLayout } from "../components/auth/AuthLayout";
 import { TextField } from "../components/ui/TextField";
@@ -13,6 +14,7 @@ import { EMAIL_RE } from "../utils/authValidation";
 export const SignIn = () => {
   const navigate = useNavigate();
   const { signInWithEmail, resendConfirmationEmail } = useAuth();
+  useRedirectIfAuthenticated();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

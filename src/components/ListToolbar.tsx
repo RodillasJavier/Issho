@@ -5,10 +5,10 @@
  * count. Both narrow an already-fetched list in memory — nothing here
  * triggers a refetch.
  */
-import { useEffect, useRef, useState } from "react";
 import { ArrowUpDown, Check, ChevronDown, Search, X } from "lucide-react";
 import { SORT_OPTIONS } from "../constants/listSort";
 import type { SortKey } from "../constants/listSort";
+import { useDismissableMenu } from "../hooks/useDismissableMenu";
 
 // #region Types
 interface ListToolbarProps {
@@ -30,32 +30,13 @@ export const ListToolbar = ({
   resultCount,
   totalCount,
 }: ListToolbarProps) => {
-  const [sortOpen, setSortOpen] = useState(false);
-  const sortRef = useRef<HTMLDivElement>(null);
+  const {
+    open: sortOpen,
+    setOpen: setSortOpen,
+    containerRef: sortRef,
+  } = useDismissableMenu<HTMLDivElement>();
   const activeSort =
     SORT_OPTIONS.find((option) => option.key === sortKey) ?? SORT_OPTIONS[0];
-
-  // Listeners only exist while the menu is open, so a closed menu costs
-  // nothing and there's no stale handler left behind.
-  useEffect(() => {
-    if (!sortOpen) return;
-
-    const handleClick = (event: MouseEvent) => {
-      if (sortRef.current && !sortRef.current.contains(event.target as Node)) {
-        setSortOpen(false);
-      }
-    };
-    const handleKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setSortOpen(false);
-    };
-
-    document.addEventListener("mousedown", handleClick);
-    document.addEventListener("keydown", handleKey);
-    return () => {
-      document.removeEventListener("mousedown", handleClick);
-      document.removeEventListener("keydown", handleKey);
-    };
-  }, [sortOpen]);
   // #endregion Component Logic
 
   // #region Render

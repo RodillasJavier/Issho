@@ -2,11 +2,9 @@
  * src/components/AccountMenu.tsx
  *
  * The navbar's avatar button and the menu it opens — profile, settings, and
- * sign out. Unlike the status pickers elsewhere in the app, this one closes on
- * Escape and on a real outside-click listener rather than a full-screen
- * click-catcher, since it sits inside a floating bar the catcher would cover.
+ * sign out.
  */
-import { useEffect, useRef, useState } from "react";
+import { useRef } from "react";
 import { Link } from "react-router";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -17,7 +15,8 @@ import {
 } from "lucide-react";
 import { UserAvatar } from "./UserAvatar";
 import { useAuth } from "../hooks/useAuth";
-import { cn, focusRing, radius } from "../styles/tokens";
+import { useDismissableMenu } from "../hooks/useDismissableMenu";
+import { cn, focusRing, radius, surface } from "../styles/tokens";
 
 interface AccountMenuProps {
   username: string;
@@ -31,33 +30,15 @@ const itemBase = cn(
 
 export const AccountMenu = ({ username, avatarUrl }: AccountMenuProps) => {
   const { signOut } = useAuth();
-  const [open, setOpen] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-
-    const onPointerDown = (event: MouseEvent) => {
-      if (!containerRef.current?.contains(event.target as Node)) {
-        setOpen(false);
-      }
-    };
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpen(false);
-    };
-
-    document.addEventListener("mousedown", onPointerDown);
-    document.addEventListener("keydown", onKeyDown);
-    return () => {
-      document.removeEventListener("mousedown", onPointerDown);
-      document.removeEventListener("keydown", onKeyDown);
-    };
-  }, [open]);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const { open, setOpen, containerRef } =
+    useDismissableMenu<HTMLDivElement>(triggerRef);
 
   return (
     <div ref={containerRef} className="relative ml-1 flex items-center">
       {/* Avatar button */}
       <button
+        ref={triggerRef}
         type="button"
         onClick={() => setOpen((value) => !value)}
         aria-haspopup="menu"
@@ -107,7 +88,10 @@ export const AccountMenu = ({ username, avatarUrl }: AccountMenuProps) => {
             exit={{ opacity: 0, y: -6, scale: 0.97 }}
             transition={{ duration: 0.16, ease: "easeOut" }}
             style={{ transformOrigin: "top right" }}
-            className="absolute top-13 right-0 w-40 rounded-2xl border border-line bg-field/95 p-1.5 text-sm shadow-lg backdrop-blur-xl"
+            className={cn(
+              surface.floatingPanel,
+              "absolute top-13 right-0 w-40 rounded-2xl p-1.5"
+            )}
           >
             <Link
               to={`/profile/${username}`}

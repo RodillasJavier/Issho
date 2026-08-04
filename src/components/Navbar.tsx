@@ -31,12 +31,14 @@ interface NavItem {
   icon: LucideIcon;
   /** Exact-match only, so a sub-route doesn't light the parent up too. */
   end?: boolean;
-  /** The real destination, or `null` if this item requires a profile that
-   * hasn't loaded yet (signed out, or still fetching). `null` renders as a
-   * plain link to sign-in instead of a route-matching NavLink, so an item
-   * with nowhere real to go yet never lights up — visually or via
-   * aria-current — and two such items never collide on the same route. */
-  to: string | null;
+  /** The real destination; `null` when signed out (renders as a sign-in
+   * prompt); `undefined` when signed in but the profile that would supply
+   * the destination hasn't loaded yet (renders as an inert placeholder —
+   * NOT a sign-in link, since the visitor is already authenticated and
+   * sending them to /signin would just bounce them back to "/" via
+   * useRedirectIfAuthenticated with no explanation). Distinguishing the two
+   * keeps a loading profile from masquerading as a signed-out visitor. */
+  to: string | null | undefined;
 }
 
 /** Active and resting treatments, shared by the desktop pill and mobile sheet. */
@@ -107,6 +109,23 @@ const NavItemLink = ({
       );
     }
 
+    // Signed in, profile still loading: an inert placeholder, not a link —
+    // sending an already-authenticated visitor to /signin would just bounce
+    // them back to "/" via useRedirectIfAuthenticated.
+    if (item.to === undefined) {
+      return (
+        <li>
+          <span
+            aria-disabled="true"
+            className={cn(restingClassName, "cursor-default opacity-50")}
+          >
+            <Icon aria-hidden className="h-4 w-4 shrink-0" />
+            {item.label}
+          </span>
+        </li>
+      );
+    }
+
     return (
       <li>
         <NavLink
@@ -144,6 +163,28 @@ const NavItemLink = ({
         >
           <DesktopNavLabel icon={Icon} label={item.label} active={false} />
         </Link>
+      </li>
+    );
+  }
+
+  // Signed in, profile still loading: an inert placeholder, not a link —
+  // sending an already-authenticated visitor to /signin would just bounce
+  // them back to "/" via useRedirectIfAuthenticated.
+  if (item.to === undefined) {
+    return (
+      <li className="group/navitem">
+        <span
+          aria-disabled="true"
+          title={item.label}
+          className={cn(
+            "flex h-10 cursor-default items-center overflow-hidden px-3.5",
+            "font-medium text-sm opacity-50",
+            radius.pill,
+            navItemResting
+          )}
+        >
+          <DesktopNavLabel icon={Icon} label={item.label} active={false} />
+        </span>
       </li>
     );
   }
@@ -194,22 +235,30 @@ export const Navbar = ({ authPage = false }: NavbarProps = {}) => {
     enabled: !!user?.id,
   });
 
-  // Friends and My List need a username to link to their real destination;
-  // signed out (or before the profile loads), `to: null` marks them as
-  // having nowhere real to go yet, which NavItemLink renders as a sign-in
-  // prompt rather than a route it tracks as active.
+  // Friends and My List need a username to link to their real destination.
+  // Signed out, `to: null` marks them as a sign-in prompt. Signed in but the
+  // profile hasn't loaded yet, `to: undefined` marks them as pending —
+  // distinct from signed-out so NavItemLink never treats an authenticated
+  // visitor as one who needs to sign in.
+  const friendsAndListTo = (suffix: "" | "/friends") =>
+    user
+      ? profile
+        ? `/profile/${profile.username}${suffix}`
+        : undefined
+      : null;
+
   const navItems: NavItem[] = [
     { label: "Feed", to: "/", icon: RssIcon, end: true },
     { label: "Post", to: "/entry/create", icon: PenLineIcon },
     { label: "Anime", to: "/anime", icon: TvIcon },
     {
       label: "Friends",
-      to: profile ? `/profile/${profile.username}/friends` : null,
+      to: friendsAndListTo("/friends"),
       icon: UsersIcon,
     },
     {
       label: "My List",
-      to: profile ? `/profile/${profile.username}` : null,
+      to: friendsAndListTo(""),
       icon: BookmarkIcon,
       end: true,
     },

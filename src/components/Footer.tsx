@@ -18,9 +18,8 @@ export const Footer = () => {
               <li key={link.id}>
                 <a
                   href={link.href}
-                  {...(link.external
-                    ? { target: "_blank", rel: "noopener noreferrer" }
-                    : {})}
+                  target={link.external ? "_blank" : undefined}
+                  rel={link.external ? "noopener noreferrer" : undefined}
                   className={cn(
                     "flex items-center gap-1.5 text-sm text-content-muted transition-colors",
                     "hover:text-accent-text-hover",

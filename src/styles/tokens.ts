@@ -58,6 +58,10 @@ export const surface = {
   cardBody: "px-5 py-5 sm:px-6",
   cardFooter: "border-t border-line-subtle bg-surface-sunken px-5 py-4 sm:px-6",
   inset: cn("border border-line bg-surface-sunken", radius.inset),
+  /** A dropdown/sheet floating over page content. Callers add their own
+   * rounding and padding, since those vary with the panel's size. */
+  floatingPanel:
+    "border border-line bg-field/95 text-sm shadow-lg backdrop-blur-xl",
 } as const;
 
 /** Tone recipes shared by Banner and StatusPill. */
@@ -83,6 +87,10 @@ export const control = {
     primary: "bg-accent text-white hover:bg-accent-hover",
     secondary:
       "border border-line bg-surface-sunken text-content hover:border-line-strong hover:bg-surface",
+    /** `secondary`'s translucent counterpart, for controls floating over page
+     * content (e.g. the navbar) rather than sitting on a solid surface. */
+    secondaryTranslucent:
+      "border border-line bg-surface-sunken/65 text-content-muted hover:border-line-strong hover:text-content",
     ghost: "text-content-muted hover:bg-surface hover:text-content",
     danger:
       "border border-danger/40 bg-danger/10 text-danger hover:bg-danger/20",

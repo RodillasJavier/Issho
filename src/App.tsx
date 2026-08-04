@@ -26,7 +26,7 @@ import { FriendsPage } from "./pages/FriendsPage";
 function AppShell() {
   return (
     // pt clears the floating navbar, which shrinks on phones: 12px offset plus
-    // a 56px bar there, 24px plus 66px from sm up.
+    // a 56px bar there, 24px plus 64px from sm up.
     <div className="flex min-h-screen flex-col bg-black text-gray-100 transition-opacity duration-500 pt-20 sm:pt-28">
       <Navbar />
 

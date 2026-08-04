@@ -45,11 +45,13 @@ export const DetailHero = ({
   const isLongDescription =
     (description?.length ?? 0) > DESCRIPTION_CLAMP_CHARS;
 
-  // -mt-10 pulls the hero flush against the fixed navbar's bottom (the app's
-  // pt-20 offset is 16px taller than the h-16 navbar) without tucking the art
-  // behind it.
+  // -mt-9 sm:-mt-12 pulls the hero flush against the floating navbar's bottom
+  // edge without tucking the art behind it. AppShell's pt-20/sm:pt-28 plus the
+  // content container's own py-6 clears the navbar's offset-plus-height
+  // (top-3+h-14=68px mobile, top-6+h-16=88px sm+) by 36px/48px — this cancels
+  // that gap: (80+24)-68=36, (112+24)-88=48.
   return (
-    <section className="relative left-1/2 right-1/2 -mx-[50vw] -mt-10 w-screen">
+    <section className="relative left-1/2 right-1/2 -mx-[50vw] -mt-9 w-screen sm:-mt-12">
       {/* Fixed-height image backdrop: stays put so expanding the description
           spills text onto the page's dark background below rather than scaling
           the image. Gradients are kept light enough to show the series art. */}

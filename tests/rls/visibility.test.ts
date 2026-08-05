@@ -1,0 +1,254 @@
+/**
+ * tests/rls/visibility.test.ts
+ *
+ * Issho's privacy model in one sentence: you see your own activity and your
+ * accepted friends', nothing else. It is enforced in Postgres, not the UI, so
+ * this is the file that actually checks it.
+ */
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { TestDb, createTestDatabase, createUser, dropTestDatabase } from "./db";
+
+const DB_NAME = "issho_rls_visibility";
+
+let db: TestDb;
+let alice: string;
+let bob: string;
+let stranger: string;
+let animeId: string;
+let aliceEntry: string;
+let strangerEntry: string;
+
+beforeAll(async () => {
+  const url = await createTestDatabase(DB_NAME);
+  db = await TestDb.open(url);
+
+  alice = await createUser(db, "alice");
+  bob = await createUser(db, "bob");
+  stranger = await createUser(db, "stranger");
+
+  [{ id: animeId }] = await db.asService<{ id: string }>(
+    `insert into anime (name, description, cover_image_url, anilist_id, franchise_key)
+     values ('Test Show', 'desc', 'cover.jpg', 1, 1) returning id`
+  );
+
+  [{ id: aliceEntry }] = await db.asService<{ id: string }>(
+    `insert into entries (anime_id, entry_type, user_id, content)
+     values ($1, 'review', $2, 'alice review') returning id`,
+    [animeId, alice]
+  );
+  [{ id: strangerEntry }] = await db.asService<{ id: string }>(
+    `insert into entries (anime_id, entry_type, user_id, content)
+     values ($1, 'review', $2, 'stranger review') returning id`,
+    [animeId, stranger]
+  );
+
+  await db.asService(
+    `insert into user_anime_entries (user_id, anime_id, status) values ($1, $2, 'watching')`,
+    [stranger, animeId]
+  );
+  await db.asService(
+    `insert into user_franchise_entries (user_id, franchise_key, status)
+     values ($1, $2, 'watching')`,
+    [stranger, 1]
+  );
+  await db.asService(
+    `insert into comments (entry_id, user_id, content) values ($1, $2, 'nice')`,
+    [strangerEntry, stranger]
+  );
+  await db.asService(
+    `insert into votes (entry_id, user_id, vote) values ($1, $2, 1)`,
+    [strangerEntry, stranger]
+  );
+
+  // Alice and Bob are friends; the stranger is friends with nobody.
+  await db.asService(
+    `insert into friendships (requester_id, addressee_id, status)
+     values ($1, $2, 'accepted')`,
+    [alice, bob]
+  );
+}, 60_000);
+
+afterAll(async () => {
+  await db?.close();
+  await dropTestDatabase(DB_NAME);
+});
+
+describe("entries", () => {
+  it("shows a user their own entries", async () => {
+    const rows = await db.as(
+      { id: alice },
+      `select id from entries where id = $1`,
+      [aliceEntry]
+    );
+    expect(rows).toHaveLength(1);
+  });
+
+  it("shows a user their friend's entries", async () => {
+    const rows = await db.as(
+      { id: bob },
+      `select id from entries where id = $1`,
+      [aliceEntry]
+    );
+    expect(rows).toHaveLength(1);
+  });
+
+  it("hides a non-friend's entries", async () => {
+    const rows = await db.as(
+      { id: alice },
+      `select id from entries where id = $1`,
+      [strangerEntry]
+    );
+    expect(rows).toHaveLength(0);
+  });
+
+  it("returns nothing at all to an anonymous reader", async () => {
+    const rows = await db.as("anon", `select id from entries`);
+    expect(rows).toHaveLength(0);
+  });
+
+  it("flips visibility the moment a friendship is accepted", async () => {
+    // The whole product promise, in one assertion.
+    const before = await db.as(
+      { id: alice },
+      `select id from entries where user_id = $1`,
+      [stranger]
+    );
+    expect(before).toHaveLength(0);
+
+    await db.asService(
+      `insert into friendships (requester_id, addressee_id, status)
+       values ($1, $2, 'accepted')`,
+      [alice, stranger]
+    );
+    try {
+      const after = await db.as(
+        { id: alice },
+        `select id from entries where user_id = $1`,
+        [stranger]
+      );
+      expect(after).toHaveLength(1);
+    } finally {
+      await db.asService(
+        `delete from friendships where requester_id = $1 and addressee_id = $2`,
+        [alice, stranger]
+      );
+    }
+  });
+
+  it("does not treat a pending request as friendship", async () => {
+    await db.asService(
+      `insert into friendships (requester_id, addressee_id, status)
+       values ($1, $2, 'pending')`,
+      [alice, stranger]
+    );
+    try {
+      const rows = await db.as(
+        { id: alice },
+        `select id from entries where user_id = $1`,
+        [stranger]
+      );
+      expect(rows).toHaveLength(0);
+    } finally {
+      await db.asService(
+        `delete from friendships where requester_id = $1 and addressee_id = $2`,
+        [alice, stranger]
+      );
+    }
+  });
+});
+
+describe("list tables", () => {
+  it("hides a non-friend's anime list", async () => {
+    const rows = await db.as(
+      { id: alice },
+      `select id from user_anime_entries where user_id = $1`,
+      [stranger]
+    );
+    expect(rows).toHaveLength(0);
+  });
+
+  it("hides a non-friend's series list", async () => {
+    const rows = await db.as(
+      { id: alice },
+      `select id from user_franchise_entries where user_id = $1`,
+      [stranger]
+    );
+    expect(rows).toHaveLength(0);
+  });
+});
+
+describe("comments and votes", () => {
+  it("hides them when the parent entry is hidden", async () => {
+    expect(
+      await db.as(
+        { id: alice },
+        `select id from comments where entry_id = $1`,
+        [strangerEntry]
+      )
+    ).toHaveLength(0);
+    expect(
+      await db.as({ id: alice }, `select id from votes where entry_id = $1`, [
+        strangerEntry,
+      ])
+    ).toHaveLength(0);
+  });
+
+  it("shows a whole thread when the entry is visible, whoever commented", async () => {
+    // can_view_entry keys off the entry's AUTHOR, not the commenter — so a
+    // visible thread renders in full rather than half-empty.
+    const [{ id: commentId }] = await db.asService<{ id: string }>(
+      `insert into comments (entry_id, user_id, content) values ($1, $2, 'from a stranger')
+       returning id`,
+      [aliceEntry, stranger]
+    );
+
+    const rows = await db.as(
+      { id: bob },
+      `select id from comments where id = $1`,
+      [commentId]
+    );
+    expect(rows).toHaveLength(1);
+  });
+});
+
+describe("get_entries_with_counts", () => {
+  it("is not SECURITY DEFINER", async () => {
+    // Making it definer would silently reopen global visibility: it would stop
+    // inheriting the entries policy that covers the feed, /entry/:id, anime
+    // pages, series pages and the friends page all at once.
+    const [row] = await db.asService<{ prosecdef: boolean }>(
+      `select prosecdef from pg_proc where proname = 'get_entries_with_counts'`
+    );
+    expect(row.prosecdef).toBe(false);
+  });
+
+  it("returns only what the caller may see", async () => {
+    const rows = await db.as<{ user_id: string }>(
+      { id: alice },
+      `select user_id from get_entries_with_counts()`
+    );
+    const authors = new Set(rows.map((r) => r.user_id));
+
+    expect(authors.has(alice)).toBe(true);
+    expect(authors.has(stranger)).toBe(false);
+  });
+});
+
+describe("world-readable by design", () => {
+  // Username search, add-by-username and friend counts all depend on these
+  // staying open. Locking them down would break those features, so the
+  // openness is asserted rather than left to chance.
+  it("keeps profiles readable", async () => {
+    const rows = await db.as(
+      { id: alice },
+      `select id from profiles where id = $1`,
+      [stranger]
+    );
+    expect(rows).toHaveLength(1);
+  });
+
+  it("keeps friendships readable", async () => {
+    const rows = await db.as({ id: stranger }, `select id from friendships`);
+    expect(rows.length).toBeGreaterThan(0);
+  });
+});

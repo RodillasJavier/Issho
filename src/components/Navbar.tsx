@@ -235,8 +235,13 @@ interface NavbarProps {
 
 export const Navbar = ({ authPage = false }: NavbarProps = {}) => {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { user: sessionUser, signOut } = useAuth();
+  const { user: sessionUser, signOut, initializing } = useAuth();
   const user = authPage ? null : sessionUser;
+  // Auth pages render the signed-out navbar on purpose and never wait. Anywhere
+  // else, "no user yet" is indistinguishable from "signed out" until the
+  // session resolves, and guessing signed-out puts a Sign In link in the corner
+  // of every page for the split second before it swaps to the account menu.
+  const authPending = !authPage && initializing;
 
   const { data: profile } = useQuery({
     queryKey: profileQueryKey(user?.id),
@@ -246,6 +251,7 @@ export const Navbar = ({ authPage = false }: NavbarProps = {}) => {
 
   // Friends and My List need a username to link to their real destination.
   const friendsAndListState = (suffix: "" | "/friends"): NavItemState => {
+    if (authPending) return { kind: "pending" };
     if (!user) return { kind: "signedOut" };
     if (!profile) return { kind: "pending" };
     return { kind: "ready", to: `/profile/${profile.username}${suffix}` };
@@ -342,7 +348,18 @@ export const Navbar = ({ authPage = false }: NavbarProps = {}) => {
               )}
             </button>
 
-            {user ? (
+            {authPending ? (
+              // Same inert-placeholder treatment as a `pending` nav item, sized
+              // to the account trigger it becomes.
+              <div
+                aria-hidden
+                className={cn(
+                  "h-9 w-9 opacity-50",
+                  control.variant.secondaryTranslucent,
+                  radius.pill
+                )}
+              />
+            ) : user ? (
               profile ? (
                 <AccountMenu
                   username={profile.username}

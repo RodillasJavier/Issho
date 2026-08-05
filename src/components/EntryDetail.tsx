@@ -70,15 +70,26 @@ const fetchEntryById = async (id: string): Promise<Entry | null> => {
 
 export const EntryDetail = ({ entryId }: EntryDetailProps) => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, initializing } = useAuth();
 
-  const { data, error, isLoading } = useQuery<
-    Entry | PublicEntry | null,
-    Error
-  >({
+  const {
+    data,
+    error,
+    isLoading: entryLoading,
+  } = useQuery<Entry | PublicEntry | null, Error>({
     queryKey: ["entry", entryId, user?.id],
     queryFn: () => (user ? fetchEntryById(entryId) : fetchPublicEntry(entryId)),
+    // Which RPC to call is an auth decision, so it has to wait for auth. Firing
+    // early doesn't just waste a request: `user` is null until the session
+    // resolves, so a signed-in visitor would fetch the *anonymous* entry — the
+    // de-identified shape with no author and no comments — and could paint it
+    // before the real one replaces it.
+    enabled: !initializing,
   });
+
+  // A disabled query reports isLoading, but so does one that hasn't been
+  // allowed to start; both mean "not ready", which is what the render wants.
+  const isLoading = initializing || entryLoading;
 
   const authorId = data && hasAuthor(data) ? data.user_id : undefined;
   const animeId = data?.anime_id;

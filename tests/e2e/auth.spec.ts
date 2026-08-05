@@ -105,13 +105,18 @@ test("signs up a new account and asks for email confirmation", async ({
 test("does not leak a non-friend's entry into the signed-in feed", async ({
   page,
 }) => {
-  // Alice is friends with Bob only. This is the friend gate as the user
-  // actually experiences it — the RLS suite proves the policy, this proves
-  // the app is really behind it.
-  await signIn(page, "alice");
+  // The friend gate as the user actually experiences it — the RLS suite proves
+  // the policy, this proves the app is really behind it.
+  //
+  // Viewed from Carol, who is friends with nobody, rather than from Alice.
+  // friends.spec makes Alice and Carol friends and the seed is restored per
+  // run, not per file, so an Alice-side assertion would hold only while
+  // Playwright happens to run auth.spec first. Carol and Bob are never made
+  // friends by any spec, so this direction does not depend on file order.
+  await signIn(page, "carol");
 
   // .first(): the top entry renders twice on page one, as the hero card and
   // again in the list below it.
-  await expect(page.getByText(SEED.bobEntry).first()).toBeVisible();
-  await expect(page.getByText(SEED.carolEntry)).toHaveCount(0);
+  await expect(page.getByText(SEED.carolEntry).first()).toBeVisible();
+  await expect(page.getByText(SEED.bobEntry)).toHaveCount(0);
 });

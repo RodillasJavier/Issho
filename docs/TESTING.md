@@ -118,16 +118,28 @@ What's asserted:
   write fails with `55000` before privileges are consulted — a Postgres
   implementation detail that would evaporate if the view were ever simplified.
 
+- **Avatar storage** — the bucket exists with its size and mime limits, writes
+  are scoped to a folder named for the uploader's uid, a rename into someone
+  else's folder is refused, and reads stay open to `anon` (avatars render on
+  logged-out pages) without extending to any other bucket.
+
+The harness stands in a trimmed `storage` schema — `buckets`, `objects` and
+`foldername` — so the avatar policies can be applied and exercised against plain
+Postgres. It is not a faithful copy; keep it in step with the columns the storage
+migration writes.
+
 Adding a table that holds user content? It needs its own `can_view_user`-based
 SELECT policy — nothing grants that by default — and a case in
 `visibility.test.ts`.
 
-`supabase/config.toml` exists for CLI work (`supabase db diff` and friends) and
-has its ports shifted into the 544xx range so it can't collide with another
-Supabase project running locally. Note that `supabase start` has *not* been
-verified to work here — its schema-init container fails on this machine for
-reasons unrelated to the schema — which is part of why the RLS suite depends on
-plain Postgres instead.
+`supabase/config.toml` has its ports shifted into the 544xx range so it can't
+collide with another Supabase project running locally, and disables `[realtime]`
+— the app subscribes to nothing, and that image exits 1 on arm64, taking the
+whole stack down with it. With those two changes `supabase start` works, which
+is what the E2E layer and CI's e2e job depend on.
+
+The RLS suite still uses plain Postgres by choice rather than necessity: it is
+faster, and it lets CI run the policy tests in a stock service container.
 
 ## Schema baseline
 
@@ -194,5 +206,8 @@ Two gotchas worth knowing before adding a spec:
 
 ## Not covered yet
 
-The Create composer (`publishEntry`), comments and voting, avatar upload, and
-search/import are only exercised at the unit layer, not through the UI.
+The Create composer (`publishEntry`), comments and voting, and search/import are
+only exercised at the unit layer, not through the UI. Avatar upload has policy
+cover in `tests/rls/avatarStorage.test.ts` but no UI flow, so the client half —
+`uploadAvatar`'s path construction and `AvatarField`'s validation — is untested
+end to end.

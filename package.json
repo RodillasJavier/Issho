@@ -15,7 +15,7 @@
     "test:e2e:ui": "playwright test --ui",
     "db:reset": "supabase db reset",
     "test:all": "npm run test && npm run test:rls",
-    "db:up": "docker run -d --name issho-pgtest -e POSTGRES_PASSWORD=postgres -p 55432:5432 postgres:17",
+    "db:up": "docker start issho-pgtest 2>/dev/null || docker run -d --name issho-pgtest -e POSTGRES_PASSWORD=postgres -p 55432:5432 postgres:17",
     "db:down": "docker rm -f issho-pgtest",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",

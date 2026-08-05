@@ -79,3 +79,53 @@ $$;
 grant execute on function auth.jwt() to anon, authenticated, service_role;
 grant execute on function auth.uid() to anon, authenticated, service_role;
 grant execute on function auth.role() to anon, authenticated, service_role;
+
+-- #region Storage
+-- The slice of Supabase Storage the avatar policies are written against.
+-- Column lists are trimmed to what those policies and the tests touch; this is
+-- not a faithful copy of the storage schema, only enough of it for
+-- `20260805172434_avatar_storage_bucket_and_policies.sql` to apply and be
+-- exercised. Keep it in step with the columns that migration writes.
+create schema if not exists storage;
+grant usage on schema storage to anon, authenticated, service_role;
+
+create table if not exists storage.buckets (
+  id text primary key,
+  name text not null,
+  public boolean default false,
+  file_size_limit bigint,
+  allowed_mime_types text[],
+  created_at timestamptz default now()
+);
+
+create table if not exists storage.objects (
+  id uuid primary key default gen_random_uuid(),
+  bucket_id text references storage.buckets (id),
+  name text,
+  owner uuid,
+  metadata jsonb,
+  created_at timestamptz default now()
+);
+
+alter table storage.objects enable row level security;
+
+-- Supabase's own definition: the path segments of an object name, minus the
+-- filename. `(storage.foldername(name))[1]` is therefore the owning folder,
+-- which every avatar policy compares against auth.uid().
+create or replace function storage.foldername(name text)
+returns text[]
+language plpgsql
+immutable
+as $$
+declare
+  parts text[];
+begin
+  select string_to_array(name, '/') into parts;
+  return parts[1:array_length(parts, 1) - 1];
+end
+$$;
+
+grant execute on function storage.foldername(text) to anon, authenticated, service_role;
+grant select on storage.buckets to anon, authenticated, service_role;
+grant select, insert, update, delete on storage.objects to anon, authenticated, service_role;
+-- #endregion Storage

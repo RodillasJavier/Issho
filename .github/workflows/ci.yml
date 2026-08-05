@@ -1,0 +1,121 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main, production]
+
+# A new push to a PR makes the in-flight run irrelevant.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Lint, typecheck, test
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test
+
+      # Catches what the typecheck can't — a bad import path, a Tailwind or
+      # Vite config error — before it reaches a Vercel deploy.
+      #
+      # Runs without VITE_SUPABASE_ANON_KEY on purpose. Vite inlines
+      # import.meta.env at build time, so this artifact has `undefined` baked
+      # in and is not runnable; it is only ever a compile check. Vercel builds
+      # its own artifact with its own environment.
+      - name: Build
+        run: npm run build
+
+  rls:
+    name: RLS policies
+    runs-on: ubuntu-latest
+
+    # A stock Postgres is all this needs. The suite applies
+    # supabase/migrations/ to a scratch database and exercises the policies as
+    # anon and authenticated directly, so none of the Supabase stack (Kong,
+    # GoTrue, PostgREST) has to be running — the risk lives in the policy
+    # predicates, and those are pure SQL.
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 55432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      - name: Test RLS policies
+        run: npm run test:rls
+        env:
+          RLS_DATABASE_URL: postgresql://postgres:postgres@localhost:55432/postgres
+
+  e2e:
+    name: End-to-end
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      # Not present on the runner image, unlike node and docker — without this
+      # the next step is a bare "supabase: command not found". Pinned to the
+      # version this suite was verified against; bump it deliberately.
+      - uses: supabase/setup-cli@v3
+        with:
+          version: 2.111.0
+
+      # The full local stack — real GoTrue, real RLS, real Postgres — built
+      # from supabase/migrations/ and seeded from supabase/seed.sql.
+      - name: Start Supabase
+        run: supabase start
+
+      - name: Run E2E
+        run: npx playwright test
+
+      - uses: actions/upload-artifact@v5
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7

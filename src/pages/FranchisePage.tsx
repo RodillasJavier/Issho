@@ -163,6 +163,7 @@ export const FranchisePage = () => {
         <section className="min-w-0 flex-1">
           <CommunityEntriesSection
             entries={seriesEntries}
+            resetKey={franchiseKey}
             emptyMessage={
               user
                 ? "No series-level posts from you or your friends yet. Share your thoughts on the whole series!"

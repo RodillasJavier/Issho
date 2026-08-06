@@ -184,6 +184,9 @@ export const AnimeFeed = ({ animeId }: AnimeFeedProps) => {
                 members={franchiseMembers}
                 currentId={animeId}
                 statusByAnimeId={statusByAnimeId}
+                currentSeasonHref={
+                  franchiseKey != null ? `/series/${franchiseKey}` : undefined
+                }
               />
             ) : undefined
           }
@@ -192,6 +195,7 @@ export const AnimeFeed = ({ animeId }: AnimeFeedProps) => {
         <section className="min-w-0 flex-1">
           <CommunityEntriesSection
             entries={entries}
+            resetKey={animeId}
             emptyMessage={
               user
                 ? "No activity for this season from you or your friends yet. Be the first to post!"

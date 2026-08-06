@@ -10,6 +10,18 @@ import type { ListEntryKind } from "../types/listEntry";
 /** Shared by the Create composer and the list edit modal's review textareas. */
 export const REVIEW_MAX = 2000;
 
+/**
+ * Shape/sizing shared by the app's two "current list status" buttons —
+ * ListStatusButton (detail pages) and SearchResultCard (search results).
+ * Kept here as one source of truth rather than a literal copied into both
+ * files, so they can't drift apart the way the comments in each used to just
+ * promise they wouldn't. Callers layer color on top via STATUS_COLORS or
+ * addButtonClassName below; cursor is intentionally left out (added per
+ * usage) since the loading state pairs this with `cursor-default`.
+ */
+export const LIST_STATUS_BUTTON_BASE_CLASSNAME =
+  "inline-flex w-full items-center justify-center gap-1.5 rounded-md px-3 py-2 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400";
+
 export const LIST_ENTRY_COPY: Record<
   ListEntryKind,
   {
@@ -26,8 +38,8 @@ export const LIST_ENTRY_COPY: Record<
     /** Prefix on the detail-page status button, e.g. "Series: Watching". */
     statusPrefix: string;
     /** Detail-page "add" button fill — filled for anime, outlined for a
-     * series. Layered onto ListStatusButton's shared buttonBase, which owns
-     * shape/sizing (both this and STATUS_COLORS only ever set color). */
+     * series. Layered onto LIST_STATUS_BUTTON_BASE_CLASSNAME above, which
+     * owns shape/sizing (both this and STATUS_COLORS only ever set color). */
     addButtonClassName: string;
   }
 > = {

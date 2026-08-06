@@ -22,6 +22,7 @@ import {
   listInvalidationKeys,
 } from "../services/supabase/userLists";
 import { STATUS_LABELS, STATUS_COLORS } from "../constants/animeStatus";
+import { LIST_STATUS_BUTTON_BASE_CLASSNAME } from "../constants/listEntry";
 import { splitGenres } from "../utils/anime";
 import type { AnimeStatus, Anime } from "../types/database.types";
 import type { AniListMedia } from "../services/anilistApi";
@@ -203,8 +204,7 @@ const ListControl = ({
   handleStatusSelect: (status: AnimeStatus) => void;
   isMutating: boolean;
 }) => {
-  const buttonBase =
-    "inline-flex w-full items-center justify-center gap-1.5 rounded-md px-3 py-2 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400";
+  const buttonBase = LIST_STATUS_BUTTON_BASE_CLASSNAME;
 
   // Signed out: send them to sign in rather than exposing the add action.
   if (!hasUser) {

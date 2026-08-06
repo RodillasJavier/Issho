@@ -27,7 +27,7 @@ export const DetailPageSkeleton = () => (
     {/* Two-column body */}
     <div className="flex flex-col items-start gap-6 lg:flex-row lg:gap-8">
       {/* Sidebar */}
-      <div className="w-full flex-none rounded-xl border border-zinc-800 bg-zinc-900/45 p-4 sm:p-5 lg:w-[356px]">
+      <div className="w-full flex-none rounded-xl border border-zinc-800 bg-zinc-900/45 p-4 sm:p-5 lg:w-89">
         <div className="grid grid-cols-2 gap-3 border-b border-zinc-800 pb-4">
           <Skeleton className="h-8 w-16" />
           <Skeleton className="h-8 w-10" />

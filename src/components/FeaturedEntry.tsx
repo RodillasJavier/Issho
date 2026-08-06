@@ -67,7 +67,7 @@ export const FeaturedEntry = ({ entries }: FeaturedEntryProps) => {
     <Link
       to={`/entry/${entry.id}`}
       aria-label={`Read ${authorLabel}'s entry for ${entry.anime?.name ?? "Unknown Anime"}`}
-      className="group relative block min-h-68 overflow-hidden rounded-md border border-rose-400/25 bg-neutral-900 transition-colors hover:border-rose-300/60"
+      className="group relative block min-h-68 overflow-hidden rounded-md border border-neutral-800 bg-neutral-900 transition-colors hover:border-rose-400/50"
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
     >

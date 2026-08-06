@@ -26,7 +26,10 @@ import {
   removeListEntry,
   listInvalidationKeys,
 } from "../services/supabase/userLists";
-import { LIST_ENTRY_COPY } from "../constants/listEntry";
+import {
+  LIST_ENTRY_COPY,
+  LIST_STATUS_BUTTON_BASE_CLASSNAME,
+} from "../constants/listEntry";
 import { STATUS_LABELS, STATUS_COLORS } from "../constants/animeStatus";
 import type { ListEntry, ListTarget } from "../types/listEntry";
 import type { AnimeStatus } from "../types/database.types";
@@ -92,16 +95,16 @@ export const ListStatusButton = ({
     },
     enabled: !!user,
   });
-  // Same chrome as SearchResultCard's status button, so the app's two
-  // "current list status" buttons don't drift apart in shape or sizing —
-  // only the fill (STATUS_COLORS / copy.addButtonClassName) changes. cursor
-  // is intentionally left out of the shared base (and added per usage
-  // below) rather than baked in here: the loading state below pairs this
-  // with `cursor-default`, and two cursor-* utilities on one element leave
-  // the actual cursor up to Tailwind's generated rule order, not the order
+  // Same chrome as SearchResultCard's status button — both pull from
+  // LIST_STATUS_BUTTON_BASE_CLASSNAME so the app's two "current list status"
+  // buttons can't drift apart in shape or sizing; only the fill
+  // (STATUS_COLORS / copy.addButtonClassName) changes. cursor is
+  // intentionally left out of the shared base (and added per usage below)
+  // rather than baked in here: the loading state below pairs this with
+  // `cursor-default`, and two cursor-* utilities on one element leave the
+  // actual cursor up to Tailwind's generated rule order, not the order
   // written here.
-  const buttonBase =
-    "inline-flex w-full items-center justify-center gap-1.5 rounded-md px-3 py-2 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400";
+  const buttonBase = LIST_STATUS_BUTTON_BASE_CLASSNAME;
   // #endregion Component Logic
 
   // #region Render

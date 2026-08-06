@@ -24,7 +24,7 @@ export const DetailSidebar = ({
   actions,
   seasonsSection,
 }: DetailSidebarProps) => (
-  <aside className="w-full flex-none rounded-xl border border-zinc-800 bg-zinc-900/45 p-4 sm:p-5 lg:sticky lg:top-24 lg:w-[356px] lg:self-start">
+  <aside className="w-full flex-none rounded-xl border border-zinc-800 bg-zinc-900/45 p-4 sm:p-5 lg:sticky lg:top-24 lg:w-89 lg:self-start">
     <dl className="grid grid-cols-2 gap-3 border-b border-zinc-800 pb-4">
       {/* dt before dd in the DOM, matching the <dl> term-then-definition
           content model (assistive tech expects that order to associate the

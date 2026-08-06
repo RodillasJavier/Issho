@@ -4,9 +4,12 @@
  * "Seasons & films" list in DetailSidebar: a single-column list of a
  * franchise's member releases, sized for the sidebar rather than the page's
  * full width. On a season page the current release is highlighted
- * ("Viewing") and not linked; every other release links to its own page.
- * Each row shows the viewer's watch status for that release (when known),
- * and a "X of Y completed" progress bar summarizes the whole franchise.
+ * ("Viewing"); every other release links to its own page. Clicking the
+ * current release's own card (when currentSeasonHref is given) goes "up" to
+ * the series page instead — a season page has no other one-click way back to
+ * the series level. Each row shows the viewer's watch status for that
+ * release (when known), and a "X of Y completed" progress bar summarizes the
+ * whole franchise.
  */
 import { Link } from "react-router";
 import { STATUS_BADGE_STYLES, STATUS_LABELS } from "../constants/animeStatus";
@@ -16,12 +19,14 @@ interface SeasonsListProps {
   members: Anime[];
   currentId?: string;
   statusByAnimeId?: Record<string, AnimeStatus>;
+  currentSeasonHref?: string;
 }
 
 export const SeasonsList = ({
   members,
   currentId,
   statusByAnimeId,
+  currentSeasonHref,
 }: SeasonsListProps) => {
   const completedCount = statusByAnimeId
     ? members.filter((member) => statusByAnimeId[member.id] === "completed")
@@ -106,10 +111,10 @@ export const SeasonsList = ({
                   src={member.cover_image_url}
                   alt=""
                   loading="lazy"
-                  className="relative h-[92px] w-[68px] flex-none object-cover sm:h-[104px] sm:w-[76px]"
+                  className="relative h-23 w-17 flex-none object-cover sm:h-26 sm:w-19"
                 />
               ) : (
-                <div className="relative h-[92px] w-[68px] flex-none bg-zinc-800 sm:h-[104px] sm:w-[76px]" />
+                <div className="relative h-23 w-17 flex-none bg-zinc-800 sm:h-26 sm:w-19" />
               )}
 
               <span className="relative flex min-w-0 flex-1 flex-col justify-center gap-1.5 px-3 py-2">
@@ -154,15 +159,25 @@ export const SeasonsList = ({
 
           const base =
             "group relative flex items-stretch overflow-hidden rounded-xl border text-left";
+          const currentClassName = `${base} border-rose-400/45 bg-rose-400/[0.07]`;
 
-          return isCurrent ? (
-            <div
-              key={member.id}
-              className={`${base} border-rose-400/45 bg-rose-400/[0.07]`}
-            >
-              {inner}
-            </div>
-          ) : (
+          if (isCurrent) {
+            return currentSeasonHref ? (
+              <Link
+                key={member.id}
+                to={currentSeasonHref}
+                className={`${currentClassName} transition-colors hover:border-rose-400/70 hover:bg-rose-400/[0.1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400`}
+              >
+                {inner}
+              </Link>
+            ) : (
+              <div key={member.id} className={currentClassName}>
+                {inner}
+              </div>
+            );
+          }
+
+          return (
             <Link
               key={member.id}
               to={`/anime/${member.id}`}

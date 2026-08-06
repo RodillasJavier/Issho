@@ -45,12 +45,13 @@ export const FollowingPanel = ({
     <Link
       to={`/profile/${username}/friends`}
       aria-label="Open friends workspace"
-      className="group flex flex-col rounded-md border border-neutral-800 bg-neutral-950 p-6 transition-colors hover:border-rose-400/45 hover:bg-neutral-900"
+      className="group flex flex-col rounded-md border border-neutral-800 bg-neutral-950 p-6 transition-colors hover:border-rose-400/50 hover:bg-neutral-900"
     >
       <div className="flex items-center justify-between">
         <p className="text-xs font-semibold uppercase tracking-widest text-neutral-500">
           Following
         </p>
+
         <span className="rounded-full border border-neutral-700 bg-black px-2.5 py-1 font-mono text-xs text-neutral-400">
           {friends.length}
         </span>

@@ -6,7 +6,7 @@
  * tracking and a "Seasons & films" list linking to each season, and the
  * series-level community feed.
  */
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { useParams, Link } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
@@ -55,11 +55,22 @@ export const FranchisePage = () => {
     () => (franchiseMembers ?? []).map((member) => member.id),
     [franchiseMembers]
   );
-  const { data: statusByAnimeId } = useQuery({
-    queryKey: ["userAnimeStatuses", franchiseKey, user?.id],
+  const { data: statusByAnimeId, error: statusError } = useQuery({
+    // memberIds is included so a franchise gaining/losing members mid-session
+    // invalidates the cached result instead of silently serving stale
+    // statuses under an unchanged key. `> 1` (not `> 0`) matches AnimeFeed's
+    // isMultiEntryFranchise gate — a singleton "franchise" has no per-season
+    // progress worth showing.
+    queryKey: ["userAnimeStatuses", franchiseKey, user?.id, memberIds],
     queryFn: () => fetchUserAnimeStatuses(user!.id, memberIds),
-    enabled: !!user && memberIds.length > 0,
+    enabled: !!user && memberIds.length > 1,
   });
+  // fetchUserAnimeStatuses throws on failure per this codebase's service
+  // convention; without this, a failed fetch would leave statusByAnimeId
+  // undefined forever with zero indication anything went wrong.
+  useEffect(() => {
+    if (statusError) console.error(statusError);
+  }, [statusError]);
 
   // Shares the feed cache with the homepage feed/Friends page (per
   // CLAUDE.md), so this never triggers its own fetch once that's warm, and
@@ -122,7 +133,7 @@ export const FranchisePage = () => {
       <div className="flex flex-col items-start gap-6 lg:flex-row lg:gap-8">
         <DetailSidebar
           rating={franchiseEntry?.rating ?? null}
-          releaseCount={franchiseMembers.length}
+          secondaryStat={{ label: "Releases", value: franchiseMembers.length }}
           actions={
             <>
               <Link

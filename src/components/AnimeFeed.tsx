@@ -6,7 +6,7 @@
  * series with the sibling "Seasons & films" list (current season
  * highlighted), and the season's own community entries.
  */
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { Link } from "react-router";
 import { ArrowRight, Plus } from "lucide-react";
 import type { Anime } from "../types/database.types";
@@ -95,11 +95,22 @@ export const AnimeFeed = ({ animeId }: AnimeFeedProps) => {
     () => (franchiseMembers ?? []).map((member) => member.id),
     [franchiseMembers]
   );
-  const { data: statusByAnimeId } = useQuery({
-    queryKey: ["userAnimeStatuses", franchiseKey, user?.id],
+  const { data: statusByAnimeId, error: statusError } = useQuery({
+    // memberIds is included so a franchise gaining/losing members mid-session
+    // (e.g. a new season gets imported while this page is open) invalidates
+    // the cached result instead of silently serving stale statuses under an
+    // unchanged key.
+    queryKey: ["userAnimeStatuses", franchiseKey, user?.id, memberIds],
     queryFn: () => fetchUserAnimeStatuses(user!.id, memberIds),
     enabled: !!user && isMultiEntryFranchise && memberIds.length > 0,
   });
+  // fetchUserAnimeStatuses throws on failure per this codebase's service
+  // convention; without this, a failed fetch would leave statusByAnimeId
+  // undefined forever with zero indication anything went wrong (the seasons
+  // list's badges/progress bar would just silently never appear).
+  useEffect(() => {
+    if (statusError) console.error(statusError);
+  }, [statusError]);
   // #endregion
 
   // #region Render
@@ -146,7 +157,10 @@ export const AnimeFeed = ({ animeId }: AnimeFeedProps) => {
       <div className="flex flex-col items-start gap-6 lg:flex-row lg:gap-8">
         <DetailSidebar
           rating={listEntry?.rating ?? null}
-          releaseCount={franchiseMembers?.length ?? 1}
+          secondaryStat={{
+            label: "Episodes",
+            value: anime.episode_count ?? "—",
+          }}
           actions={
             <>
               <Link

@@ -39,7 +39,7 @@ export const DetailPageSkeleton = () => (
         </div>
         <div className="mt-4 flex flex-col gap-2 border-t border-zinc-800 pt-4">
           {Array.from({ length: 5 }).map((_, index) => (
-            <Skeleton key={index} className="h-[72px] w-full" />
+            <Skeleton key={index} className="h-18 w-full" />
           ))}
         </div>
       </div>

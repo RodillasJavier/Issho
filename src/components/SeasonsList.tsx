@@ -9,8 +9,7 @@
  * and a "X of Y completed" progress bar summarizes the whole franchise.
  */
 import { Link } from "react-router";
-import { Clock3 } from "lucide-react";
-import { WatchStatusBadge } from "./WatchStatusBadge";
+import { STATUS_BADGE_STYLES, STATUS_LABELS } from "../constants/animeStatus";
 import type { Anime, AnimeStatus } from "../types/database.types";
 
 interface SeasonsListProps {
@@ -18,16 +17,6 @@ interface SeasonsListProps {
   currentId?: string;
   statusByAnimeId?: Record<string, AnimeStatus>;
 }
-
-const meta = (anime: Anime): string =>
-  [
-    anime.year?.toString(),
-    anime.episode_count
-      ? `${anime.episode_count} ${anime.episode_count === 1 ? "episode" : "episodes"}`
-      : null,
-  ]
-    .filter(Boolean)
-    .join(" · ");
 
 export const SeasonsList = ({
   members,
@@ -71,7 +60,7 @@ export const SeasonsList = ({
             of {members.length} completed
           </p>
           <div
-            className="mt-1.5 h-[5px] w-full overflow-hidden rounded-full bg-zinc-800"
+            className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-zinc-800"
             role="progressbar"
             aria-valuenow={completedPercent}
             aria-valuemin={0}
@@ -90,25 +79,55 @@ export const SeasonsList = ({
         {members.map((member, index) => {
           const isCurrent = member.id === currentId;
           const status = statusByAnimeId?.[member.id];
+          const badge = status ? STATUS_BADGE_STYLES[status] : null;
+          const StatusIcon = badge?.icon;
+
           const inner = (
             <>
+              {/* A faint, full-row echo of the poster sits behind the text —
+                  darkest near the flush thumbnail and fading out to its
+                  right — so the row reads as one piece without turning the
+                  thumbnail into a full-bleed banner. The actual thumbnail
+                  below is a real flush image, not this backdrop. */}
+              {member.cover_image_url && (
+                <span
+                  aria-hidden
+                  className="pointer-events-none absolute inset-0 bg-cover bg-center opacity-[0.12]"
+                  style={{ backgroundImage: `url(${member.cover_image_url})` }}
+                />
+              )}
+              <span
+                aria-hidden
+                className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#101014] via-[#101014]/85 to-transparent"
+              />
+
               {member.cover_image_url ? (
                 <img
                   src={member.cover_image_url}
                   alt=""
                   loading="lazy"
-                  className="size-14 shrink-0 rounded-lg object-cover"
+                  className="relative h-[92px] w-[68px] flex-none object-cover sm:h-[104px] sm:w-[76px]"
                 />
               ) : (
-                <div className="size-14 shrink-0 rounded-lg bg-zinc-800" />
+                <div className="relative h-[92px] w-[68px] flex-none bg-zinc-800 sm:h-[104px] sm:w-[76px]" />
               )}
-              <span className="min-w-0 flex-1">
+
+              <span className="relative flex min-w-0 flex-1 flex-col justify-center gap-1.5 px-3 py-2">
                 <span className="flex items-center justify-between gap-2">
                   <span className="flex items-center gap-2">
-                    <span className="font-mono text-[10px] text-zinc-600">
+                    {badge && StatusIcon && (
+                      <span
+                        className={`flex size-[18px] items-center justify-center rounded-full border ${badge.className}`}
+                      >
+                        <StatusIcon aria-hidden className="size-3" />
+                        <span className="sr-only">
+                          {STATUS_LABELS[status!]}
+                        </span>
+                      </span>
+                    )}
+                    <span className="font-mono text-[10px] text-zinc-500">
                       {String(index + 1).padStart(2, "0")}
                     </span>
-                    {status && <WatchStatusBadge status={status} />}
                   </span>
                   {isCurrent && (
                     <span className="text-[10px] font-semibold text-rose-300">
@@ -116,19 +135,25 @@ export const SeasonsList = ({
                     </span>
                   )}
                 </span>
-                <span className="mt-1 block truncate text-sm font-semibold text-zinc-100">
+                <span className="line-clamp-2 text-sm font-semibold leading-snug text-zinc-100">
                   {member.name}
                 </span>
-                <span className="mt-1 inline-flex items-center gap-1 text-[11px] text-zinc-500">
-                  <Clock3 aria-hidden className="size-3" />
-                  {meta(member)}
+                <span className="flex flex-wrap items-center gap-1.5 text-[11px] text-zinc-500">
+                  {member.year != null && (
+                    <span className="rounded border border-zinc-800 bg-zinc-900/80 px-1.5 py-px font-mono text-[10px] uppercase tracking-wide text-zinc-400">
+                      {member.year}
+                    </span>
+                  )}
+                  {member.episode_count != null && (
+                    <span>{member.episode_count} eps</span>
+                  )}
                 </span>
               </span>
             </>
           );
 
           const base =
-            "group flex gap-3 rounded-xl border p-2.5 text-left transition-colors";
+            "group relative flex items-stretch overflow-hidden rounded-xl border text-left";
 
           return isCurrent ? (
             <div
@@ -141,7 +166,7 @@ export const SeasonsList = ({
             <Link
               key={member.id}
               to={`/anime/${member.id}`}
-              className={`${base} border-zinc-800 bg-[#101014] hover:border-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400`}
+              className={`${base} border-zinc-800 bg-zinc-900/50 transition-colors hover:border-zinc-700 hover:bg-zinc-800/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400`}
             >
               {inner}
             </Link>

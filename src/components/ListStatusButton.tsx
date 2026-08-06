@@ -92,6 +92,11 @@ export const ListStatusButton = ({
     },
     enabled: !!user,
   });
+  // Same chrome as SearchResultCard's status button, so the app's two
+  // "current list status" buttons don't drift apart in shape or sizing —
+  // only the fill (STATUS_COLORS / copy.addButtonClassName) changes.
+  const buttonBase =
+    "inline-flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-md px-3 py-2 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400";
   // #endregion Component Logic
 
   // #region Render
@@ -101,7 +106,9 @@ export const ListStatusButton = ({
 
   if (isLoading) {
     return (
-      <div className="rounded bg-neutral-800 px-4 py-2 text-sm">Loading...</div>
+      <div className={`${buttonBase} cursor-default bg-zinc-800 text-zinc-500`}>
+        Loading...
+      </div>
     );
   }
 
@@ -115,8 +122,9 @@ export const ListStatusButton = ({
       {/* Show the current status when the slot is already in the list */}
       {listEntry ? (
         <button
+          type="button"
           onClick={() => setShowStatusPicker(!showStatusPicker)}
-          className={`flex cursor-pointer items-center gap-1 rounded px-4 py-2 text-sm font-semibold text-white transition-colors ${STATUS_COLORS[listEntry.status]}`}
+          className={`${buttonBase} ${STATUS_COLORS[listEntry.status]}`}
         >
           {copy.statusPrefix}
           {STATUS_LABELS[listEntry.status]}
@@ -124,8 +132,9 @@ export const ListStatusButton = ({
         </button>
       ) : (
         <button
+          type="button"
           onClick={() => setShowStatusPicker(!showStatusPicker)}
-          className={copy.addButtonClassName}
+          className={`${buttonBase} ${copy.addButtonClassName}`}
         >
           + {copy.addButtonLabel}
         </button>

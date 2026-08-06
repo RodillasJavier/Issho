@@ -25,7 +25,9 @@ export const LIST_ENTRY_COPY: Record<
     noReviewText: string;
     /** Prefix on the detail-page status button, e.g. "Series: Watching". */
     statusPrefix: string;
-    /** Detail-page "add" button classes — filled for anime, outlined for a series. */
+    /** Detail-page "add" button fill — filled for anime, outlined for a
+     * series. Layered onto ListStatusButton's shared buttonBase, which owns
+     * shape/sizing (both this and STATUS_COLORS only ever set color). */
     addButtonClassName: string;
   }
 > = {
@@ -42,8 +44,7 @@ export const LIST_ENTRY_COPY: Record<
     addButtonLabel: "Add to list",
     noReviewText: "No review added.",
     statusPrefix: "",
-    addButtonClassName:
-      "cursor-pointer rounded bg-rose-500 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-rose-600",
+    addButtonClassName: "bg-rose-500 text-white hover:bg-rose-600",
   },
   franchise: {
     modalEyebrow: "Edit series",
@@ -59,6 +60,6 @@ export const LIST_ENTRY_COPY: Record<
     noReviewText: "No series review added.",
     statusPrefix: "Series: ",
     addButtonClassName:
-      "cursor-pointer rounded border border-rose-500/50 bg-neutral-800 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-neutral-700",
+      "border border-rose-500/50 bg-neutral-800 text-white hover:bg-neutral-700",
   },
 };

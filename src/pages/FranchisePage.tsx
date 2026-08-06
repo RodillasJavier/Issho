@@ -2,8 +2,9 @@
  * src/pages/FranchisePage.tsx
  *
  * Series landing page (route /series/:franchiseKey): a full-bleed hero built
- * from the franchise's root member, series-level tracking, a "Seasons & films"
- * grid linking to each season, and the series-level community feed.
+ * from the franchise's root member, a sticky sidebar with series-level
+ * tracking and a "Seasons & films" list linking to each season, and the
+ * series-level community feed.
  */
 import { useMemo } from "react";
 import { useParams, Link } from "react-router";
@@ -18,7 +19,10 @@ import {
 } from "../utils/franchise";
 import { splitGenres } from "../utils/anime";
 import { DetailHero } from "../components/DetailHero";
-import { SeasonsGrid } from "../components/SeasonsGrid";
+import { DetailPageSkeleton } from "../components/DetailPageSkeleton";
+import { DetailSidebar } from "../components/DetailSidebar";
+import { SeasonsList } from "../components/SeasonsList";
+import { ShareButton } from "../components/ShareButton";
 import { WatchStatusBadge } from "../components/WatchStatusBadge";
 import { CommunityEntriesSection } from "../components/CommunityEntriesSection";
 import { ListStatusButton } from "../components/ListStatusButton";
@@ -27,6 +31,7 @@ import {
   fetchEntriesWithCounts,
 } from "../services/supabase/entries";
 import { getUserFranchiseEntry } from "../services/supabase/userFranchiseList";
+import { fetchUserAnimeStatuses } from "../services/supabase/userAnimeList";
 
 export const FranchisePage = () => {
   const { franchiseKey: franchiseKeyParam } = useParams<{
@@ -44,6 +49,16 @@ export const FranchisePage = () => {
     queryKey: ["userFranchiseList", franchiseKey, user?.id],
     queryFn: () => getUserFranchiseEntry(franchiseKey, user!.id),
     enabled: !!user && validKey,
+  });
+
+  const memberIds = useMemo(
+    () => (franchiseMembers ?? []).map((member) => member.id),
+    [franchiseMembers]
+  );
+  const { data: statusByAnimeId } = useQuery({
+    queryKey: ["userAnimeStatuses", franchiseKey, user?.id],
+    queryFn: () => fetchUserAnimeStatuses(user!.id, memberIds),
+    enabled: !!user && memberIds.length > 0,
   });
 
   // Shares the feed cache with the homepage feed/Friends page (per
@@ -70,7 +85,7 @@ export const FranchisePage = () => {
   }
 
   if (!franchiseMembers) {
-    return <div className="h-64 w-full animate-pulse rounded-xl bg-white/5" />;
+    return <DetailPageSkeleton />;
   }
 
   if (franchiseMembers.length === 0) {
@@ -102,35 +117,49 @@ export const FranchisePage = () => {
         }
         genres={genres}
         description={root.description}
-        actions={
-          <>
-            <Link
-              to={`/entry/create?franchiseKey=${franchiseKey}`}
-              className="inline-flex items-center gap-2 rounded-md border border-zinc-700 bg-zinc-950/45 px-3 py-2 text-sm font-semibold text-zinc-200 transition-colors hover:border-zinc-500 hover:bg-zinc-800"
-            >
-              <Plus aria-hidden className="size-4 text-rose-300" />
-              Create an entry
-            </Link>
-            {user && (
-              <ListStatusButton
-                target={{ kind: "franchise", franchise_key: franchiseKey }}
-                franchiseTitle={title}
-              />
-            )}
-          </>
-        }
       />
 
-      <SeasonsGrid members={franchiseMembers} />
+      <div className="flex flex-col items-start gap-6 lg:flex-row lg:gap-8">
+        <DetailSidebar
+          rating={franchiseEntry?.rating ?? null}
+          releaseCount={franchiseMembers.length}
+          actions={
+            <>
+              <Link
+                to={`/entry/create?franchiseKey=${franchiseKey}`}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-md border border-zinc-700 bg-zinc-950/45 px-3 py-2 text-sm font-semibold text-zinc-200 transition-colors hover:border-zinc-500 hover:bg-zinc-800"
+              >
+                <Plus aria-hidden className="size-4 text-rose-300" />
+                Create an entry
+              </Link>
+              {user && (
+                <ListStatusButton
+                  target={{ kind: "franchise", franchise_key: franchiseKey }}
+                  franchiseTitle={title}
+                />
+              )}
+              <ShareButton />
+            </>
+          }
+          seasonsSection={
+            <SeasonsList
+              members={franchiseMembers}
+              statusByAnimeId={statusByAnimeId}
+            />
+          }
+        />
 
-      <CommunityEntriesSection
-        entries={seriesEntries}
-        emptyMessage={
-          user
-            ? "No series-level posts from you or your friends yet. Share your thoughts on the whole series!"
-            : "Sign in to see series posts from your friends."
-        }
-      />
+        <section className="min-w-0 flex-1">
+          <CommunityEntriesSection
+            entries={seriesEntries}
+            emptyMessage={
+              user
+                ? "No series-level posts from you or your friends yet. Share your thoughts on the whole series!"
+                : "Sign in to see series posts from your friends."
+            }
+          />
+        </section>
+      </div>
     </div>
   );
   // #endregion Render

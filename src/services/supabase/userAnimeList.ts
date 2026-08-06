@@ -109,6 +109,34 @@ export const countCompletedAnimeEntries = async (
 };
 
 /**
+ * Batch-fetch a user's status for a set of anime ids. Used for the per-season
+ * watch-status badges on the sidebar's seasons list, which needs every
+ * franchise member's status at once rather than one entry at a time.
+ *
+ * @param userId uuid of the user
+ * @param animeIds anime ids to check (e.g. a franchise's members)
+ * @returns a map of anime id to that anime's status, omitting untracked ids
+ */
+export const fetchUserAnimeStatuses = async (
+  userId: string,
+  animeIds: string[]
+): Promise<Record<string, AnimeStatus>> => {
+  if (animeIds.length === 0) return {};
+
+  const { data, error } = await supabase
+    .from("user_anime_entries")
+    .select("anime_id, status")
+    .eq("user_id", userId)
+    .in("anime_id", animeIds);
+
+  if (error) throw new Error(error.message);
+
+  return Object.fromEntries(
+    (data ?? []).map((entry) => [entry.anime_id, entry.status as AnimeStatus])
+  );
+};
+
+/**
  * Get a user's anime entry if it exists
  *
  * @param animeId uuid of the anime

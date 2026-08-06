@@ -22,21 +22,33 @@ export const ShareButton = () => {
 
   const handleShare = async () => {
     const url = window.location.href;
+    let succeeded = true;
     try {
       await navigator.clipboard.writeText(url);
     } catch {
       // Clipboard API unavailable (e.g. non-secure context) — fall back to
-      // the classic hidden-textarea copy trick.
+      // the classic hidden-textarea copy trick. The inner try/finally
+      // guarantees the temporary field is always removed (execCommand is
+      // deprecated and can throw in some browsers/security contexts) and
+      // that a failed copy doesn't falsely report success below.
       const field = document.createElement("textarea");
       field.value = url;
       field.setAttribute("readonly", "");
       field.style.position = "absolute";
       field.style.left = "-9999px";
       document.body.appendChild(field);
-      field.select();
-      document.execCommand("copy");
-      document.body.removeChild(field);
+      try {
+        field.select();
+        succeeded = document.execCommand("copy");
+      } catch {
+        succeeded = false;
+      } finally {
+        document.body.removeChild(field);
+      }
     }
+
+    if (!succeeded) return;
+
     setCopied(true);
     if (timeoutRef.current) window.clearTimeout(timeoutRef.current);
     timeoutRef.current = window.setTimeout(

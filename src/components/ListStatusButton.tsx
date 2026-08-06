@@ -94,9 +94,14 @@ export const ListStatusButton = ({
   });
   // Same chrome as SearchResultCard's status button, so the app's two
   // "current list status" buttons don't drift apart in shape or sizing —
-  // only the fill (STATUS_COLORS / copy.addButtonClassName) changes.
+  // only the fill (STATUS_COLORS / copy.addButtonClassName) changes. cursor
+  // is intentionally left out of the shared base (and added per usage
+  // below) rather than baked in here: the loading state below pairs this
+  // with `cursor-default`, and two cursor-* utilities on one element leave
+  // the actual cursor up to Tailwind's generated rule order, not the order
+  // written here.
   const buttonBase =
-    "inline-flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-md px-3 py-2 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400";
+    "inline-flex w-full items-center justify-center gap-1.5 rounded-md px-3 py-2 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400";
   // #endregion Component Logic
 
   // #region Render
@@ -124,7 +129,7 @@ export const ListStatusButton = ({
         <button
           type="button"
           onClick={() => setShowStatusPicker(!showStatusPicker)}
-          className={`${buttonBase} ${STATUS_COLORS[listEntry.status]}`}
+          className={`${buttonBase} cursor-pointer ${STATUS_COLORS[listEntry.status]}`}
         >
           {copy.statusPrefix}
           {STATUS_LABELS[listEntry.status]}
@@ -134,7 +139,7 @@ export const ListStatusButton = ({
         <button
           type="button"
           onClick={() => setShowStatusPicker(!showStatusPicker)}
-          className={`${buttonBase} ${copy.addButtonClassName}`}
+          className={`${buttonBase} cursor-pointer ${copy.addButtonClassName}`}
         >
           + {copy.addButtonLabel}
         </button>

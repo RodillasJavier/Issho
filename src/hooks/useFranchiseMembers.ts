@@ -14,7 +14,12 @@
  * Stamped with the batch's own dataUpdatedAt (not "now"), and skipped when
  * the target entry is already equal-or-newer, so a direct fetchAnime call for
  * the season currently being viewed never has its freshness clock clobbered
- * by a franchiseMembers fetch that actually happened earlier.
+ * by a franchiseMembers fetch that actually happened earlier. Also skipped
+ * when the cached row is already byte-identical to the incoming one — the
+ * dataUpdatedAt-only guard above would otherwise still rewrite every member
+ * on every refetch (window refocus, staleTime expiry, ...) even when nothing
+ * actually changed, since dataUpdatedAt advances on every fetch regardless
+ * of whether the response differs.
  */
 import { useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -41,6 +46,12 @@ export const useFranchiseMembers = (franchiseKey: number | null) => {
     for (const member of franchiseMembers) {
       const existing = queryClient.getQueryState(["anime", member.id]);
       if (existing && existing.dataUpdatedAt >= dataUpdatedAt) continue;
+      if (
+        existing &&
+        JSON.stringify(existing.data) === JSON.stringify(member)
+      ) {
+        continue;
+      }
       queryClient.setQueryData(["anime", member.id], member, {
         updatedAt: dataUpdatedAt,
       });

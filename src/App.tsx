@@ -1,12 +1,21 @@
 /**
  * src/App.tsx
  *
- * Main application component that sets up routing and layout.
+ * Route table. Built with createBrowserRouter (via createRoutesFromElements,
+ * so the route tree below is still plain JSX) rather than plain
+ * <BrowserRouter>/<Routes>, specifically so AppShell can use
+ * <ScrollRestoration> — that component only works under the data-router
+ * APIs. Nothing else about routing changed: every route, and every
+ * component's use of useNavigate/useParams/Link/etc., behaves exactly as it
+ * did before.
  */
-import { Navigate, Outlet, Route, Routes } from "react-router";
-import { Navbar } from "./components/Navbar";
-import { Footer } from "./components/Footer";
-import { cn, navbar } from "./styles/tokens";
+import {
+  createBrowserRouter,
+  createRoutesFromElements,
+  Navigate,
+  Route,
+} from "react-router";
+import { AppShell } from "./components/AppShell";
 import { Home } from "./pages/Home";
 import { SignIn } from "./pages/SignIn";
 import { SignUp } from "./pages/SignUp";
@@ -22,31 +31,9 @@ import { UserProfilePage } from "./pages/UserProfilePage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { FriendsPage } from "./pages/FriendsPage";
 
-// The auth pages get the persistent Navbar too (via AuthLayout), but own
-// their own full-bleed body layout, so they render outside this shell rather
-// than under AppShell's centered container and Footer.
-function AppShell() {
-  return (
-    <div
-      className={cn(
-        "flex min-h-screen flex-col bg-black text-gray-100 transition-opacity duration-500",
-        navbar.shellClearance
-      )}
-    >
-      <Navbar />
-
-      <div className="container mx-auto flex-1 px-4 py-6">
-        <Outlet />
-      </div>
-
-      <Footer />
-    </div>
-  );
-}
-
-function App() {
-  return (
-    <Routes>
+export const router = createBrowserRouter(
+  createRoutesFromElements(
+    <>
       {/* Auth */}
       <Route path="/signin" element={<SignIn />} />
       <Route path="/signup" element={<SignUp />} />
@@ -77,8 +64,6 @@ function App() {
           element={<Navigate to="/settings" replace />}
         />
       </Route>
-    </Routes>
-  );
-}
-
-export default App;
+    </>
+  )
+);

@@ -13,6 +13,7 @@ import { useQuery } from "@tanstack/react-query";
 import { EntryItem } from "./EntryItem";
 import { EmptyFeedState } from "./EntryList";
 import { FeaturedEntry } from "./FeaturedEntry";
+import { FeedSkeleton } from "./FeedSkeleton";
 import {
   fetchPublicFeed,
   publicEntriesQueryKey,
@@ -31,7 +32,7 @@ export const PublicFeed = () => {
   });
 
   if (isLoading) {
-    return <div>Loading entries...</div>;
+    return <FeedSkeleton />;
   }
 
   if (error) {

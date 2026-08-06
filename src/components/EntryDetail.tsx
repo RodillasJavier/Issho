@@ -23,6 +23,7 @@ import { useAuth } from "../hooks/useAuth";
 import { fetchPublicEntry } from "../services/supabase/entries";
 import { LikeButton } from "./LikeButton";
 import { CommentSection } from "./CommentSection";
+import { Skeleton } from "./ui/Skeleton";
 import { getEntryTypeLabel } from "../constants/entryTypes";
 import { STATUS_LABELS, STATUS_COLORS } from "../constants/animeStatus";
 import { UserInfo } from "./UserInfo";
@@ -139,7 +140,7 @@ export const EntryDetail = ({ entryId }: EntryDetailProps) => {
 
   // #region Render
   if (isLoading) {
-    return <div>Loading entry...</div>;
+    return <EntryDetailSkeleton />;
   }
 
   if (error) {
@@ -371,3 +372,36 @@ export const EntryDetail = ({ entryId }: EntryDetailProps) => {
   );
 };
 // #endregion Render
+
+// Shaped to roughly match the sidebar+article layout above, so there's no
+// dramatic collapse-then-expand once the real entry loads.
+function EntryDetailSkeleton() {
+  return (
+    <div className="lg:grid lg:grid-cols-[300px_minmax(0,1fr)] lg:gap-10">
+      <div className="mb-8 lg:mb-0">
+        <Skeleton className="mb-4 h-5 w-16" />
+        <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4">
+          <Skeleton className="h-10 w-32" />
+          <Skeleton className="mt-4 h-4 w-24" />
+        </div>
+        <div className="mt-5 border-y border-neutral-800 py-6">
+          <Skeleton className="mx-auto size-28 rounded-full" />
+        </div>
+        <div className="mt-5 rounded-xl border border-neutral-800 bg-neutral-950 p-4">
+          <Skeleton className="h-4 w-16" />
+          <Skeleton className="mt-2 h-5 w-40" />
+        </div>
+      </div>
+
+      <div className="min-w-0">
+        <Skeleton className="h-48 w-full sm:h-64 lg:h-72" />
+        <Skeleton className="mt-8 h-10 w-3/4" />
+        <Skeleton className="mt-7 h-24 w-full" />
+        <div className="mt-12 border-t border-neutral-800 pt-8">
+          <Skeleton className="h-6 w-32" />
+          <Skeleton className="mt-4 h-20 w-full" />
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -32,6 +32,7 @@ import { ProfileHeader } from "../components/ProfileHeader";
 import { AnimeListStats } from "../components/AnimeListStats";
 import { ListToolbar } from "../components/ListToolbar";
 import { ProfileListItem } from "../components/ProfileListItem";
+import { Skeleton } from "../components/ui/Skeleton";
 import {
   buildProfileListCards,
   franchiseKeysNeedingMembers,
@@ -190,7 +191,7 @@ export const UserProfilePage = () => {
   // #region Render
 
   if (profileLoading) {
-    return <div className="text-zinc-400">Loading profile...</div>;
+    return <ProfilePageSkeleton />;
   }
 
   if (profileError || !profile) {
@@ -236,7 +237,7 @@ export const UserProfilePage = () => {
             </p>
           </div>
         ) : listLoading ? (
-          <div className="text-zinc-400">Loading anime list...</div>
+          <ListGridSkeleton />
         ) : seriesCards.length === 0 ? (
           <div className="text-zinc-400">No anime in list yet</div>
         ) : (
@@ -331,3 +332,39 @@ export const UserProfilePage = () => {
 };
 
 // #endregion Render
+
+// Just the toolbar+grid portion, shaped to match ListToolbar + the card grid
+// below it — used once listEntries starts loading (profile/header/stats
+// have already rendered by then).
+function ListGridSkeleton() {
+  return (
+    <div className="flex flex-col gap-4">
+      <Skeleton className="h-11 w-full rounded-lg" />
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+        {Array.from({ length: 8 }).map((_, index) => (
+          <Skeleton key={index} className="aspect-[3/4] w-full" />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Full-page shape (header + stats + toolbar + grid), for the initial
+// profile fetch — matches ProfileHeader/AnimeListStats' real proportions so
+// there's no dramatic collapse-then-expand once the real profile loads.
+function ProfilePageSkeleton() {
+  return (
+    <div className="flex flex-col gap-6">
+      <Skeleton className="h-28 w-full rounded-xl sm:h-32" />
+      <div className="grid grid-cols-3 gap-2 sm:grid-cols-6 sm:gap-3">
+        {Array.from({ length: 6 }).map((_, index) => (
+          <Skeleton key={index} className="h-[70px] w-full rounded-lg" />
+        ))}
+      </div>
+      <div className="flex flex-col gap-4">
+        <Skeleton className="h-6 w-32" />
+        <ListGridSkeleton />
+      </div>
+    </div>
+  );
+}

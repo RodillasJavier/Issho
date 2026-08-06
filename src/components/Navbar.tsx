@@ -283,6 +283,8 @@ export const Navbar = ({ authPage = false }: NavbarProps = {}) => {
     },
   ];
 
+  // #region Render
+
   return (
     <div className="fixed inset-x-0 top-2 z-40 flex justify-center px-3 sm:top-4 sm:px-4">
       <div className="w-full max-w-[1000px]">
@@ -293,7 +295,7 @@ export const Navbar = ({ authPage = false }: NavbarProps = {}) => {
           className={cn(
             "flex h-12 items-center justify-between px-2.5",
             "sm:h-14 sm:px-3.5 md:grid md:grid-cols-[1fr_auto_1fr]",
-            "border border-line bg-field/88 backdrop-blur-xl",
+            "border border-line bg-field/80 backdrop-blur-xl",
             "shadow-[0_12px_26px_rgba(0,0,0,0.55)]",
             radius.pill
           )}
@@ -442,3 +444,5 @@ export const Navbar = ({ authPage = false }: NavbarProps = {}) => {
     </div>
   );
 };
+
+// #endregion Render

@@ -8,8 +8,7 @@
  * instead of stretching (zooming) the image.
  */
 import { useState, type ReactNode } from "react";
-import { Link } from "react-router";
-import { ArrowLeft } from "lucide-react";
+import { BackButton } from "./BackButton";
 
 // Roughly three lines at the hero's body size — long enough to collapse.
 const DESCRIPTION_CLAMP_CHARS = 240;
@@ -37,7 +36,7 @@ export const DetailHero = ({
   genres,
   description,
   backHref = "/anime",
-  backLabel = "Back to browse",
+  backLabel = "Back",
 }: DetailHeroProps) => {
   const [expanded, setExpanded] = useState(false);
   const isLongDescription =
@@ -80,13 +79,7 @@ export const DetailHero = ({
       </div>
 
       <div className="container relative mx-auto flex min-h-[28rem] flex-col justify-between gap-8 px-4 py-6">
-        <Link
-          to={backHref}
-          className="inline-flex w-fit items-center gap-2 rounded-md border border-white/10 bg-zinc-950/45 px-2.5 py-1.5 text-sm font-medium text-zinc-300 backdrop-blur-sm transition-colors hover:border-white/20 hover:bg-zinc-950/70 hover:text-zinc-50"
-        >
-          <ArrowLeft aria-hidden className="size-4" />
-          {backLabel}
-        </Link>
+        <BackButton href={backHref} label={backLabel} />
 
         <div className="max-w-3xl">
           <p className="font-mono text-xs font-medium uppercase tracking-[0.18em] text-rose-300">

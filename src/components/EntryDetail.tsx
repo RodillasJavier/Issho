@@ -16,11 +16,12 @@
  * post values.
  */
 import { useQuery } from "@tanstack/react-query";
-import { Link, useNavigate } from "react-router";
-import { ArrowLeft, Star } from "lucide-react";
+import { Link } from "react-router";
+import { Star } from "lucide-react";
 import supabase from "../supabase-client";
 import { useAuth } from "../hooks/useAuth";
 import { fetchPublicEntry } from "../services/supabase/entries";
+import { BackButton } from "./BackButton";
 import { LikeButton } from "./LikeButton";
 import { CommentSection } from "./CommentSection";
 import { Skeleton } from "./ui/Skeleton";
@@ -70,7 +71,6 @@ const fetchEntryById = async (id: string): Promise<Entry | null> => {
 };
 
 export const EntryDetail = ({ entryId }: EntryDetailProps) => {
-  const navigate = useNavigate();
   const { user, initializing } = useAuth();
 
   const {
@@ -176,14 +176,9 @@ export const EntryDetail = ({ entryId }: EntryDetailProps) => {
     <div className="lg:grid lg:grid-cols-[300px_minmax(0,1fr)] lg:gap-10">
       {/* Entry Details Sidebar */}
       <aside className="mb-8 lg:mb-0">
-        <button
-          type="button"
-          onClick={() => navigate(-1)}
-          className="group mb-4 flex cursor-pointer items-center gap-1.5 text-sm font-medium text-neutral-400 transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400"
-        >
-          <ArrowLeft className="size-4 transition-transform group-hover:-translate-x-0.5" />
-          Back
-        </button>
+        <div className="mb-4">
+          <BackButton href="/" />
+        </div>
 
         <p className="mb-4 text-[10px] font-semibold uppercase tracking-widest text-neutral-500">
           Entry details

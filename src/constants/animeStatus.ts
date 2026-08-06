@@ -52,11 +52,21 @@ export const STATUS_OPTIONS: {
   },
 ];
 
+// Interactive weight of the same bordered/translucent language as
+// STATUS_BADGE_STYLES below — a shade stronger since these sit on clickable
+// buttons (ListStatusButton, SearchResultCard) as well as static tags
+// (EntryItem, EntryCompactRow, EntryDetail), and buttons need a hover state.
+// Kept alongside STATUS_BADGE_STYLES so both stay in the same hue family per
+// status rather than drifting independently.
 export const STATUS_COLORS: Record<AnimeStatus, string> = {
-  not_started: "border border-neutral-400 bg-neutral-400/25 text-white",
-  watching: "bg-blue-400 text-neutral-900",
-  completed: "bg-green-400 text-neutral-900",
-  dropped: "border border-red-900 bg-red-900/25 text-red-400",
+  not_started:
+    "border border-zinc-700 bg-zinc-800/70 text-zinc-200 hover:border-zinc-600 hover:bg-zinc-800",
+  watching:
+    "border border-blue-400/30 bg-blue-400/10 text-blue-300 hover:border-blue-400/50 hover:bg-blue-400/15",
+  completed:
+    "border border-green-400/30 bg-green-400/10 text-green-300 hover:border-green-400/50 hover:bg-green-400/15",
+  dropped:
+    "border border-red-500/30 bg-red-500/10 text-red-300 hover:border-red-500/50 hover:bg-red-500/15",
 };
 
 // Bordered/translucent variant + icon, used by WatchStatusBadge on detail-page

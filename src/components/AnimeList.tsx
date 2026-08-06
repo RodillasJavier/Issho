@@ -13,6 +13,7 @@ import { ChevronLeft, ChevronRight, Filter, Search } from "lucide-react";
 import supabase from "../supabase-client";
 import { FranchiseCard } from "./FranchiseCard";
 import { SearchResultCard } from "./SearchResultCard";
+import { Skeleton } from "./ui/Skeleton";
 import { groupAnimeByFranchise } from "../utils/franchise";
 import { splitGenres } from "../utils/anime";
 import { useDebouncedValue } from "../hooks/useDebouncedValue";
@@ -211,7 +212,7 @@ export const AnimeList = () => {
 
   // #region Render
   if (isLoading) {
-    return <div className="mt-8 text-zinc-400">Loading anime...</div>;
+    return <AnimeListSkeleton />;
   }
 
   if (error) {
@@ -393,4 +394,28 @@ const SearchResultsGrid = ({
     </>
   );
 };
+
+// Matches the filter bar + card grid below it, so there's no dramatic
+// collapse-then-expand once the real catalog loads.
+const AnimeListSkeleton = () => (
+  <div className="w-full">
+    <div className="mt-6 border-t border-zinc-800 py-4">
+      <Skeleton className="h-11 w-full rounded-lg" />
+      <div className="mt-3 flex flex-wrap gap-2">
+        {Array.from({ length: 8 }).map((_, index) => (
+          <Skeleton key={index} className="h-7 w-16 rounded-md" />
+        ))}
+      </div>
+    </div>
+
+    <div className="mt-6">
+      <Skeleton className="mb-4 h-5 w-32" />
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {Array.from({ length: 8 }).map((_, index) => (
+          <Skeleton key={index} className="aspect-[2/3] w-full" />
+        ))}
+      </div>
+    </div>
+  </div>
+);
 // #endregion Subcomponents

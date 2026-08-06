@@ -26,7 +26,10 @@ import {
   removeListEntry,
   listInvalidationKeys,
 } from "../services/supabase/userLists";
-import { LIST_ENTRY_COPY } from "../constants/listEntry";
+import {
+  LIST_ENTRY_COPY,
+  LIST_STATUS_BUTTON_BASE_CLASSNAME,
+} from "../constants/listEntry";
 import { STATUS_LABELS, STATUS_COLORS } from "../constants/animeStatus";
 import type { ListEntry, ListTarget } from "../types/listEntry";
 import type { AnimeStatus } from "../types/database.types";
@@ -92,6 +95,16 @@ export const ListStatusButton = ({
     },
     enabled: !!user,
   });
+  // Same chrome as SearchResultCard's status button — both pull from
+  // LIST_STATUS_BUTTON_BASE_CLASSNAME so the app's two "current list status"
+  // buttons can't drift apart in shape or sizing; only the fill
+  // (STATUS_COLORS / copy.addButtonClassName) changes. cursor is
+  // intentionally left out of the shared base (and added per usage below)
+  // rather than baked in here: the loading state below pairs this with
+  // `cursor-default`, and two cursor-* utilities on one element leave the
+  // actual cursor up to Tailwind's generated rule order, not the order
+  // written here.
+  const buttonBase = LIST_STATUS_BUTTON_BASE_CLASSNAME;
   // #endregion Component Logic
 
   // #region Render
@@ -101,7 +114,9 @@ export const ListStatusButton = ({
 
   if (isLoading) {
     return (
-      <div className="rounded bg-neutral-800 px-4 py-2 text-sm">Loading...</div>
+      <div className={`${buttonBase} cursor-default bg-zinc-800 text-zinc-500`}>
+        Loading...
+      </div>
     );
   }
 
@@ -115,8 +130,9 @@ export const ListStatusButton = ({
       {/* Show the current status when the slot is already in the list */}
       {listEntry ? (
         <button
+          type="button"
           onClick={() => setShowStatusPicker(!showStatusPicker)}
-          className={`flex cursor-pointer items-center gap-1 rounded px-4 py-2 text-sm font-semibold text-white transition-colors ${STATUS_COLORS[listEntry.status]}`}
+          className={`${buttonBase} cursor-pointer ${STATUS_COLORS[listEntry.status]}`}
         >
           {copy.statusPrefix}
           {STATUS_LABELS[listEntry.status]}
@@ -124,8 +140,9 @@ export const ListStatusButton = ({
         </button>
       ) : (
         <button
+          type="button"
           onClick={() => setShowStatusPicker(!showStatusPicker)}
-          className={copy.addButtonClassName}
+          className={`${buttonBase} cursor-pointer ${copy.addButtonClassName}`}
         >
           + {copy.addButtonLabel}
         </button>

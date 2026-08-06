@@ -31,6 +31,7 @@ import {
 } from "../components/FriendsViewToggle";
 import { FriendChannel } from "../components/FriendChannel";
 import { FriendDirectoryCard } from "../components/FriendDirectoryCard";
+import { Skeleton } from "../components/ui/Skeleton";
 import type { Entry, Friendship, Profile } from "../types/database.types";
 
 // #region Component Logic
@@ -121,7 +122,7 @@ export const FriendsPage = () => {
 
   // #region Render
   if (profileLoading) {
-    return <div>Loading profile...</div>;
+    return <FriendsPageSkeleton />;
   }
 
   if (!profile) {
@@ -164,7 +165,7 @@ export const FriendsPage = () => {
       )}
 
       {friendsLoading ? (
-        <div>Loading friends...</div>
+        <FriendChannelsSkeleton />
       ) : friendRows.length > 0 ? (
         <section>
           <div className="mb-5 flex items-center justify-between">
@@ -235,3 +236,38 @@ export const FriendsPage = () => {
   // #endregion Render
 };
 // #endregion
+
+// Header row + a few channel-shaped blocks, matching the "Latest from
+// friends" section's real shape — used both standalone (friendsLoading) and
+// composed into the full-page skeleton below.
+function FriendChannelsSkeleton() {
+  return (
+    <div className="flex flex-col gap-8">
+      <div className="flex items-center justify-between">
+        <Skeleton className="h-4 w-32" />
+        <Skeleton className="h-3 w-16" />
+      </div>
+      {Array.from({ length: 3 }).map((_, index) => (
+        <Skeleton key={index} className="h-24 w-full rounded-xl" />
+      ))}
+    </div>
+  );
+}
+
+// Full-page shape (header + own-profile forms row + channel list), for the
+// initial profile fetch — matches this page's real proportions so there's
+// no dramatic collapse-then-expand once the real profile loads.
+function FriendsPageSkeleton() {
+  return (
+    <div className="flex w-full flex-col gap-6">
+      <div className="border-b border-neutral-800 pb-7">
+        <Skeleton className="h-10 w-56" />
+      </div>
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(290px,0.72fr)]">
+        <Skeleton className="h-32 w-full rounded-xl" />
+        <Skeleton className="h-32 w-full rounded-xl" />
+      </div>
+      <FriendChannelsSkeleton />
+    </div>
+  );
+}

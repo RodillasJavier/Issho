@@ -2,10 +2,11 @@
  * src/pages/FranchisePage.tsx
  *
  * Series landing page (route /series/:franchiseKey): a full-bleed hero built
- * from the franchise's root member, series-level tracking, a "Seasons & films"
- * grid linking to each season, and the series-level community feed.
+ * from the franchise's root member, a sticky sidebar with series-level
+ * tracking and a "Seasons & films" list linking to each season, and the
+ * series-level community feed.
  */
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { useParams, Link } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
@@ -18,7 +19,10 @@ import {
 } from "../utils/franchise";
 import { splitGenres } from "../utils/anime";
 import { DetailHero } from "../components/DetailHero";
-import { SeasonsGrid } from "../components/SeasonsGrid";
+import { DetailPageSkeleton } from "../components/DetailPageSkeleton";
+import { DetailSidebar } from "../components/DetailSidebar";
+import { SeasonsList } from "../components/SeasonsList";
+import { ShareButton } from "../components/ShareButton";
 import { WatchStatusBadge } from "../components/WatchStatusBadge";
 import { CommunityEntriesSection } from "../components/CommunityEntriesSection";
 import { ListStatusButton } from "../components/ListStatusButton";
@@ -27,6 +31,7 @@ import {
   fetchEntriesWithCounts,
 } from "../services/supabase/entries";
 import { getUserFranchiseEntry } from "../services/supabase/userFranchiseList";
+import { fetchUserAnimeStatuses } from "../services/supabase/userAnimeList";
 
 export const FranchisePage = () => {
   const { franchiseKey: franchiseKeyParam } = useParams<{
@@ -45,6 +50,27 @@ export const FranchisePage = () => {
     queryFn: () => getUserFranchiseEntry(franchiseKey, user!.id),
     enabled: !!user && validKey,
   });
+
+  const memberIds = useMemo(
+    () => (franchiseMembers ?? []).map((member) => member.id),
+    [franchiseMembers]
+  );
+  const { data: statusByAnimeId, error: statusError } = useQuery({
+    // memberIds is included so a franchise gaining/losing members mid-session
+    // invalidates the cached result instead of silently serving stale
+    // statuses under an unchanged key. `> 1` (not `> 0`) matches AnimeFeed's
+    // isMultiEntryFranchise gate — a singleton "franchise" has no per-season
+    // progress worth showing.
+    queryKey: ["userAnimeStatuses", franchiseKey, user?.id, memberIds],
+    queryFn: () => fetchUserAnimeStatuses(user!.id, memberIds),
+    enabled: !!user && memberIds.length > 1,
+  });
+  // fetchUserAnimeStatuses throws on failure per this codebase's service
+  // convention; without this, a failed fetch would leave statusByAnimeId
+  // undefined forever with zero indication anything went wrong.
+  useEffect(() => {
+    if (statusError) console.error(statusError);
+  }, [statusError]);
 
   // Shares the feed cache with the homepage feed/Friends page (per
   // CLAUDE.md), so this never triggers its own fetch once that's warm, and
@@ -70,7 +96,7 @@ export const FranchisePage = () => {
   }
 
   if (!franchiseMembers) {
-    return <div className="h-64 w-full animate-pulse rounded-xl bg-white/5" />;
+    return <DetailPageSkeleton />;
   }
 
   if (franchiseMembers.length === 0) {
@@ -102,35 +128,50 @@ export const FranchisePage = () => {
         }
         genres={genres}
         description={root.description}
-        actions={
-          <>
-            <Link
-              to={`/entry/create?franchiseKey=${franchiseKey}`}
-              className="inline-flex items-center gap-2 rounded-md border border-zinc-700 bg-zinc-950/45 px-3 py-2 text-sm font-semibold text-zinc-200 transition-colors hover:border-zinc-500 hover:bg-zinc-800"
-            >
-              <Plus aria-hidden className="size-4 text-rose-300" />
-              Create an entry
-            </Link>
-            {user && (
-              <ListStatusButton
-                target={{ kind: "franchise", franchise_key: franchiseKey }}
-                franchiseTitle={title}
-              />
-            )}
-          </>
-        }
       />
 
-      <SeasonsGrid members={franchiseMembers} />
+      <div className="flex flex-col items-start gap-6 lg:flex-row lg:gap-8">
+        <DetailSidebar
+          rating={franchiseEntry?.rating ?? null}
+          secondaryStat={{ label: "Releases", value: franchiseMembers.length }}
+          actions={
+            <>
+              <Link
+                to={`/entry/create?franchiseKey=${franchiseKey}`}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-md border border-zinc-700 bg-zinc-950/45 px-3 py-2 text-sm font-semibold text-zinc-200 transition-colors hover:border-zinc-500 hover:bg-zinc-800"
+              >
+                <Plus aria-hidden className="size-4 text-rose-300" />
+                Create an entry
+              </Link>
+              {user && (
+                <ListStatusButton
+                  target={{ kind: "franchise", franchise_key: franchiseKey }}
+                  franchiseTitle={title}
+                />
+              )}
+              <ShareButton />
+            </>
+          }
+          seasonsSection={
+            <SeasonsList
+              members={franchiseMembers}
+              statusByAnimeId={statusByAnimeId}
+            />
+          }
+        />
 
-      <CommunityEntriesSection
-        entries={seriesEntries}
-        emptyMessage={
-          user
-            ? "No series-level posts from you or your friends yet. Share your thoughts on the whole series!"
-            : "Sign in to see series posts from your friends."
-        }
-      />
+        <section className="min-w-0 flex-1">
+          <CommunityEntriesSection
+            entries={seriesEntries}
+            resetKey={franchiseKey}
+            emptyMessage={
+              user
+                ? "No series-level posts from you or your friends yet. Share your thoughts on the whole series!"
+                : "Sign in to see series posts from your friends."
+            }
+          />
+        </section>
+      </div>
     </div>
   );
   // #endregion Render

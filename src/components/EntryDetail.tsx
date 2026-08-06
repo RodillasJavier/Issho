@@ -16,13 +16,15 @@
  * post values.
  */
 import { useQuery } from "@tanstack/react-query";
-import { Link, useNavigate } from "react-router";
-import { ArrowLeft, Star } from "lucide-react";
+import { Link } from "react-router";
+import { Star } from "lucide-react";
 import supabase from "../supabase-client";
 import { useAuth } from "../hooks/useAuth";
 import { fetchPublicEntry } from "../services/supabase/entries";
+import { BackButton } from "./BackButton";
 import { LikeButton } from "./LikeButton";
 import { CommentSection } from "./CommentSection";
+import { Skeleton } from "./ui/Skeleton";
 import { getEntryTypeLabel } from "../constants/entryTypes";
 import { STATUS_LABELS, STATUS_COLORS } from "../constants/animeStatus";
 import { UserInfo } from "./UserInfo";
@@ -69,7 +71,6 @@ const fetchEntryById = async (id: string): Promise<Entry | null> => {
 };
 
 export const EntryDetail = ({ entryId }: EntryDetailProps) => {
-  const navigate = useNavigate();
   const { user, initializing } = useAuth();
 
   const {
@@ -139,7 +140,7 @@ export const EntryDetail = ({ entryId }: EntryDetailProps) => {
 
   // #region Render
   if (isLoading) {
-    return <div>Loading entry...</div>;
+    return <EntryDetailSkeleton />;
   }
 
   if (error) {
@@ -175,14 +176,9 @@ export const EntryDetail = ({ entryId }: EntryDetailProps) => {
     <div className="lg:grid lg:grid-cols-[300px_minmax(0,1fr)] lg:gap-10">
       {/* Entry Details Sidebar */}
       <aside className="mb-8 lg:mb-0">
-        <button
-          type="button"
-          onClick={() => navigate(-1)}
-          className="group mb-4 flex cursor-pointer items-center gap-1.5 text-sm font-medium text-neutral-400 transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400"
-        >
-          <ArrowLeft className="size-4 transition-transform group-hover:-translate-x-0.5" />
-          Back
-        </button>
+        <div className="mb-4">
+          <BackButton href="/" />
+        </div>
 
         <p className="mb-4 text-[10px] font-semibold uppercase tracking-widest text-neutral-500">
           Entry details
@@ -371,3 +367,36 @@ export const EntryDetail = ({ entryId }: EntryDetailProps) => {
   );
 };
 // #endregion Render
+
+// Shaped to roughly match the sidebar+article layout above, so there's no
+// dramatic collapse-then-expand once the real entry loads.
+function EntryDetailSkeleton() {
+  return (
+    <div className="lg:grid lg:grid-cols-[300px_minmax(0,1fr)] lg:gap-10">
+      <div className="mb-8 lg:mb-0">
+        <Skeleton className="mb-4 h-5 w-16" />
+        <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4">
+          <Skeleton className="h-10 w-32" />
+          <Skeleton className="mt-4 h-4 w-24" />
+        </div>
+        <div className="mt-5 border-y border-neutral-800 py-6">
+          <Skeleton className="mx-auto size-28 rounded-full" />
+        </div>
+        <div className="mt-5 rounded-xl border border-neutral-800 bg-neutral-950 p-4">
+          <Skeleton className="h-4 w-16" />
+          <Skeleton className="mt-2 h-5 w-40" />
+        </div>
+      </div>
+
+      <div className="min-w-0">
+        <Skeleton className="h-48 w-full sm:h-64 lg:h-72" />
+        <Skeleton className="mt-8 h-10 w-3/4" />
+        <Skeleton className="mt-7 h-24 w-full" />
+        <div className="mt-12 border-t border-neutral-800 pt-8">
+          <Skeleton className="h-6 w-32" />
+          <Skeleton className="mt-4 h-20 w-full" />
+        </div>
+      </div>
+    </div>
+  );
+}

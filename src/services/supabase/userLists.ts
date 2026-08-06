@@ -113,12 +113,13 @@ export const getListEntry = async (
  * airing, and a viewer who is merely caught up is still "watching". Only the
  * user can declare a series complete, so a seeded row is capped at "watching".
  * Mirrors `deriveSeriesStatus` in src/utils/listEntries.ts, which applies the
- * same rule on the display side.
+ * same rule on the display side. Exported only so a test can pin the two
+ * together — nothing outside this module should be calling it.
  *
  * @param seasonStatus the status the season was added with
  * @returns the status to seed the series row with
  */
-const seriesStatusFor = (seasonStatus: AnimeStatus): AnimeStatus =>
+export const seriesStatusFor = (seasonStatus: AnimeStatus): AnimeStatus =>
   seasonStatus === "completed" ? "watching" : seasonStatus;
 
 /**

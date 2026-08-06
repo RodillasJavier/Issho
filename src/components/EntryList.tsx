@@ -22,6 +22,7 @@ import { EntryItem } from "./EntryItem";
 import { FeaturedEntry } from "./FeaturedEntry";
 import { FollowingPanel } from "./FollowingPanel";
 import { CreateEntryCta } from "./CreateEntryCta";
+import { FeedSkeleton } from "./FeedSkeleton";
 import {
   ACTIVITY_FILTERS,
   type ActivityFilter,
@@ -271,7 +272,7 @@ export const EntryList = ({ filter }: EntryListProps) => {
   };
 
   if (isLoading) {
-    return <div>Loading entries...</div>;
+    return <FeedSkeleton withSidebar />;
   }
 
   if (error) {

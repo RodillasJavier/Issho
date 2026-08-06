@@ -2,11 +2,11 @@
  * src/components/AnimeFeed.tsx
  *
  * Season detail view (route /anime/:id): a full-bleed hero for the season,
- * per-season watchlist tracking, a link up to its series with the sibling
- * "Seasons & films" grid (current season highlighted), and the season's own
- * community entries.
+ * a sticky sidebar with per-season watchlist tracking and a link up to its
+ * series with the sibling "Seasons & films" list (current season
+ * highlighted), and the season's own community entries.
  */
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { Link } from "react-router";
 import { ArrowRight, Plus } from "lucide-react";
 import type { Anime } from "../types/database.types";
@@ -14,7 +14,10 @@ import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "../hooks/useAuth";
 import { ListStatusButton } from "./ListStatusButton";
 import { DetailHero } from "./DetailHero";
-import { SeasonsGrid } from "./SeasonsGrid";
+import { DetailPageSkeleton } from "./DetailPageSkeleton";
+import { DetailSidebar } from "./DetailSidebar";
+import { SeasonsList } from "./SeasonsList";
+import { ShareButton } from "./ShareButton";
 import { WatchStatusBadge } from "./WatchStatusBadge";
 import { CommunityEntriesSection } from "./CommunityEntriesSection";
 import { fetchAnime } from "../services/supabase/anime";
@@ -22,8 +25,14 @@ import {
   entriesQueryKey,
   fetchEntriesWithCounts,
 } from "../services/supabase/entries";
-import { getUserAnimeEntry } from "../services/supabase/userAnimeList";
-import { useFranchiseMembers } from "../hooks/useFranchiseMembers";
+import {
+  getUserAnimeEntry,
+  fetchUserAnimeStatuses,
+} from "../services/supabase/userAnimeList";
+import {
+  ANIME_METADATA_STALE_TIME,
+  useFranchiseMembers,
+} from "../hooks/useFranchiseMembers";
 import { franchiseDisplayTitle } from "../utils/franchise";
 import { splitGenres } from "../utils/anime";
 
@@ -68,6 +77,10 @@ export const AnimeFeed = ({ animeId }: AnimeFeedProps) => {
   } = useQuery<Anime, Error>({
     queryKey: ["anime", animeId],
     queryFn: () => fetchAnime(animeId),
+    // Lets a sibling season's cache seeding (useFranchiseMembers) actually
+    // skip the redundant fetch on click-through, not just hide it visually —
+    // staleTime is observer-level, so it has to be set here too.
+    staleTime: ANIME_METADATA_STALE_TIME,
   });
 
   const franchiseKey = anime?.franchise_key ?? null;
@@ -77,6 +90,27 @@ export const AnimeFeed = ({ animeId }: AnimeFeedProps) => {
     franchiseDisplayTitle(franchiseMembers ?? []) ??
     anime?.franchise_title ??
     "this series";
+
+  const memberIds = useMemo(
+    () => (franchiseMembers ?? []).map((member) => member.id),
+    [franchiseMembers]
+  );
+  const { data: statusByAnimeId, error: statusError } = useQuery({
+    // memberIds is included so a franchise gaining/losing members mid-session
+    // (e.g. a new season gets imported while this page is open) invalidates
+    // the cached result instead of silently serving stale statuses under an
+    // unchanged key.
+    queryKey: ["userAnimeStatuses", franchiseKey, user?.id, memberIds],
+    queryFn: () => fetchUserAnimeStatuses(user!.id, memberIds),
+    enabled: !!user && isMultiEntryFranchise && memberIds.length > 0,
+  });
+  // fetchUserAnimeStatuses throws on failure per this codebase's service
+  // convention; without this, a failed fetch would leave statusByAnimeId
+  // undefined forever with zero indication anything went wrong (the seasons
+  // list's badges/progress bar would just silently never appear).
+  useEffect(() => {
+    if (statusError) console.error(statusError);
+  }, [statusError]);
   // #endregion
 
   // #region Render
@@ -86,7 +120,7 @@ export const AnimeFeed = ({ animeId }: AnimeFeedProps) => {
   }
 
   if (isLoading || !anime) {
-    return <div className="h-64 w-full animate-pulse rounded-xl bg-white/5" />;
+    return <DetailPageSkeleton />;
   }
 
   const bannerUrl = anime.banner_image_url ?? anime.cover_image_url ?? null;
@@ -118,34 +152,58 @@ export const AnimeFeed = ({ animeId }: AnimeFeedProps) => {
         }
         genres={genres}
         description={anime.description}
-        actions={
-          <>
-            <Link
-              to={`/entry/create?animeId=${animeId}`}
-              className="inline-flex items-center gap-2 rounded-md border border-zinc-700 bg-zinc-950/45 px-3 py-2 text-sm font-semibold text-zinc-200 transition-colors hover:border-zinc-500 hover:bg-zinc-800"
-            >
-              <Plus aria-hidden className="size-4 text-rose-300" />
-              Create an entry
-            </Link>
-            {user && (
-              <ListStatusButton target={{ kind: "anime", anime_id: animeId }} />
-            )}
-          </>
-        }
       />
 
-      {isMultiEntryFranchise && franchiseMembers && (
-        <SeasonsGrid members={franchiseMembers} currentId={animeId} />
-      )}
+      <div className="flex flex-col items-start gap-6 lg:flex-row lg:gap-8">
+        <DetailSidebar
+          rating={listEntry?.rating ?? null}
+          secondaryStat={{
+            label: "Episodes",
+            value: anime.episode_count ?? "—",
+          }}
+          actions={
+            <>
+              <Link
+                to={`/entry/create?animeId=${animeId}`}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-md border border-zinc-700 bg-zinc-950/45 px-3 py-2 text-sm font-semibold text-zinc-200 transition-colors hover:border-zinc-500 hover:bg-zinc-800"
+              >
+                <Plus aria-hidden className="size-4 text-rose-300" />
+                Create an entry
+              </Link>
+              {user && (
+                <ListStatusButton
+                  target={{ kind: "anime", anime_id: animeId }}
+                />
+              )}
+              <ShareButton />
+            </>
+          }
+          seasonsSection={
+            isMultiEntryFranchise && franchiseMembers ? (
+              <SeasonsList
+                members={franchiseMembers}
+                currentId={animeId}
+                statusByAnimeId={statusByAnimeId}
+                currentSeasonHref={
+                  franchiseKey != null ? `/series/${franchiseKey}` : undefined
+                }
+              />
+            ) : undefined
+          }
+        />
 
-      <CommunityEntriesSection
-        entries={entries}
-        emptyMessage={
-          user
-            ? "No activity for this season from you or your friends yet. Be the first to post!"
-            : "Sign in to see activity for this season from your friends."
-        }
-      />
+        <section className="min-w-0 flex-1">
+          <CommunityEntriesSection
+            entries={entries}
+            resetKey={animeId}
+            emptyMessage={
+              user
+                ? "No activity for this season from you or your friends yet. Be the first to post!"
+                : "Sign in to see activity for this season from your friends."
+            }
+          />
+        </section>
+      </div>
     </div>
   );
   // #endregion Render

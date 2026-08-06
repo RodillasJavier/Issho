@@ -11,4 +11,4 @@ assignees: ''
 
 Describe some feedback on code, best practices, or the product here.
 
-[ ] suggest fixing as this might cause issues down the line
+- [ ] suggest fixing as this might cause issues down the line

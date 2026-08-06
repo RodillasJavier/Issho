@@ -23,7 +23,7 @@ import { cn, page, surface, text } from "../styles/tokens";
 const EASE_OUT_EXPO = [0.22, 1, 0.36, 1] as const;
 
 export const SettingsPage = () => {
-  const { user } = useAuth();
+  const { user, initializing } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const {
@@ -37,7 +37,11 @@ export const SettingsPage = () => {
     enabled: Boolean(user),
   });
 
-  if (!user) return <Navigate to="/signin" replace />;
+  // Only redirect once we actually know there's no session. Bouncing on the
+  // indeterminate first paint would send a signed-in user to /signin, which
+  // then forwards them to "/" the moment the session lands — losing the page
+  // they asked for.
+  if (!initializing && !user) return <Navigate to="/signin" replace />;
 
   // The tab lives in the URL so the email-confirmation link can land straight
   // on ?tab=account. `replace` keeps Back leaving settings rather than
@@ -50,7 +54,9 @@ export const SettingsPage = () => {
     setSearchParams({ tab: id }, { replace: true });
 
   let content: React.ReactNode;
-  if (isLoading) {
+  // `!user` only survives the guard above while the session is still
+  // resolving, so this covers that window as well as the profile fetch.
+  if (initializing || !user || isLoading) {
     content = <SettingsSkeleton />;
   } else if (isError) {
     content = (

@@ -11,14 +11,32 @@ import type { User } from "@supabase/supabase-js";
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [initializing, setInitializing] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-    });
+    supabase.auth
+      .getSession()
+      .then(({ data: { session } }) => {
+        setUser(session?.user ?? null);
+      })
+      .catch(() => {
+        // Can't identify the visitor, so treat them as signed out. Swallowed
+        // rather than rethrown: an unhandled rejection here would surface as a
+        // console error on every offline load.
+        setUser(null);
+      })
+      // `finally`, not `then`: a failed session lookup still resolves the
+      // question of whether we know who the user is. Leaving `initializing`
+      // set would strand the whole app on its loading state.
+      .finally(() => {
+        setInitializing(false);
+      });
 
     const { data: listener } = supabase.auth.onAuthStateChange((_, session) => {
       setUser(session?.user ?? null);
+      // This can fire before `getSession` settles; either one arriving is
+      // enough to stop treating auth as unknown.
+      setInitializing(false);
     });
 
     return () => {
@@ -91,6 +109,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     <AuthContext.Provider
       value={{
         user,
+        initializing,
         signInWithEmail,
         signUpWithEmail,
         signOut,

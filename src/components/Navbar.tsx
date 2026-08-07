@@ -293,7 +293,7 @@ export const Navbar = ({ authPage = false }: NavbarProps = {}) => {
         <nav
           aria-label="Main"
           className={cn(
-            "flex h-12 items-center justify-between px-2.5",
+            "group/nav flex h-12 items-center justify-between px-2.5",
             "sm:h-14 sm:px-3.5 md:grid md:grid-cols-[1fr_auto_1fr]",
             "border border-line bg-field/80 backdrop-blur-xl",
             "shadow-[0_12px_26px_rgba(0,0,0,0.55)]",
@@ -321,7 +321,7 @@ export const Navbar = ({ authPage = false }: NavbarProps = {}) => {
           {/* Middle Column — labels unfurl on hover of the group, or when active */}
           <ul
             className={cn(
-              "group/nav hidden h-12 items-center gap-1 justify-self-center p-1.5 md:flex"
+              "hidden h-12 items-center gap-1 justify-self-center p-1.5 md:flex"
             )}
           >
             {navItems.map((item) => (

@@ -4,7 +4,7 @@
  * Component that fetches and displays a list of recent entries with their
  * associated anime data: a featured entry + following panel + create-entry
  * CTA on the first page, a grid of activity cards, and pagination. The
- * Friends & you/Friends/You filter is owned by Home (rendered in the page
+ * All/Friends/You filter is owned by Home (rendered in the page
  * header) and passed in as a prop. Every entry is fetched once and
  * filter/pagination are applied client-side, so switching tabs or pages
  * never re-hits the network.
@@ -193,7 +193,7 @@ export const EntryList = ({ filter }: EntryListProps) => {
         : [];
     }
     // allEntries is already RLS-scoped to the viewer + their friends, so
-    // "all" (Friends & you) needs no further client-side filtering.
+    // "all" needs no further client-side filtering.
     return allEntries;
   }, [allEntries, filter, user, friendIds]);
 

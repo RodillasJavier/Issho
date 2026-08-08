@@ -2,9 +2,10 @@
  * src/components/Navbar.tsx
  *
  * Floating pill navigation. The centre cluster keeps its items icon-only until
- * the group is hovered or one is active, which is what lets four destinations
- * sit in a bar this narrow; the account menu on the right owns profile,
- * settings, and sign out.
+ * one is active or the navbar as a whole is hovered (the wider hover region
+ * avoids flicker when the cursor overshoots a button), which is what lets
+ * four destinations sit in a bar this narrow; the account menu on the right
+ * owns profile, settings, and sign out.
  */
 import { useState } from "react";
 import { Link, NavLink } from "react-router";

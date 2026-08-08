@@ -32,10 +32,14 @@ interface ProfileData {
 }
 // #endregion Types
 
-/** Query key for a single entry's comment thread, scoped by entryId since
- * comments are RLS-scoped just like votes/entries. */
-export const commentsQueryKey = (entryId: string) =>
-  ["comments", entryId] as const;
+/** Query key for a single entry's comment thread. Scoped by both entryId
+ * and viewer id — comments are RLS-scoped per viewer (each comment's
+ * user_vote reflects who's asking), so a bare ["comments", entryId] key
+ * would serve one signed-in user's cached vote state to the next person who
+ * signs in on the same tab, the same leak entriesQueryKey(userId) is keyed
+ * this way to avoid. */
+export const commentsQueryKey = (entryId: string, userId: string | undefined) =>
+  ["comments", entryId, userId] as const;
 
 export const fetchComments = async (entryId: string): Promise<Comment[]> => {
   const { data, error } = await supabase.rpc("get_comments_with_counts", {

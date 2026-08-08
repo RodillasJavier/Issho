@@ -41,8 +41,9 @@ export const CommentVoteButtons = ({
       return castCommentVote(comment.id, user.id, voteValue);
     },
     onSuccess: (nextVote) => {
-      queryClient.setQueryData<Comment[]>(commentsQueryKey(entryId), (old) =>
-        applyVoteToCommentsCache(old, comment.id, userVote, nextVote)
+      queryClient.setQueryData<Comment[]>(
+        commentsQueryKey(entryId, user?.id),
+        (old) => applyVoteToCommentsCache(old, comment.id, userVote, nextVote)
       );
     },
   });

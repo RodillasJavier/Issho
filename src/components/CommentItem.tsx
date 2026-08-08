@@ -61,7 +61,9 @@ export const CommentItem = ({ comment, entryId, depth }: CommentItemProps) => {
     mutationFn: (replyContent: string) =>
       postComment(entryId, user?.id, replyContent, comment.id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: commentsQueryKey(entryId) });
+      queryClient.invalidateQueries({
+        queryKey: commentsQueryKey(entryId, user?.id),
+      });
       queryClient.setQueryData<Entry[]>(entriesQueryKey(user?.id), (old) =>
         incrementEntryCommentCount(old, entryId)
       );

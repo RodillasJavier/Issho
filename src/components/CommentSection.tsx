@@ -55,7 +55,7 @@ export const CommentSection = ({
     isLoading,
     error,
   } = useQuery<Comment[], Error>({
-    queryKey: commentsQueryKey(entryId),
+    queryKey: commentsQueryKey(entryId, user?.id),
     queryFn: () => fetchComments(entryId),
     // Comments carry their author's identity, so logged-out visitors don't
     // get them at all — RLS would return an empty list regardless, and not
@@ -73,7 +73,9 @@ export const CommentSection = ({
   const { mutate, isPending, isError } = useMutation({
     mutationFn: (content: string) => postComment(entryId, user?.id, content),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: commentsQueryKey(entryId) });
+      queryClient.invalidateQueries({
+        queryKey: commentsQueryKey(entryId, user?.id),
+      });
 
       // Keep the cached feed list's comment count in sync so navigating
       // back shows the up-to-date number instead of the stale initial fetch.

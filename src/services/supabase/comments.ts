@@ -5,10 +5,11 @@
  * get_comments_with_counts RPC, joined with profiles in memory — same
  * RPC-then-join pattern as fetchEntriesWithCounts in entries.ts), posting a
  * root comment or reply through one function, and a Reddit-style vote toggle
- * on comment_votes mirroring votes.ts's castVote.
+ * on comment_votes built on voteToggle.ts's shared mechanics.
  */
 import supabase from "../../supabase-client";
 import type { Comment } from "../../types/database.types";
+import { applyVoteToCache, castTableVote } from "./voteToggle";
 
 // #region Types
 interface CommentWithCounts {
@@ -89,56 +90,22 @@ export const postComment = async (
 
 /**
  * Cast, change, or clear (toggle off by re-clicking the same value) a vote
- * on a comment. Mirrors castVote in votes.ts exactly.
+ * on a comment.
  *
  * @returns The caller's resulting vote: 1, -1, or null if it was cleared.
  */
-export const castCommentVote = async (
+export const castCommentVote = (
   commentId: string,
   userId: string,
   voteValue: 1 | -1
-): Promise<number | null> => {
-  const { data: existingVote } = await supabase
-    .from("comment_votes")
-    .select("*")
-    .eq("comment_id", commentId)
-    .eq("user_id", userId)
-    .maybeSingle();
-
-  if (existingVote?.vote === voteValue) {
-    const { error } = await supabase
-      .from("comment_votes")
-      .delete()
-      .eq("id", existingVote.id);
-
-    if (error) throw new Error(error.message);
-    return null;
-  }
-
-  if (existingVote) {
-    const { error } = await supabase
-      .from("comment_votes")
-      .update({ vote: voteValue })
-      .eq("id", existingVote.id);
-
-    if (error) throw new Error(error.message);
-    return voteValue;
-  }
-
-  const { error } = await supabase
-    .from("comment_votes")
-    .insert({ comment_id: commentId, user_id: userId, vote: voteValue });
-
-  if (error) throw new Error(error.message);
-  return voteValue;
-};
+): Promise<number | null> =>
+  castTableVote("comment_votes", "comment_id", commentId, userId, voteValue);
 
 /**
- * Patch a cached flat comment list with the result of casting a vote,
- * computing the new like/dislike counts from the vote delta rather than
- * refetching. Mirrors applyVoteToEntriesCache in entries.ts. Operates on the
- * flat array cached under commentsQueryKey — the reply tree is rebuilt from
- * it at render time (buildCommentTree), so no recursive walk is needed here.
+ * Patch a cached flat comment list with the result of casting a vote.
+ * Operates on the flat array cached under commentsQueryKey — the reply
+ * tree is rebuilt from it at render time (buildCommentTree), so no
+ * recursive walk is needed here.
  */
 export const applyVoteToCommentsCache = (
   comments: Comment[] | undefined,
@@ -146,20 +113,4 @@ export const applyVoteToCommentsCache = (
   prevVote: number | null,
   nextVote: number | null
 ): Comment[] | undefined =>
-  comments?.map((comment) => {
-    if (comment.id !== commentId) return comment;
-
-    let likes = comment.likes_count ?? 0;
-    let dislikes = comment.dislikes_count ?? 0;
-    if (prevVote === 1) likes -= 1;
-    if (prevVote === -1) dislikes -= 1;
-    if (nextVote === 1) likes += 1;
-    if (nextVote === -1) dislikes += 1;
-
-    return {
-      ...comment,
-      user_vote: nextVote,
-      likes_count: likes,
-      dislikes_count: dislikes,
-    };
-  });
+  applyVoteToCache(comments, commentId, prevVote, nextVote);

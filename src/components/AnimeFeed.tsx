@@ -140,10 +140,10 @@ export const AnimeFeed = ({ animeId }: AnimeFeedProps) => {
           isMultiEntryFranchise && franchiseKey != null ? (
             <Link
               to={`/series/${franchiseKey}`}
-              className="inline-flex items-center gap-1.5 text-sm font-medium text-rose-300 transition-colors hover:text-rose-200"
+              className="flex flex-wrap items-center gap-1.5 text-sm font-medium text-rose-300 transition-colors hover:text-rose-200"
             >
-              Part of {franchiseTitle}
-              <ArrowRight aria-hidden className="size-4" />
+              <span className="break-words">Part of {franchiseTitle}</span>
+              <ArrowRight aria-hidden className="size-4 shrink-0" />
             </Link>
           ) : undefined
         }
@@ -154,7 +154,7 @@ export const AnimeFeed = ({ animeId }: AnimeFeedProps) => {
         description={anime.description}
       />
 
-      <div className="flex flex-col items-start gap-6 lg:flex-row lg:gap-8">
+      <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:gap-8">
         <DetailSidebar
           rating={listEntry?.rating ?? null}
           secondaryStat={{

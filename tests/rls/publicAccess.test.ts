@@ -14,6 +14,7 @@ const DB_NAME = "issho_rls_public";
 let db: TestDb;
 let author: string;
 let entryId: string;
+let commentId: string;
 
 beforeAll(async () => {
   const url = await createTestDatabase(DB_NAME);
@@ -39,9 +40,13 @@ beforeAll(async () => {
     `insert into votes (entry_id, user_id, vote) values ($1, $2, 1)`,
     [entryId, author]
   );
-  await db.asService(
-    `insert into comments (entry_id, user_id, content) values ($1, $2, 'hi')`,
+  [{ id: commentId }] = await db.asService<{ id: string }>(
+    `insert into comments (entry_id, user_id, content) values ($1, $2, 'hi') returning id`,
     [entryId, author]
+  );
+  await db.asService(
+    `insert into comment_votes (comment_id, user_id, vote) values ($1, $2, 1)`,
+    [commentId, author]
   );
 }, 60_000);
 
@@ -147,6 +152,7 @@ describe("anon has no direct read on user content", () => {
     "user_franchise_entries",
     "comments",
     "votes",
+    "comment_votes",
   ])("returns nothing from %s", async (table) => {
     expect(await db.as("anon", `select * from ${table}`)).toHaveLength(0);
   });

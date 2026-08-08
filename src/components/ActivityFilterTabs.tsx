@@ -9,6 +9,7 @@ import {
   ACTIVITY_FILTERS,
   type ActivityFilter,
 } from "../constants/activityFilters";
+import { TabList } from "./TabList";
 
 // #region Types
 interface ActivityFilterTabsProps {
@@ -21,31 +22,14 @@ interface ActivityFilterTabsProps {
 export const ActivityFilterTabs = ({
   value,
   onChange,
-}: ActivityFilterTabsProps) => {
-  return (
-    <div
-      role="tablist"
-      aria-label="Filter activity"
-      className="mt-5 inline-flex w-fit rounded-md border border-neutral-800 bg-neutral-950 p-1 sm:mt-0"
-    >
-      {ACTIVITY_FILTERS.map((filter) => (
-        <button
-          key={filter.value}
-          type="button"
-          role="tab"
-          aria-selected={value === filter.value}
-          onClick={() => onChange(filter.value)}
-          className={`rounded text-sm font-medium px-3 py-1.5 transition-colors cursor-pointer ${
-            value === filter.value
-              ? "bg-neutral-800 text-white shadow-sm"
-              : "text-neutral-500 hover:text-neutral-200"
-          }`}
-        >
-          {filter.label}
-        </button>
-      ))}
-    </div>
-  );
-  // #endregion Component Logic
-};
+}: ActivityFilterTabsProps) => (
+  <TabList
+    value={value}
+    onChange={onChange}
+    options={ACTIVITY_FILTERS}
+    ariaLabel="Filter activity"
+    className="mt-5 sm:mt-0"
+  />
+);
+// #endregion Component Logic
 // #endregion

@@ -17,6 +17,7 @@
  */
 import supabase from "../../supabase-client";
 import type { Entry, PublicEntry } from "../../types/database.types";
+import { applyVoteToCache } from "./voteToggle";
 
 // #region Types
 interface EntryWithCounts {
@@ -95,13 +96,15 @@ export const fetchEntriesWithCounts = async (): Promise<Entry[]> => {
   // concurrently) and join in memory
   const userIds = [...new Set(entries.map((entry) => entry.user_id))];
 
-  const [withAnime, { data: profileData }] = await Promise.all([
-    attachAnime(entries),
-    supabase
-      .from("profiles")
-      .select("id, username, avatar_url")
-      .in("id", userIds),
-  ]);
+  const [withAnime, { data: profileData, error: profileError }] =
+    await Promise.all([
+      attachAnime(entries),
+      supabase
+        .from("profiles")
+        .select("id, username, avatar_url")
+        .in("id", userIds),
+    ]);
+  if (profileError) throw new Error(profileError.message);
 
   return withAnime.map((entry) => ({
     ...entry,
@@ -152,23 +155,7 @@ export const applyVoteToEntriesCache = (
   prevVote: number | null,
   nextVote: number | null
 ): Entry[] | undefined =>
-  entries?.map((entry) => {
-    if (entry.id !== entryId) return entry;
-
-    let likes = entry.likes_count ?? 0;
-    let dislikes = entry.dislikes_count ?? 0;
-    if (prevVote === 1) likes -= 1;
-    if (prevVote === -1) dislikes -= 1;
-    if (nextVote === 1) likes += 1;
-    if (nextVote === -1) dislikes += 1;
-
-    return {
-      ...entry,
-      user_vote: nextVote,
-      likes_count: likes,
-      dislikes_count: dislikes,
-    };
-  });
+  applyVoteToCache(entries, entryId, prevVote, nextVote);
 
 /** Patch a cached feed list after a new comment is posted. */
 export const incrementEntryCommentCount = (

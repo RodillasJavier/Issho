@@ -1,7 +1,7 @@
 /**
  * src/constants/activityFilters.ts
  *
- * Filter options for the activity feed (Friends & you / Friends / You),
+ * Filter options for the activity feed (All / Friends / You),
  * shared between ActivityFilterTabs (renders the tabs) and EntryList
  * (looks up the active filter's label).
  *
@@ -12,7 +12,7 @@
 export type ActivityFilter = "all" | "friends" | "mine";
 
 export const ACTIVITY_FILTERS: { value: ActivityFilter; label: string }[] = [
-  { value: "all", label: "Friends & you" },
+  { value: "all", label: "All" },
   { value: "friends", label: "Friends" },
   { value: "mine", label: "You" },
 ];

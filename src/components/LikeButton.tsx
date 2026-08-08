@@ -1,7 +1,13 @@
 /**
  * src/components/LikeButton.tsx
  *
- * Component for liking or disliking an entry.
+ * Component for liking or disliking an entry. Signed-in visitors get live
+ * counts and their own vote state from a direct `votes` query (RLS-gated to
+ * `authenticated`, so it's disabled entirely for anon rather than firing and
+ * silently coming back empty). Anon visitors have no vote of their own to
+ * show, but the counts themselves aren't identifying — they fall back to
+ * `likesCount`/`dislikesCount`, the aggregates the entry fetch (get_public_entry)
+ * already computed, so the number here matches what the public feed shows.
  */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ThumbsUp, ThumbsDown } from "lucide-react";
@@ -16,11 +22,18 @@ import type { Entry } from "../types/database.types";
 // #region Types
 interface LikeButtonProps {
   entryId: string;
+  /** Aggregated counts from the entry fetch, used only when signed out. */
+  likesCount?: number;
+  dislikesCount?: number;
 }
 // #endregion Types
 
 // #region Component Logic
-export const LikeButton = ({ entryId }: LikeButtonProps) => {
+export const LikeButton = ({
+  entryId,
+  likesCount,
+  dislikesCount,
+}: LikeButtonProps) => {
   const { user } = useAuth();
 
   const queryClient = useQueryClient();
@@ -32,6 +45,7 @@ export const LikeButton = ({ entryId }: LikeButtonProps) => {
   } = useQuery({
     queryKey: ["votes", entryId],
     queryFn: () => getVotes(entryId),
+    enabled: !!user,
   });
 
   const userVote = votes?.find((v) => v.user_id === user?.id)?.vote ?? null;
@@ -66,8 +80,12 @@ export const LikeButton = ({ entryId }: LikeButtonProps) => {
     return <div>Error loading post: {error.message}</div>;
   }
 
-  const likes = votes?.filter((v) => v.vote === 1).length || 0;
-  const dislikes = votes?.filter((v) => v.vote === -1).length || 0;
+  const likes = user
+    ? votes?.filter((v) => v.vote === 1).length || 0
+    : (likesCount ?? 0);
+  const dislikes = user
+    ? votes?.filter((v) => v.vote === -1).length || 0
+    : (dislikesCount ?? 0);
 
   const buttonClasses = (active: boolean) =>
     `flex items-center justify-between gap-2 rounded-lg border px-3 py-2.5 text-xs font-medium transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 ${

@@ -118,7 +118,9 @@ export interface Comment {
   content: string;
   profile?: Profile; // When joined
   is_spoiler: boolean;
-  children?: Comment[]; // When nested
+  likes_count?: number; // When aggregated
+  dislikes_count?: number; // When aggregated
+  user_vote?: number | null; // Current user's vote on this comment: 1, -1, or null
 }
 
 export interface UserAnimeEntry {

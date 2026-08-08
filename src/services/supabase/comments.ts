@@ -48,10 +48,11 @@ export const fetchComments = async (entryId: string): Promise<Comment[]> => {
   }
 
   const userIds = [...new Set(comments.map((comment) => comment.user_id))];
-  const { data: profileData } = await supabase
+  const { data: profileData, error: profileError } = await supabase
     .from("profiles")
     .select("id, username, avatar_url")
     .in("id", userIds);
+  if (profileError) throw new Error(profileError.message);
 
   return comments.map((comment) => ({
     ...comment,

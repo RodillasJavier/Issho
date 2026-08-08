@@ -95,13 +95,15 @@ export const fetchEntriesWithCounts = async (): Promise<Entry[]> => {
   // concurrently) and join in memory
   const userIds = [...new Set(entries.map((entry) => entry.user_id))];
 
-  const [withAnime, { data: profileData }] = await Promise.all([
-    attachAnime(entries),
-    supabase
-      .from("profiles")
-      .select("id, username, avatar_url")
-      .in("id", userIds),
-  ]);
+  const [withAnime, { data: profileData, error: profileError }] =
+    await Promise.all([
+      attachAnime(entries),
+      supabase
+        .from("profiles")
+        .select("id, username, avatar_url")
+        .in("id", userIds),
+    ]);
+  if (profileError) throw new Error(profileError.message);
 
   return withAnime.map((entry) => ({
     ...entry,

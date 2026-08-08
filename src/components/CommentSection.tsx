@@ -31,12 +31,19 @@ import type { Comment } from "../types/database.types";
 
 interface CommentSectionProps {
   entryId: string;
+  /** Aggregated count from the entry fetch, shown only when signed out —
+   * the comment list itself stays gated (comments carry author identity),
+   * but the count alone isn't identifying, so it need not default to 0. */
+  commentCount?: number;
 }
 
 const VISIBLE_ROOT_COMMENTS = 3;
 // #endregion Types
 
-export const CommentSection = ({ entryId }: CommentSectionProps) => {
+export const CommentSection = ({
+  entryId,
+  commentCount,
+}: CommentSectionProps) => {
   const [newCommentText, setNewCommentText] = useState<string>("");
   const [showAll, setShowAll] = useState<boolean>(false);
   const [sort, setSort] = useState<CommentSort>("top");
@@ -126,7 +133,7 @@ export const CommentSection = ({ entryId }: CommentSectionProps) => {
             </svg>
             <h3 className="text-xl font-semibold text-white">Comments</h3>
             <span className="rounded-full border border-neutral-800 bg-neutral-950 px-2 py-0.5 font-mono text-[11px] text-neutral-400">
-              {comments?.length ?? 0}
+              {user ? (comments?.length ?? 0) : (commentCount ?? 0)}
             </span>
           </div>
           <p className="mt-1 text-sm text-neutral-500">

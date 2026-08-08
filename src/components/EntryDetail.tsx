@@ -291,7 +291,11 @@ export const EntryDetail = ({ entryId }: EntryDetailProps) => {
 
         {/* Reactions */}
         <div className="mt-5">
-          <LikeButton entryId={entryId} />
+          <LikeButton
+            entryId={entryId}
+            likesCount={data.likes_count}
+            dislikesCount={data.dislikes_count}
+          />
         </div>
       </aside>
 
@@ -360,7 +364,7 @@ export const EntryDetail = ({ entryId }: EntryDetailProps) => {
 
         {/* Comments */}
         <div className="mt-12 max-w-3xl border-t border-neutral-800 pt-8">
-          <CommentSection entryId={entryId} />
+          <CommentSection entryId={entryId} commentCount={data.comment_count} />
         </div>
       </article>
     </div>

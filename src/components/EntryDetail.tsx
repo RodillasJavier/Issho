@@ -228,26 +228,57 @@ export const EntryDetail = ({ entryId }: EntryDetailProps) => {
             )}
         </section>
 
-        {/* Rating Dial */}
-        <section className="mt-5 border-y border-neutral-800 py-6">
-          <p className="mb-3 text-center text-[10px] font-semibold uppercase tracking-widest text-neutral-500">
-            {isLive ? "Current rating" : "Rating"}
-          </p>
-          <div
-            className="mx-auto grid size-28 place-items-center rounded-full p-[5px] shadow-[0_0_28px_rgba(244,63,94,0.14)]"
-            style={{
-              background: `conic-gradient(#f43f5e 0deg ${ratingDegrees}deg, #262626 ${ratingDegrees}deg 360deg)`,
-            }}
-          >
-            <div className="grid size-full place-items-center rounded-full bg-neutral-950">
+        {/* Current Rating */}
+        <section className="mt-5 border-y border-neutral-800">
+          {/* Compact row below lg; the circular dial (unchanged) takes over
+              at lg+, where the sidebar becomes a fixed-width column rather
+              than a stacked mobile section. */}
+          <div className="py-4 lg:hidden">
+            <div className="flex items-baseline justify-between gap-3">
+              <span className="text-[10px] font-semibold uppercase tracking-widest text-neutral-500">
+                {isLive ? "Current rating" : "Rating"}
+              </span>
               {displayRating ? (
-                <p className="font-mono text-3xl font-semibold text-rose-400">
-                  {displayRating}
-                  <span className="ml-1 text-lg text-neutral-500">/10</span>
+                <p className="flex items-baseline gap-1">
+                  <span className="font-mono text-2xl font-semibold text-rose-400">
+                    {displayRating}
+                  </span>
+                  <span className="text-sm text-neutral-500">/10</span>
                 </p>
               ) : (
-                <p className="font-mono text-2xl text-neutral-600">—</p>
+                <span className="font-mono text-lg text-neutral-600">—</span>
               )}
+            </div>
+            <div className="mt-2.5 h-1.5 w-full overflow-hidden rounded-full bg-neutral-800">
+              <div
+                className="h-full rounded-full bg-rose-500"
+                style={{
+                  width: `${displayRating ? (displayRating / 10) * 100 : 0}%`,
+                }}
+              />
+            </div>
+          </div>
+
+          <div className="hidden py-6 lg:block">
+            <p className="mb-3 text-center text-[10px] font-semibold uppercase tracking-widest text-neutral-500">
+              {isLive ? "Current rating" : "Rating"}
+            </p>
+            <div
+              className="mx-auto grid size-28 place-items-center rounded-full p-[5px] shadow-[0_0_28px_rgba(244,63,94,0.14)]"
+              style={{
+                background: `conic-gradient(#f43f5e 0deg ${ratingDegrees}deg, #262626 ${ratingDegrees}deg 360deg)`,
+              }}
+            >
+              <div className="grid size-full place-items-center rounded-full bg-neutral-950">
+                {displayRating ? (
+                  <p className="font-mono text-3xl font-semibold text-rose-400">
+                    {displayRating}
+                    <span className="ml-1 text-lg text-neutral-500">/10</span>
+                  </p>
+                ) : (
+                  <p className="font-mono text-2xl text-neutral-600">—</p>
+                )}
+              </div>
             </div>
           </div>
         </section>
@@ -291,7 +322,11 @@ export const EntryDetail = ({ entryId }: EntryDetailProps) => {
 
         {/* Reactions */}
         <div className="mt-5">
-          <LikeButton entryId={entryId} />
+          <LikeButton
+            entryId={entryId}
+            likesCount={data.likes_count}
+            dislikesCount={data.dislikes_count}
+          />
         </div>
       </aside>
 
@@ -360,7 +395,7 @@ export const EntryDetail = ({ entryId }: EntryDetailProps) => {
 
         {/* Comments */}
         <div className="mt-12 max-w-3xl border-t border-neutral-800 pt-8">
-          <CommentSection entryId={entryId} />
+          <CommentSection entryId={entryId} commentCount={data.comment_count} />
         </div>
       </article>
     </div>
@@ -379,8 +414,14 @@ function EntryDetailSkeleton() {
           <Skeleton className="h-10 w-32" />
           <Skeleton className="mt-4 h-4 w-24" />
         </div>
-        <div className="mt-5 border-y border-neutral-800 py-6">
-          <Skeleton className="mx-auto size-28 rounded-full" />
+        <div className="mt-5 border-y border-neutral-800">
+          <div className="py-4 lg:hidden">
+            <Skeleton className="h-6 w-full" />
+            <Skeleton className="mt-2.5 h-1.5 w-full rounded-full" />
+          </div>
+          <div className="hidden py-6 lg:block">
+            <Skeleton className="mx-auto size-28 rounded-full" />
+          </div>
         </div>
         <div className="mt-5 rounded-xl border border-neutral-800 bg-neutral-950 p-4">
           <Skeleton className="h-4 w-16" />

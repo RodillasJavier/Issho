@@ -2,10 +2,12 @@
  * src/services/supabase/votes.ts
  *
  * Direct Supabase queries for the votes table (Reddit-style up/down on
- * entries).
+ * entries). The toggle logic itself lives in voteToggle.ts, shared with
+ * comments.ts's castCommentVote.
  */
 import supabase from "../../supabase-client";
 import type { Vote } from "../../types/database.types";
+import { castTableVote } from "./voteToggle";
 
 export const getVotes = async (entryId: string): Promise<Vote[]> => {
   const { data, error } = await supabase
@@ -22,42 +24,9 @@ export const getVotes = async (entryId: string): Promise<Vote[]> => {
  *
  * @returns The caller's resulting vote: 1, -1, or null if it was cleared.
  */
-export const castVote = async (
+export const castVote = (
   entryId: string,
   userId: string,
   voteValue: 1 | -1
-): Promise<number | null> => {
-  const { data: existingVote } = await supabase
-    .from("votes")
-    .select("*")
-    .eq("entry_id", entryId)
-    .eq("user_id", userId)
-    .maybeSingle();
-
-  if (existingVote?.vote === voteValue) {
-    const { error } = await supabase
-      .from("votes")
-      .delete()
-      .eq("id", existingVote.id);
-
-    if (error) throw new Error(error.message);
-    return null;
-  }
-
-  if (existingVote) {
-    const { error } = await supabase
-      .from("votes")
-      .update({ vote: voteValue })
-      .eq("id", existingVote.id);
-
-    if (error) throw new Error(error.message);
-    return voteValue;
-  }
-
-  const { error } = await supabase
-    .from("votes")
-    .insert({ entry_id: entryId, user_id: userId, vote: voteValue });
-
-  if (error) throw new Error(error.message);
-  return voteValue;
-};
+): Promise<number | null> =>
+  castTableVote("votes", "entry_id", entryId, userId, voteValue);

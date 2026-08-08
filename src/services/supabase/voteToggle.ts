@@ -52,7 +52,27 @@ export const castTableVote = async (
     .from(table)
     .insert({ [idColumn]: targetId, user_id: userId, vote: voteValue });
 
-  if (error) throw new Error(error.message);
+  if (error) {
+    // A concurrent request (double-click before the button disables, a
+    // retry, two open tabs) can win the race between this function's
+    // select and insert above, creating the row first. The unique
+    // (idColumn, user_id) constraint then rejects this insert instead of
+    // silently duplicating the row — fall back to updating the row that
+    // won, rather than surfacing an error for what the user experiences
+    // as one click.
+    if (error.code === "23505") {
+      const { error: retryError } = await supabase
+        .from(table)
+        .update({ vote: voteValue })
+        .eq(idColumn, targetId)
+        .eq("user_id", userId);
+
+      if (retryError) throw new Error(retryError.message);
+      return voteValue;
+    }
+
+    throw new Error(error.message);
+  }
   return voteValue;
 };
 

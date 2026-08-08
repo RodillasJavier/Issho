@@ -265,7 +265,13 @@ describe("vote mutation authorization", () => {
 
   it("blocks a friend from hijacking another user's vote via UPDATE", async () => {
     // Alice votes on her own entry, so Bob (her friend) can see the row and
-    // target it by id.
+    // target it by id. Clear any row a previous test left behind first —
+    // asService writes aren't rolled back, and (entry_id, user_id) is
+    // unique now.
+    await db.asService(
+      `delete from votes where entry_id = $1 and user_id = $2`,
+      [aliceEntry, alice]
+    );
     const [{ id: voteId }] = await db.asService<{ id: string }>(
       `insert into votes (entry_id, user_id, vote) values ($1, $2, 1) returning id`,
       [aliceEntry, alice]
@@ -286,6 +292,10 @@ describe("vote mutation authorization", () => {
   });
 
   it("lets the owner update their own vote", async () => {
+    await db.asService(
+      `delete from votes where entry_id = $1 and user_id = $2`,
+      [aliceEntry, alice]
+    );
     const [{ id: voteId }] = await db.asService<{ id: string }>(
       `insert into votes (entry_id, user_id, vote) values ($1, $2, 1) returning id`,
       [aliceEntry, alice]
@@ -384,6 +394,50 @@ describe("comments insert authorization", () => {
       [aliceEntry, bob]
     );
     expect(rows).toHaveLength(1);
+  });
+});
+
+describe("vote uniqueness", () => {
+  // Regression coverage for the fix to a TOCTOU race in castTableVote: two
+  // near-simultaneous requests could both see "no existing vote" and both
+  // insert, producing two rows for one user + target. These constraints turn
+  // that into a rejected second insert instead of a silent duplicate.
+
+  it("rejects a second vote row for the same user and entry", async () => {
+    await db.asService(
+      `delete from votes where entry_id = $1 and user_id = $2`,
+      [aliceEntry, alice]
+    );
+    await db.asService(
+      `insert into votes (entry_id, user_id, vote) values ($1, $2, 1)`,
+      [aliceEntry, alice]
+    );
+
+    const error = await db.expectRejected(
+      { id: alice },
+      `insert into votes (entry_id, user_id, vote) values ($1, $2, -1)`,
+      [aliceEntry, alice]
+    );
+    expect(error.code).toBe("23505");
+  });
+
+  it("rejects a second comment-vote row for the same user and comment", async () => {
+    const [{ id: commentId }] = await db.asService<{ id: string }>(
+      `insert into comments (entry_id, user_id, content) values ($1, $2, 'uniqueness target')
+       returning id`,
+      [aliceEntry, alice]
+    );
+    await db.asService(
+      `insert into comment_votes (comment_id, user_id, vote) values ($1, $2, 1)`,
+      [commentId, alice]
+    );
+
+    const error = await db.expectRejected(
+      { id: alice },
+      `insert into comment_votes (comment_id, user_id, vote) values ($1, $2, -1)`,
+      [commentId, alice]
+    );
+    expect(error.code).toBe("23505");
   });
 });
 

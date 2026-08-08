@@ -351,6 +351,42 @@ describe("vote mutation authorization", () => {
   });
 });
 
+describe("comments insert authorization", () => {
+  // Regression coverage for a fix to comments' INSERT policy: it used to be
+  // `with check (true)` — no ownership or visibility check at all — so any
+  // authenticated user could forge a comment under someone else's user_id,
+  // or attach a comment to an entry they cannot see. Revert the policy and
+  // these go red.
+
+  it("blocks inserting a comment with a spoofed user_id", async () => {
+    const error = await db.expectRejected(
+      { id: bob },
+      `insert into comments (entry_id, user_id, content) values ($1, $2, 'not really bob')`,
+      [aliceEntry, alice]
+    );
+    expect(error.code).toBe("42501");
+  });
+
+  it("blocks inserting a comment on an entry the commenter cannot see", async () => {
+    const error = await db.expectRejected(
+      { id: alice },
+      `insert into comments (entry_id, user_id, content) values ($1, $2, 'blind comment')`,
+      [strangerEntry, alice]
+    );
+    expect(error.code).toBe("42501");
+  });
+
+  it("lets a friend comment on a visible entry under their own identity", async () => {
+    const rows = await db.as(
+      { id: bob },
+      `insert into comments (entry_id, user_id, content) values ($1, $2, 'nice review')
+       returning id`,
+      [aliceEntry, bob]
+    );
+    expect(rows).toHaveLength(1);
+  });
+});
+
 describe("get_comments_with_counts", () => {
   it("is not SECURITY DEFINER", async () => {
     // Same reasoning as get_entries_with_counts: definer would stop it

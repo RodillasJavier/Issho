@@ -2,21 +2,28 @@
  * src/components/CommentSection.tsx
  *
  * Component for displaying and adding comments to an entry: heading with a
- * live count, a composer card, the threaded comment list (first few shown,
- * expandable), and sign-in gating for anonymous viewers.
+ * live count, a sort control, a composer card, the threaded comment list
+ * (first few shown, expandable), and sign-in gating for anonymous viewers.
  */
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Send } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import supabase from "../supabase-client";
 import { CommentItem } from "./CommentItem";
+import { CommentSortTabs } from "./CommentSortTabs";
 import { UserAvatar } from "./UserAvatar";
 import { getProfileById } from "../services/supabase/profiles";
+import {
+  commentsQueryKey,
+  fetchComments,
+  postComment,
+} from "../services/supabase/comments";
 import {
   entriesQueryKey,
   incrementEntryCommentCount,
 } from "../services/supabase/entries";
+import { buildCommentTree, sortComments } from "../utils/comments";
+import type { CommentSort } from "../constants/commentSort";
 import type { Entry } from "../types/database.types";
 
 // #region Types
@@ -26,57 +33,13 @@ interface CommentSectionProps {
   entryId: string;
 }
 
-interface NewComment {
-  content: string;
-  parent_comment_id?: string | null;
-}
-
 const VISIBLE_ROOT_COMMENTS = 3;
 // #endregion Types
-
-const createComment = async (
-  newComment: NewComment,
-  entryId: string,
-  userId?: string
-) => {
-  if (!userId) {
-    throw new Error("You must be logged in to comment.");
-  }
-
-  const { error } = await supabase.from("comments").insert({
-    entry_id: entryId,
-    content: newComment.content,
-    parent_comment_id: newComment.parent_comment_id || null,
-    user_id: userId,
-  });
-
-  if (error) {
-    throw new Error(error.message);
-  }
-};
-
-const fetchComments = async (entryId: string): Promise<Comment[]> => {
-  const { data, error } = await supabase
-    .from("comments")
-    .select(
-      `
-      *,
-      profile:profiles!user_id(id, username, avatar_url)
-    `
-    )
-    .eq("entry_id", entryId)
-    .order("created_at", { ascending: true });
-
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  return data as Comment[];
-};
 
 export const CommentSection = ({ entryId }: CommentSectionProps) => {
   const [newCommentText, setNewCommentText] = useState<string>("");
   const [showAll, setShowAll] = useState<boolean>(false);
+  const [sort, setSort] = useState<CommentSort>("top");
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
@@ -85,7 +48,7 @@ export const CommentSection = ({ entryId }: CommentSectionProps) => {
     isLoading,
     error,
   } = useQuery<Comment[], Error>({
-    queryKey: ["comments", entryId],
+    queryKey: commentsQueryKey(entryId),
     queryFn: () => fetchComments(entryId),
     // Comments carry their author's identity, so logged-out visitors don't
     // get them at all — RLS would return an empty list regardless, and not
@@ -101,10 +64,9 @@ export const CommentSection = ({ entryId }: CommentSectionProps) => {
   });
 
   const { mutate, isPending, isError } = useMutation({
-    mutationFn: (newComment: NewComment) =>
-      createComment(newComment, entryId, user?.id),
+    mutationFn: (content: string) => postComment(entryId, user?.id, content),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["comments", entryId] });
+      queryClient.invalidateQueries({ queryKey: commentsQueryKey(entryId) });
 
       // Keep the cached feed list's comment count in sync so navigating
       // back shows the up-to-date number instead of the stale initial fetch.
@@ -121,43 +83,18 @@ export const CommentSection = ({ entryId }: CommentSectionProps) => {
       return;
     }
 
-    mutate({ content: newCommentText.trim(), parent_comment_id: null });
+    mutate(newCommentText.trim());
 
     setNewCommentText("");
   };
 
-  /**
-   * Map of comments - comment : parent
-   *
-   * @param flatComments - Array of top level comments with mappings to their children (replies)
-   * @returns Tree object representing all the comment parent relationships
-   */
-  const buildCommentTree = (
-    flatComments: Comment[]
-  ): (Comment & { children: Comment[] })[] => {
-    const map = new Map<string, Comment & { children: Comment[] }>();
-    const roots: (Comment & { children: Comment[] })[] = [];
-
-    flatComments.forEach((comment) => {
-      map.set(comment.id, { ...comment, children: [] });
-    });
-
-    flatComments.forEach((comment) => {
-      if (comment.parent_comment_id) {
-        const parent = map.get(comment.parent_comment_id);
-
-        if (parent) {
-          parent.children.push(map.get(comment.id)!);
-        }
-      }
-
-      if (!comment.parent_comment_id) {
-        roots.push(map.get(comment.id)!);
-      }
-    });
-
-    return roots;
-  };
+  // Memoized so typing in the composer (which re-renders this component on
+  // every keystroke via newCommentText state) doesn't re-walk and re-sort
+  // the whole tree — only an actual comments/sort change should pay for it.
+  const commentTree = useMemo(
+    () => sortComments(buildCommentTree(comments ?? []), sort),
+    [comments, sort]
+  );
 
   if (isLoading) {
     return <div>Loading comments...</div>;
@@ -168,7 +105,6 @@ export const CommentSection = ({ entryId }: CommentSectionProps) => {
     return <div>Error loading comments: {error.message}</div>;
   }
 
-  const commentTree = comments ? buildCommentTree(comments) : [];
   const visibleComments = showAll
     ? commentTree
     : commentTree.slice(0, VISIBLE_ROOT_COMMENTS);
@@ -177,26 +113,32 @@ export const CommentSection = ({ entryId }: CommentSectionProps) => {
   return (
     <div>
       {/* Heading */}
-      <div className="mb-6">
-        <div className="flex items-center gap-2">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 640 640"
-            fill="currentColor"
-            className="w-4 text-rose-400"
-          >
-            <path d="M576 304C576 436.5 461.4 544 320 544C282.9 544 247.7 536.6 215.9 523.3L97.5 574.1C88.1 578.1 77.3 575.8 70.4 568.3C63.5 560.8 62 549.8 66.8 540.8L115.6 448.6C83.2 408.3 64 358.3 64 304C64 171.5 178.6 64 320 64C461.4 64 576 171.5 576 304z" />
-          </svg>
-          <h3 className="text-xl font-semibold text-white">Comments</h3>
-          <span className="rounded-full border border-neutral-800 bg-neutral-950 px-2 py-0.5 font-mono text-[11px] text-neutral-400">
-            {comments?.length ?? 0}
-          </span>
+      <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 640 640"
+              fill="currentColor"
+              className="w-4 text-rose-400"
+            >
+              <path d="M576 304C576 436.5 461.4 544 320 544C282.9 544 247.7 536.6 215.9 523.3L97.5 574.1C88.1 578.1 77.3 575.8 70.4 568.3C63.5 560.8 62 549.8 66.8 540.8L115.6 448.6C83.2 408.3 64 358.3 64 304C64 171.5 178.6 64 320 64C461.4 64 576 171.5 576 304z" />
+            </svg>
+            <h3 className="text-xl font-semibold text-white">Comments</h3>
+            <span className="rounded-full border border-neutral-800 bg-neutral-950 px-2 py-0.5 font-mono text-[11px] text-neutral-400">
+              {comments?.length ?? 0}
+            </span>
+          </div>
+          <p className="mt-1 text-sm text-neutral-500">
+            {user
+              ? "Join the conversation about this entry."
+              : "Sign in to read and join the conversation."}
+          </p>
         </div>
-        <p className="mt-1 text-sm text-neutral-500">
-          {user
-            ? "Join the conversation about this entry."
-            : "Sign in to read and join the conversation."}
-        </p>
+
+        {user && commentTree.length > 0 && (
+          <CommentSortTabs value={sort} onChange={setSort} />
+        )}
       </div>
 
       {/* Composer */}
@@ -254,7 +196,12 @@ export const CommentSection = ({ entryId }: CommentSectionProps) => {
       <div className="mt-6 space-y-3">
         {visibleComments.map((comment) => {
           return (
-            <CommentItem key={comment.id} comment={comment} entryId={entryId} />
+            <CommentItem
+              key={comment.id}
+              comment={comment}
+              entryId={entryId}
+              depth={0}
+            />
           );
         })}
       </div>

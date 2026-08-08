@@ -211,6 +211,90 @@ describe("comments and votes", () => {
   });
 });
 
+describe("comment votes", () => {
+  it("hides them when the parent entry is hidden", async () => {
+    const [{ id: commentId }] = await db.asService<{ id: string }>(
+      `insert into comments (entry_id, user_id, content) values ($1, $2, 'stranger comment')
+       returning id`,
+      [strangerEntry, stranger]
+    );
+    await db.asService(
+      `insert into comment_votes (comment_id, user_id, vote) values ($1, $2, 1)`,
+      [commentId, stranger]
+    );
+
+    const rows = await db.as(
+      { id: alice },
+      `select id from comment_votes where comment_id = $1`,
+      [commentId]
+    );
+    expect(rows).toHaveLength(0);
+  });
+
+  it("shows a whole thread's votes when the entry is visible, whoever voted", async () => {
+    // can_view_comment routes through can_view_entry, keyed off the entry's
+    // author — so a visible comment's votes are visible whoever cast them.
+    const [{ id: commentId }] = await db.asService<{ id: string }>(
+      `insert into comments (entry_id, user_id, content) values ($1, $2, 'alice-side comment')
+       returning id`,
+      [aliceEntry, alice]
+    );
+    const [{ id: voteId }] = await db.asService<{ id: string }>(
+      `insert into comment_votes (comment_id, user_id, vote) values ($1, $2, 1)
+       returning id`,
+      [commentId, stranger]
+    );
+
+    const rows = await db.as(
+      { id: bob },
+      `select id from comment_votes where id = $1`,
+      [voteId]
+    );
+    expect(rows).toHaveLength(1);
+  });
+});
+
+describe("get_comments_with_counts", () => {
+  it("is not SECURITY DEFINER", async () => {
+    // Same reasoning as get_entries_with_counts: definer would stop it
+    // inheriting comments' SELECT policy and reopen global visibility.
+    const [row] = await db.asService<{ prosecdef: boolean }>(
+      `select prosecdef from pg_proc where proname = 'get_comments_with_counts'`
+    );
+    expect(row.prosecdef).toBe(false);
+  });
+
+  it("returns only what the caller may see", async () => {
+    const rows = await db.as(
+      { id: alice },
+      `select id from get_comments_with_counts($1)`,
+      [strangerEntry]
+    );
+    expect(rows).toHaveLength(0);
+  });
+
+  it("includes aggregated vote counts for a visible thread", async () => {
+    const [{ id: commentId }] = await db.asService<{ id: string }>(
+      `insert into comments (entry_id, user_id, content) values ($1, $2, 'counted')
+       returning id`,
+      [aliceEntry, alice]
+    );
+    await db.asService(
+      `insert into comment_votes (comment_id, user_id, vote) values ($1, $2, 1)`,
+      [commentId, bob]
+    );
+
+    const rows = await db.as<{ likes_count: number; user_vote: number | null }>(
+      { id: bob },
+      `select likes_count, user_vote from get_comments_with_counts($1) where id = $2`,
+      [aliceEntry, commentId]
+    );
+    expect(rows).toHaveLength(1);
+    expect(Number(rows[0].likes_count)).toBe(1);
+    expect(rows[0].user_vote).toBe(1);
+  });
+});
+
 describe("get_entries_with_counts", () => {
   it("is not SECURITY DEFINER", async () => {
     // Making it definer would silently reopen global visibility: it would stop

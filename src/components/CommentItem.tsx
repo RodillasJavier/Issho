@@ -73,11 +73,11 @@ export const CommentItem = ({ comment, entryId, depth }: CommentItemProps) => {
   const handleReplySubmit = (e: React.FormEvent) => {
     e.preventDefault(); // Prevent page reload
 
-    if (!replyText) {
+    if (!replyText.trim()) {
       return;
     }
 
-    mutate(replyText);
+    mutate(replyText.trim());
   };
 
   const isOwn = !!user && comment.user_id === user.id;
@@ -153,7 +153,7 @@ export const CommentItem = ({ comment, entryId, depth }: CommentItemProps) => {
           <div className="mt-1 flex justify-end">
             <button
               type="submit"
-              disabled={!replyText || isPending}
+              disabled={!replyText.trim() || isPending}
               className="rounded-md bg-rose-500 px-2.5 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-rose-400 disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer"
             >
               {isPending ? "Posting..." : "Post reply"}

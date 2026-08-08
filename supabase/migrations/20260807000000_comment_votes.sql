@@ -34,10 +34,12 @@ alter table public.comment_votes enable row level security;
 create policy "Comment votes are visible when the parent entry is"
   on public.comment_votes for select to authenticated using (can_view_comment(comment_id));
 create policy "Enable insert for users based on user_id"
-  on public.comment_votes for insert to public with check ((select auth.uid()) = user_id);
+  on public.comment_votes for insert to authenticated
+  with check ((select auth.uid()) = user_id and can_view_comment(comment_id));
 create policy "Enable update for users based on user_id"
-  on public.comment_votes for update to public
-  using (auth.uid() is not null) with check ((select auth.uid()) = user_id);
+  on public.comment_votes for update to authenticated
+  using ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id and can_view_comment(comment_id));
 create policy "Enable delete for users based on user_id"
   on public.comment_votes for delete to public using ((select auth.uid()) = user_id);
 

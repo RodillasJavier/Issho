@@ -254,6 +254,103 @@ describe("comment votes", () => {
   });
 });
 
+describe("vote mutation authorization", () => {
+  // Regression coverage for a fix to `votes`/`comment_votes`: the UPDATE
+  // policy's USING clause used to be `auth.uid() is not null` — any
+  // authenticated user, not just the row's owner — so anyone who could see a
+  // vote row (SELECT is visibility-gated, so any mutual friend could) could
+  // retarget it by primary key and overwrite it with their own vote. INSERT
+  // also never checked the voter could see the thing being voted on. Revert
+  // either policy and these go red.
+
+  it("blocks a friend from hijacking another user's vote via UPDATE", async () => {
+    // Alice votes on her own entry, so Bob (her friend) can see the row and
+    // target it by id.
+    const [{ id: voteId }] = await db.asService<{ id: string }>(
+      `insert into votes (entry_id, user_id, vote) values ($1, $2, 1) returning id`,
+      [aliceEntry, alice]
+    );
+
+    const rows = await db.as(
+      { id: bob },
+      `update votes set vote = -1 where id = $1 returning vote`,
+      [voteId]
+    );
+    expect(rows).toHaveLength(0);
+
+    const [row] = await db.asService<{ vote: number }>(
+      `select vote from votes where id = $1`,
+      [voteId]
+    );
+    expect(row.vote).toBe(1);
+  });
+
+  it("lets the owner update their own vote", async () => {
+    const [{ id: voteId }] = await db.asService<{ id: string }>(
+      `insert into votes (entry_id, user_id, vote) values ($1, $2, 1) returning id`,
+      [aliceEntry, alice]
+    );
+
+    const rows = await db.as(
+      { id: alice },
+      `update votes set vote = -1 where id = $1 returning vote`,
+      [voteId]
+    );
+    expect(rows).toHaveLength(1);
+    expect(rows[0].vote).toBe(-1);
+  });
+
+  it("blocks inserting a vote on an entry the voter cannot see", async () => {
+    const error = await db.expectRejected(
+      { id: alice },
+      `insert into votes (entry_id, user_id, vote) values ($1, $2, 1)`,
+      [strangerEntry, alice]
+    );
+    expect(error.code).toBe("42501");
+  });
+
+  it("blocks a friend from hijacking another user's comment vote via UPDATE", async () => {
+    const [{ id: commentId }] = await db.asService<{ id: string }>(
+      `insert into comments (entry_id, user_id, content) values ($1, $2, 'hijack target')
+       returning id`,
+      [aliceEntry, alice]
+    );
+    const [{ id: voteId }] = await db.asService<{ id: string }>(
+      `insert into comment_votes (comment_id, user_id, vote) values ($1, $2, 1)
+       returning id`,
+      [commentId, alice]
+    );
+
+    const rows = await db.as(
+      { id: bob },
+      `update comment_votes set vote = -1 where id = $1 returning vote`,
+      [voteId]
+    );
+    expect(rows).toHaveLength(0);
+
+    const [row] = await db.asService<{ vote: number }>(
+      `select vote from comment_votes where id = $1`,
+      [voteId]
+    );
+    expect(row.vote).toBe(1);
+  });
+
+  it("blocks inserting a comment vote on a comment the voter cannot see", async () => {
+    const [{ id: commentId }] = await db.asService<{ id: string }>(
+      `insert into comments (entry_id, user_id, content) values ($1, $2, 'invisible to alice')
+       returning id`,
+      [strangerEntry, stranger]
+    );
+
+    const error = await db.expectRejected(
+      { id: alice },
+      `insert into comment_votes (comment_id, user_id, vote) values ($1, $2, 1)`,
+      [commentId, alice]
+    );
+    expect(error.code).toBe("42501");
+  });
+});
+
 describe("get_comments_with_counts", () => {
   it("is not SECURITY DEFINER", async () => {
     // Same reasoning as get_entries_with_counts: definer would stop it

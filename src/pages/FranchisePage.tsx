@@ -130,7 +130,7 @@ export const FranchisePage = () => {
         description={root.description}
       />
 
-      <div className="flex flex-col items-start gap-6 lg:flex-row lg:gap-8">
+      <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:gap-8">
         <DetailSidebar
           rating={franchiseEntry?.rating ?? null}
           secondaryStat={{ label: "Releases", value: franchiseMembers.length }}

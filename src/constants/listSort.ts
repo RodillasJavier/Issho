@@ -24,6 +24,9 @@ export const SORT_OPTIONS: { key: SortKey; label: string }[] = [
 
 export const DEFAULT_SORT_KEY: SortKey = "recent";
 
+export const isSortKey = (value: string | null): value is SortKey =>
+  SORT_OPTIONS.some((option) => option.key === value);
+
 // Unrated cards sink to the bottom in both directions — "worst first" should
 // mean the worst thing you rated, not everything you haven't rated yet.
 const ratingDesc = (card: ProfileListCardModel) => card.rating ?? -1;

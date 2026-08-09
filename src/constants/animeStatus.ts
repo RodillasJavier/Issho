@@ -52,6 +52,16 @@ export const STATUS_OPTIONS: {
   },
 ];
 
+// A profile list's status filter always adds an "all" option on top of the
+// four real statuses. Shared by AnimeListStats (renders the tiles) and
+// UserProfilePage (owns the filter state) so the two can't drift.
+export type AnimeListFilter = "all" | AnimeStatus;
+
+export const isAnimeListFilter = (
+  value: string | null
+): value is AnimeListFilter =>
+  value === "all" || STATUS_OPTIONS.some((option) => option.value === value);
+
 // Interactive weight of the same bordered/translucent language as
 // STATUS_BADGE_STYLES below — a shade stronger since these sit on clickable
 // buttons (ListStatusButton, SearchResultCard) as well as static tags

@@ -40,13 +40,12 @@ import {
 } from "../utils/listEntries";
 import {
   DEFAULT_SORT_KEY,
-  SORT_OPTIONS,
+  isSortKey,
   sortProfileCards,
 } from "../constants/listSort";
 import type { SortKey } from "../constants/listSort";
-import type { AnimeStatus } from "../types/database.types";
-
-type FilterTab = "all" | AnimeStatus;
+import { isAnimeListFilter } from "../constants/animeStatus";
+import type { AnimeListFilter } from "../constants/animeStatus";
 
 const ITEMS_PER_PAGE = 12;
 
@@ -55,15 +54,6 @@ const ITEMS_PER_PAGE = 12;
 // same pattern as SettingsPage's `?tab=`. A fresh nav Link to the bare
 // `/profile/:username` (no query string) still resets to defaults, which is
 // the desired split between "came back" and "started over".
-const isFilterTab = (value: string | null): value is FilterTab =>
-  value === "all" ||
-  value === "watching" ||
-  value === "completed" ||
-  value === "dropped" ||
-  value === "not_started";
-
-const isSortKey = (value: string | null): value is SortKey =>
-  SORT_OPTIONS.some((option) => option.key === value);
 
 // #region Component Logic
 
@@ -73,7 +63,7 @@ export const UserProfilePage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const filterParam = searchParams.get("filter");
-  const activeFilter: FilterTab = isFilterTab(filterParam)
+  const activeFilter: AnimeListFilter = isAnimeListFilter(filterParam)
     ? filterParam
     : "all";
 
@@ -242,7 +232,7 @@ export const UserProfilePage = () => {
     enabled: !!user && !!profile?.id,
   });
 
-  const handleFilterChange = (filter: FilterTab) => {
+  const handleFilterChange = (filter: AnimeListFilter) => {
     setSearchParams(
       (prev) => {
         const next = new URLSearchParams(prev);
@@ -258,6 +248,18 @@ export const UserProfilePage = () => {
 
   const handleQueryChange = (value: string) => {
     setQuery(value);
+    // Reset to page 1 immediately rather than waiting for the debounced
+    // write-back effect below to catch up with the new `q` ~200ms later —
+    // otherwise a later page briefly re-renders against the new (filtered)
+    // results before snapping back to page 1.
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete("page");
+        return next;
+      },
+      { replace: true }
+    );
   };
 
   const handleSortChange = (key: SortKey) => {

@@ -125,15 +125,26 @@ export const EntryList = ({ filter }: EntryListProps) => {
     return allEntries;
   }, [allEntries, filter, user, friendIds]);
 
+  const pageCount = Math.max(
+    1,
+    Math.ceil(filteredEntries.length / ENTRIES_PER_PAGE)
+  );
+
+  // filteredEntries can shrink independent of the filter changing — a
+  // background refetch of the shared feed query (window refocus, a friend's
+  // visibility changing) can legitimately return fewer rows. Without this, a
+  // viewer sitting on a later page would see an empty page with "Next"
+  // disabled and no way out except "Prev". Same pattern as
+  // CommunityEntriesSection's resetKey clamp.
+  if (pageNumber > pageCount - 1) {
+    setPageNumber(pageCount - 1);
+  }
+
   const entries = filteredEntries.slice(
     pageNumber * ENTRIES_PER_PAGE,
     (pageNumber + 1) * ENTRIES_PER_PAGE
   );
   const hasMore = (pageNumber + 1) * ENTRIES_PER_PAGE < filteredEntries.length;
-  const pageCount = Math.max(
-    1,
-    Math.ceil(filteredEntries.length / ENTRIES_PER_PAGE)
-  );
 
   // Friends' entries from the last 7 days, for FollowingPanel's headline stat
   const recentActivityCount = useMemo(() => {

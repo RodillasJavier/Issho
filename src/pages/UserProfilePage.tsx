@@ -15,7 +15,7 @@
 import { useMemo, useState } from "react";
 import { useParams } from "react-router";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight, SearchX } from "lucide-react";
+import { SearchX } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import { useDebouncedValue } from "../hooks/useDebouncedValue";
 import { getProfileByUsername } from "../services/supabase/profiles";
@@ -33,6 +33,7 @@ import { AnimeListStats } from "../components/AnimeListStats";
 import { ListToolbar } from "../components/ListToolbar";
 import { ProfileListItem } from "../components/ProfileListItem";
 import { Skeleton } from "../components/ui/Skeleton";
+import { Pagination } from "../components/ui/Pagination";
 import {
   buildProfileListCards,
   franchiseKeysNeedingMembers,
@@ -249,6 +250,10 @@ export const UserProfilePage = () => {
               onSortChange={handleSortChange}
               resultCount={visibleCards.length}
               totalCount={seriesCards.length}
+              pageNumber={safePage}
+              pageCount={pageCount}
+              onPrevPage={handlePrevPage}
+              onNextPage={handleNextPage}
             />
 
             {paginatedCards.length === 0 ? (
@@ -296,34 +301,13 @@ export const UserProfilePage = () => {
               </div>
             )}
 
-            {pageCount > 1 && (
-              <nav
-                aria-label="Pagination"
-                className="flex items-center justify-center gap-4 pt-2"
-              >
-                <button
-                  onClick={handlePrevPage}
-                  disabled={safePage === 0}
-                  className="inline-flex h-9 cursor-pointer items-center gap-1 rounded-md border border-zinc-800 bg-neutral-950/60 px-3 text-sm text-zinc-400 transition-colors hover:border-zinc-700 hover:text-zinc-100 disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  <ChevronLeft aria-hidden className="size-4" />
-                  Prev
-                </button>
-
-                <span className="font-mono text-[10px] tracking-[0.18em] text-zinc-600 uppercase">
-                  Page {safePage + 1} / {pageCount}
-                </span>
-
-                <button
-                  onClick={handleNextPage}
-                  disabled={safePage >= pageCount - 1}
-                  className="inline-flex h-9 cursor-pointer items-center gap-1 rounded-md border border-zinc-800 bg-neutral-950/60 px-3 text-sm text-zinc-400 transition-colors hover:border-zinc-700 hover:text-zinc-100 disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  Next
-                  <ChevronRight aria-hidden className="size-4" />
-                </button>
-              </nav>
-            )}
+            <Pagination
+              pageNumber={safePage}
+              pageCount={pageCount}
+              onPrevPage={handlePrevPage}
+              onNextPage={handleNextPage}
+              className="pt-2"
+            />
           </>
         )}
       </section>

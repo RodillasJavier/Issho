@@ -2,13 +2,16 @@
  * src/components/ListToolbar.tsx
  *
  * Search box and sort dropdown above a profile's list, plus a live result
- * count. Both narrow an already-fetched list in memory — nothing here
- * triggers a refetch.
+ * count and (optionally) the top pagination control, inline to the right of
+ * sort. Search/sort narrow an already-fetched list in memory — nothing here
+ * triggers a refetch; pagination state is still owned by the caller, this
+ * just gives it a place to render.
  */
 import { ArrowUpDown, Check, ChevronDown, Search, X } from "lucide-react";
 import { SORT_OPTIONS } from "../constants/listSort";
 import type { SortKey } from "../constants/listSort";
 import { useDismissableMenu } from "../hooks/useDismissableMenu";
+import { Pagination } from "./ui/Pagination";
 
 // #region Types
 interface ListToolbarProps {
@@ -18,6 +21,10 @@ interface ListToolbarProps {
   onSortChange: (key: SortKey) => void;
   resultCount: number;
   totalCount: number;
+  pageNumber: number;
+  pageCount: number;
+  onPrevPage: () => void;
+  onNextPage: () => void;
 }
 // #endregion Types
 
@@ -29,6 +36,10 @@ export const ListToolbar = ({
   onSortChange,
   resultCount,
   totalCount,
+  pageNumber,
+  pageCount,
+  onPrevPage,
+  onNextPage,
 }: ListToolbarProps) => {
   const {
     open: sortOpen,
@@ -43,7 +54,7 @@ export const ListToolbar = ({
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       {/* Search */}
-      <div className="relative h-10 w-full sm:max-w-sm">
+      <div className="relative h-9 w-full sm:max-w-sm">
         <Search
           aria-hidden
           className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-zinc-500"
@@ -54,7 +65,7 @@ export const ListToolbar = ({
           onChange={(event) => onQueryChange(event.target.value)}
           placeholder="Search this list by title..."
           aria-label="Search anime in this list"
-          className="h-10 w-full rounded-lg border border-zinc-800 bg-[#101014] pr-9 pl-9 text-sm text-zinc-100 outline-none transition-colors placeholder:text-zinc-600 hover:border-zinc-700 focus:border-rose-400/60 [&::-webkit-search-cancel-button]:appearance-none"
+          className="h-9 w-full rounded-lg border border-zinc-800 bg-zinc-950 pr-9 pl-9 text-sm text-zinc-100 outline-none transition-colors placeholder:text-zinc-600 hover:border-zinc-700 focus:border-rose-400/60 [&::-webkit-search-cancel-button]:appearance-none"
         />
         {query && (
           <button
@@ -68,7 +79,7 @@ export const ListToolbar = ({
         )}
       </div>
 
-      <div className="flex items-center justify-between gap-3 sm:justify-end">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 gap-x-3 sm:justify-end">
         <span
           aria-live="polite"
           className="font-mono text-[10px] tracking-[0.18em] whitespace-nowrap text-zinc-500 uppercase"
@@ -89,7 +100,7 @@ export const ListToolbar = ({
             onClick={() => setSortOpen(!sortOpen)}
             aria-haspopup="listbox"
             aria-expanded={sortOpen}
-            className={`inline-flex h-10 cursor-pointer items-center gap-2 rounded-lg border bg-[#101014] px-3 text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-400 ${
+            className={`inline-flex h-9 cursor-pointer items-center gap-2 rounded-lg border bg-zinc-950 px-3 text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-400 ${
               sortOpen
                 ? "border-zinc-700"
                 : "border-zinc-800 hover:border-zinc-700"
@@ -143,6 +154,13 @@ export const ListToolbar = ({
             </ul>
           )}
         </div>
+
+        <Pagination
+          pageNumber={pageNumber}
+          pageCount={pageCount}
+          onPrevPage={onPrevPage}
+          onNextPage={onNextPage}
+        />
       </div>
     </div>
   );

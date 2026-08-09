@@ -16,9 +16,9 @@
  * anime/franchise.
  */
 import { useState } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
 import { FeaturedEntry } from "./FeaturedEntry";
 import { EntryCompactRow } from "./EntryCompactRow";
+import { Pagination } from "./ui/Pagination";
 import type { Entry } from "../types/database.types";
 
 const ENTRIES_PER_PAGE = 10;
@@ -35,44 +35,6 @@ interface CommunityEntriesSectionProps {
   resetKey: string | number;
 }
 
-const PaginationControls = ({
-  pageNumber,
-  hasMore,
-  onPrevPage,
-  onNextPage,
-}: {
-  pageNumber: number;
-  hasMore: boolean;
-  onPrevPage: () => void;
-  onNextPage: () => void;
-}) => (
-  <div className="flex items-center justify-center gap-2 py-4">
-    <button
-      type="button"
-      onClick={onPrevPage}
-      disabled={pageNumber === 0}
-      aria-label="Previous page"
-      className="flex size-9 cursor-pointer items-center justify-center rounded-md border border-zinc-800 bg-zinc-900 text-white transition hover:border-rose-500 disabled:cursor-not-allowed disabled:opacity-40"
-    >
-      <ChevronLeft className="size-4" />
-    </button>
-
-    <span className="flex size-9 items-center justify-center rounded-md bg-rose-500 font-mono text-xs font-semibold text-white">
-      {pageNumber + 1}
-    </span>
-
-    <button
-      type="button"
-      onClick={onNextPage}
-      disabled={!hasMore}
-      aria-label="Next page"
-      className="flex size-9 cursor-pointer items-center justify-center rounded-md border border-zinc-800 bg-zinc-900 text-white transition hover:border-rose-500 disabled:cursor-not-allowed disabled:opacity-40"
-    >
-      <ChevronRight className="size-4" />
-    </button>
-  </div>
-);
-
 export const CommunityEntriesSection = ({
   entries,
   emptyMessage,
@@ -84,6 +46,7 @@ export const CommunityEntriesSection = ({
     0,
     Math.ceil(allEntries.length / ENTRIES_PER_PAGE) - 1
   );
+  const pageCount = maxPageNumber + 1;
 
   // Reset to page 1 whenever resetKey changes (see prop doc above).
   // Adjusting state during render, rather than in an effect, avoids an
@@ -145,15 +108,22 @@ export const CommunityEntriesSection = ({
         <div className="flex flex-col gap-4">
           <FeaturedEntry key={featuredKey} entries={featuredEntries} />
 
+          <Pagination
+            pageNumber={pageNumber}
+            pageCount={pageCount}
+            onPrevPage={handlePrevPage}
+            onNextPage={handleNextPage}
+          />
+
           <div className="flex flex-col gap-2">
             {pageEntries.map((entry) => (
               <EntryCompactRow key={entry.id} entry={entry} />
             ))}
           </div>
 
-          <PaginationControls
+          <Pagination
             pageNumber={pageNumber}
-            hasMore={hasMore}
+            pageCount={pageCount}
             onPrevPage={handlePrevPage}
             onNextPage={handleNextPage}
           />

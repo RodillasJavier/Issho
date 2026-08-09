@@ -9,11 +9,12 @@
  */
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight, Filter, Search } from "lucide-react";
+import { Filter, Search } from "lucide-react";
 import supabase from "../supabase-client";
 import { FranchiseCard } from "./FranchiseCard";
 import { SearchResultCard } from "./SearchResultCard";
 import { Skeleton } from "./ui/Skeleton";
+import { Pagination } from "./ui/Pagination";
 import { groupAnimeByFranchise } from "../utils/franchise";
 import { splitGenres } from "../utils/anime";
 import { useDebouncedValue } from "../hooks/useDebouncedValue";
@@ -231,7 +232,7 @@ export const AnimeList = () => {
         aria-label="Browse filters"
         className="mt-6 border-t border-zinc-800 py-4"
       >
-        <label className="flex w-full items-center gap-3 rounded-lg border border-zinc-800 bg-[#101014] px-3 py-2.5 focus-within:border-rose-400/60">
+        <label className="flex w-full items-center gap-3 rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2.5 focus-within:border-rose-400/60">
           <Search aria-hidden className="size-4 shrink-0 text-zinc-500" />
           <span className="sr-only">Search anime</span>
           <input
@@ -266,18 +267,28 @@ export const AnimeList = () => {
 
       {/* Results */}
       <section aria-labelledby="library-heading" className="mt-6">
-        <div className="mb-4 flex items-center justify-between">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-y-2">
           <h2
             id="library-heading"
             className="text-sm font-semibold uppercase tracking-[0.14em] text-zinc-300"
           >
             {isSearching ? "Results" : "Explore titles"}
           </h2>
-          <p className="font-mono text-xs text-zinc-600">
-            {isSearching
-              ? `${searchResults.length} ${searchResults.length === 1 ? "result" : "results"}`
-              : `${totalFranchises} ${totalFranchises === 1 ? "franchise" : "franchises"}`}
-          </p>
+          <div className="flex items-center gap-3">
+            <p className="font-mono text-xs text-zinc-600">
+              {isSearching
+                ? `${searchResults.length} ${searchResults.length === 1 ? "result" : "results"}`
+                : `${totalFranchises} ${totalFranchises === 1 ? "franchise" : "franchises"}`}
+            </p>
+            {!isSearching && (
+              <Pagination
+                pageNumber={pageNumber}
+                pageCount={totalPages}
+                onPrevPage={handlePrevPage}
+                onNextPage={handleNextPage}
+              />
+            )}
+          </div>
         </div>
 
         {isSearching ? (
@@ -294,34 +305,16 @@ export const AnimeList = () => {
               ))}
             </div>
 
-            {totalPages > 1 && (
-              <div className="mt-8 flex items-center justify-center gap-3">
-                <button
-                  onClick={handlePrevPage}
-                  disabled={pageNumber === 0}
-                  aria-label="Previous page"
-                  className="flex items-center justify-center size-9 rounded-md border border-zinc-800 bg-[#101014] text-zinc-100 transition-colors hover:border-rose-500 disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer"
-                >
-                  <ChevronLeft className="size-4" />
-                </button>
-
-                <span className="font-mono text-xs text-zinc-500">
-                  Page {pageNumber + 1} of {totalPages}
-                </span>
-
-                <button
-                  onClick={handleNextPage}
-                  disabled={!hasMore}
-                  aria-label="Next page"
-                  className="flex items-center justify-center size-9 rounded-md border border-zinc-800 bg-[#101014] text-zinc-100 transition-colors hover:border-rose-500 disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer"
-                >
-                  <ChevronRight className="size-4" />
-                </button>
-              </div>
-            )}
+            <Pagination
+              pageNumber={pageNumber}
+              pageCount={totalPages}
+              onPrevPage={handlePrevPage}
+              onNextPage={handleNextPage}
+              className="mt-8"
+            />
           </>
         ) : (
-          <div className="rounded-xl border border-dashed border-zinc-800 bg-[#101014] px-5 py-16 text-center">
+          <div className="rounded-xl border border-dashed border-zinc-800 bg-zinc-950 px-5 py-16 text-center">
             <p className="text-sm font-semibold text-zinc-200">
               No anime in the database yet
             </p>
@@ -355,7 +348,7 @@ const SearchResultsGrid = ({
       );
     }
     return (
-      <div className="rounded-xl border border-dashed border-zinc-800 bg-[#101014] px-5 py-16 text-center">
+      <div className="rounded-xl border border-dashed border-zinc-800 bg-zinc-950 px-5 py-16 text-center">
         <p className="text-sm font-semibold text-zinc-200">No titles found</p>
         <p className="mt-2 text-sm text-zinc-500">
           Try a different title, character, or alternate spelling.

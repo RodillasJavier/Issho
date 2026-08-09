@@ -82,7 +82,7 @@ export const ListToolbar = ({
       <div className="flex flex-wrap items-center justify-between gap-y-2 gap-x-3 sm:justify-end">
         <span
           aria-live="polite"
-          className="font-mono text-[10px] tracking-[0.18em] whitespace-nowrap text-zinc-500 uppercase"
+          className="font-mono text-xs leading-none tracking-[0.18em] whitespace-nowrap text-zinc-500 uppercase translate-y-px"
         >
           {/* Narrows for a status filter as well as a search — otherwise it
               reads "57 series" while nine are on screen. The `!query` keeps a
@@ -106,8 +106,15 @@ export const ListToolbar = ({
                 : "border-zinc-800 hover:border-zinc-700"
             }`}
           >
-            <ArrowUpDown aria-hidden className="size-4 text-zinc-500" />
-            <span className="hidden font-mono text-[10px] tracking-[0.18em] text-zinc-500 uppercase sm:inline">
+            {/* All-caps mono text has almost no descender, so centering its
+                box against "Recently updated" (which has real descenders)
+                still reads a couple pixels high — translate-y-px nudges the
+                icon+label pair down to compensate. */}
+            <ArrowUpDown
+              aria-hidden
+              className="size-4 translate-y-px text-zinc-500"
+            />
+            <span className="hidden font-mono text-xs leading-none tracking-[0.18em] text-zinc-500 uppercase sm:inline translate-y-px">
               Sort
             </span>
             <span className="font-medium text-zinc-300">

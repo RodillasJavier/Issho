@@ -12,8 +12,8 @@
  * purely so the page can say "private" rather than misreport an empty list
  * as "no anime in list yet".
  */
-import { useMemo, useState } from "react";
-import { useParams } from "react-router";
+import { useEffect, useMemo, useState } from "react";
+import { useParams, useSearchParams } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import { SearchX } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
@@ -38,7 +38,11 @@ import {
   buildProfileListCards,
   franchiseKeysNeedingMembers,
 } from "../utils/listEntries";
-import { DEFAULT_SORT_KEY, sortProfileCards } from "../constants/listSort";
+import {
+  DEFAULT_SORT_KEY,
+  SORT_OPTIONS,
+  sortProfileCards,
+} from "../constants/listSort";
 import type { SortKey } from "../constants/listSort";
 import type { AnimeStatus } from "../types/database.types";
 
@@ -46,16 +50,97 @@ type FilterTab = "all" | AnimeStatus;
 
 const ITEMS_PER_PAGE = 12;
 
+// View state (filter/search/sort/page) lives in the URL so Back-navigating
+// from a season/series detail page restores the exact list the user left —
+// same pattern as SettingsPage's `?tab=`. A fresh nav Link to the bare
+// `/profile/:username` (no query string) still resets to defaults, which is
+// the desired split between "came back" and "started over".
+const isFilterTab = (value: string | null): value is FilterTab =>
+  value === "all" ||
+  value === "watching" ||
+  value === "completed" ||
+  value === "dropped" ||
+  value === "not_started";
+
+const isSortKey = (value: string | null): value is SortKey =>
+  SORT_OPTIONS.some((option) => option.key === value);
+
 // #region Component Logic
 
 export const UserProfilePage = () => {
   const { username } = useParams<{ username: string }>();
   const { user, initializing } = useAuth();
-  const [activeFilter, setActiveFilter] = useState<FilterTab>("all");
-  const [query, setQuery] = useState("");
-  const [sortKey, setSortKey] = useState<SortKey>(DEFAULT_SORT_KEY);
-  const [pageNumber, setPageNumber] = useState(0);
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const filterParam = searchParams.get("filter");
+  const activeFilter: FilterTab = isFilterTab(filterParam)
+    ? filterParam
+    : "all";
+
+  const sortParam = searchParams.get("sort");
+  const sortKey: SortKey = isSortKey(sortParam) ? sortParam : DEFAULT_SORT_KEY;
+
+  const pageParam = Number.parseInt(searchParams.get("page") ?? "", 10);
+  const pageNumber =
+    Number.isFinite(pageParam) && pageParam >= 1 ? pageParam - 1 : 0;
+
+  const [query, setQuery] = useState(() => searchParams.get("q") ?? "");
   const debouncedQuery = useDebouncedValue(query, 200);
+  const urlQuery = searchParams.get("q") ?? "";
+
+  // The last `q` value read from the URL, so the render-time adjustment
+  // below can tell "the URL changed under us" (a fresh nav link — even to
+  // this same profile, e.g. clicking "My List" while already on it, which
+  // doesn't change `useParams().username` and so wouldn't otherwise be
+  // noticed — Back/Forward, switching profiles, or a hand-edited URL) from
+  // "the URL is still whatever it was." Comparing against `query` directly
+  // instead would misfire on every keystroke, since `query` updates
+  // immediately while the URL only catches up once the debounced
+  // write-back below runs. `useState`, not `useRef`: this comparison runs
+  // during render, where refs can't be read.
+  const [lastSyncedQuery, setLastSyncedQuery] = useState(urlQuery);
+
+  // Adjusted during render rather than in an effect, same pattern
+  // EntryList/CommunityEntriesSection use to reset their own page state on
+  // a prop change — avoids an extra cascading render, and is safe under
+  // StrictMode's double-rendering since the condition is false the second
+  // time through once the first render's setState lands.
+  if (urlQuery !== lastSyncedQuery) {
+    setLastSyncedQuery(urlQuery);
+    setQuery(urlQuery);
+  }
+
+  // Writes the debounced query to the URL once it settles on something the
+  // URL doesn't already reflect. Deliberately compares against `urlQuery`
+  // (read fresh, not listed as a dependency) rather than `lastSyncedQuery`:
+  // an external reset updates `query` — and eventually `debouncedQuery` —
+  // well before this effect should react, and by the time `debouncedQuery`
+  // actually settles 200ms later, `urlQuery` has already caught up too, so
+  // the comparison correctly finds no diff and skips. Depending on
+  // `urlQuery` instead would fire this effect immediately on every
+  // external reset, before `debouncedQuery` has had a chance to catch up,
+  // clobbering the reset with a stale re-write. `setSearchParams` is
+  // deliberately excluded too — react-router doesn't guarantee it's
+  // referentially stable across navigations, and this effect must only
+  // react to `debouncedQuery` actually settling on something new, not to
+  // `setSearchParams` merely being a new function reference; the
+  // functional-updater form below doesn't need a "fresh" one anyway.
+  useEffect(() => {
+    if (debouncedQuery === urlQuery) return;
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (debouncedQuery === "") next.delete("q");
+        else next.set("q", debouncedQuery);
+        next.delete("page");
+        return next;
+      },
+      { replace: true }
+    );
+    // urlQuery/setSearchParams are read above but deliberately excluded
+    // from the dependency array; see comment.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedQuery]);
 
   const {
     data: profile,
@@ -158,31 +243,62 @@ export const UserProfilePage = () => {
   });
 
   const handleFilterChange = (filter: FilterTab) => {
-    setActiveFilter(filter);
-    setPageNumber(0);
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (filter === "all") next.delete("filter");
+        else next.set("filter", filter);
+        next.delete("page");
+        return next;
+      },
+      { replace: true }
+    );
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const handleQueryChange = (value: string) => {
     setQuery(value);
-    setPageNumber(0);
   };
 
   const handleSortChange = (key: SortKey) => {
-    setSortKey(key);
-    setPageNumber(0);
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (key === DEFAULT_SORT_KEY) next.delete("sort");
+        else next.set("sort", key);
+        next.delete("page");
+        return next;
+      },
+      { replace: true }
+    );
   };
 
   const handlePrevPage = () => {
     if (safePage > 0) {
-      setPageNumber(safePage - 1);
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          const target1Indexed = safePage; // (safePage - 1) + 1
+          if (target1Indexed === 1) next.delete("page");
+          else next.set("page", String(target1Indexed));
+          return next;
+        },
+        { replace: true }
+      );
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
   };
 
   const handleNextPage = () => {
     if (safePage < pageCount - 1) {
-      setPageNumber(safePage + 1);
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          next.set("page", String(safePage + 2)); // (safePage + 1) + 1
+          return next;
+        },
+        { replace: true }
+      );
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
   };

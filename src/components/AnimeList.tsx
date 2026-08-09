@@ -197,8 +197,13 @@ export const AnimeList = () => {
     (debouncedQuery !== trimmedQuery || isSearchingAniList);
 
   // Signed out, but typed enough that AniList would otherwise have been
-  // searched — let them know more results exist behind sign-in.
-  const showSignInHint = isSearching && shouldSearchRemote && !canSearchRemote;
+  // searched — let them know more results exist behind sign-in. Gated on
+  // `!initializing` explicitly (not just `!canSearchRemote`, which is also
+  // false while initializing): otherwise an already-signed-in visitor whose
+  // session is still being looked up would flash this hint before their
+  // `user` resolves, painting the signed-out branch for a second.
+  const showSignInHint =
+    !initializing && !user && isSearching && shouldSearchRemote;
 
   // Browse pagination
   const totalFranchises = franchiseGroups.length;
@@ -209,6 +214,16 @@ export const AnimeList = () => {
   );
   const hasMore = startIndex + ITEMS_PER_PAGE < totalFranchises;
   const totalPages = Math.ceil(totalFranchises / ITEMS_PER_PAGE);
+
+  // The genre filter resets pageNumber itself (handleGenreChange below), but
+  // `data` can also shrink out from under an unchanged pageNumber via a
+  // background refetch of the ["anime"] query — same class of issue
+  // EntryList/CommunityEntriesSection guard against for their own lists.
+  // Guarded on `totalPages > 0` so an empty catalog (totalPages === 0)
+  // doesn't clamp pageNumber to -1.
+  if (totalPages > 0 && pageNumber > totalPages - 1) {
+    setPageNumber(totalPages - 1);
+  }
 
   const handleGenreChange = (genre: string) => {
     setActiveGenre(genre);
@@ -299,6 +314,7 @@ export const AnimeList = () => {
                 pageCount={totalPages}
                 onPrevPage={handlePrevPage}
                 onNextPage={handleNextPage}
+                label="Top pagination"
               />
             )}
           </div>

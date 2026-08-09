@@ -9,8 +9,10 @@
  */
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "react-router";
 import { Filter, Search } from "lucide-react";
 import supabase from "../supabase-client";
+import { useAuth } from "../hooks/useAuth";
 import { FranchiseCard } from "./FranchiseCard";
 import { SearchResultCard } from "./SearchResultCard";
 import { Skeleton } from "./ui/Skeleton";
@@ -57,6 +59,7 @@ const matchesText = (anime: Anime, query: string): boolean =>
   (anime.genres?.toLowerCase().includes(query) ?? false);
 
 export const AnimeList = () => {
+  const { user, initializing } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [activeGenre, setActiveGenre] = useState(ALL_GENRES);
   const [pageNumber, setPageNumber] = useState(0);
@@ -67,17 +70,22 @@ export const AnimeList = () => {
   const debouncedQuery = useDebouncedValue(trimmedQuery, REMOTE_DEBOUNCE_MS);
   const shouldSearchRemote = debouncedQuery.length >= MIN_REMOTE_QUERY_LENGTH;
 
+  // AniList is a third-party API this app calls directly from the browser —
+  // signed-out sessions shouldn't have our UI auto-firing those requests.
+  const canSearchRemote = !initializing && !!user;
+
   const { data, isLoading, error } = useQuery<Anime[], Error>({
     queryKey: ["anime"],
     queryFn: fetchAllAnime,
   });
 
   // AniList is only hit on the settled, debounced query (min-length gated,
-  // cached per term) so keystrokes don't fan out into API calls.
+  // cached per term, signed-in only) so keystrokes don't fan out into API
+  // calls and anon sessions never reach AniList through this app.
   const { data: anilistResults, isFetching: isSearchingAniList } = useQuery({
     queryKey: ["anilistSearch", debouncedQuery],
     queryFn: () => searchAnimeFromAniList(debouncedQuery),
-    enabled: shouldSearchRemote,
+    enabled: shouldSearchRemote && !!user,
     staleTime: 5 * 60 * 1000,
   });
 
@@ -183,9 +191,14 @@ export const AnimeList = () => {
 
   // Are we still waiting on (or fetching) AniList for the current input?
   const remoteInFlight =
+    canSearchRemote &&
     isSearching &&
     trimmedQuery.length >= MIN_REMOTE_QUERY_LENGTH &&
     (debouncedQuery !== trimmedQuery || isSearchingAniList);
+
+  // Signed out, but typed enough that AniList would otherwise have been
+  // searched — let them know more results exist behind sign-in.
+  const showSignInHint = isSearching && shouldSearchRemote && !canSearchRemote;
 
   // Browse pagination
   const totalFranchises = franchiseGroups.length;
@@ -296,6 +309,7 @@ export const AnimeList = () => {
             results={searchResults}
             loading={remoteInFlight}
             localByAnilistId={localByAnilistId}
+            showSignInHint={showSignInHint}
           />
         ) : paginatedGroups.length > 0 ? (
           <>
@@ -334,10 +348,12 @@ const SearchResultsGrid = ({
   results,
   loading,
   localByAnilistId,
+  showSignInHint,
 }: {
   results: SearchItem[];
   loading: boolean;
   localByAnilistId: Map<number, Anime>;
+  showSignInHint: boolean;
 }) => {
   if (results.length === 0) {
     if (loading) {
@@ -351,8 +367,13 @@ const SearchResultsGrid = ({
       <div className="rounded-xl border border-dashed border-zinc-800 bg-zinc-950 px-5 py-16 text-center">
         <p className="text-sm font-semibold text-zinc-200">No titles found</p>
         <p className="mt-2 text-sm text-zinc-500">
-          Try a different title, character, or alternate spelling.
+          {showSignInHint ? (
+            <>Sign in to search AniList's full catalog for more titles.</>
+          ) : (
+            "Try a different title, character, or alternate spelling."
+          )}
         </p>
+        {showSignInHint && <SignInHintLink />}
       </div>
     );
   }
@@ -384,9 +405,27 @@ const SearchResultsGrid = ({
           Searching AniList…
         </p>
       )}
+
+      {showSignInHint && (
+        <div className="mt-6 rounded-xl border border-dashed border-zinc-800 bg-zinc-950 px-5 py-6 text-center">
+          <p className="text-sm text-zinc-400">
+            Can't find what you're looking for?
+          </p>
+          <SignInHintLink />
+        </div>
+      )}
     </>
   );
 };
+
+const SignInHintLink = () => (
+  <Link
+    to="/signin"
+    className="mt-2 inline-flex text-sm font-medium text-rose-400 transition-colors hover:text-rose-300"
+  >
+    Sign in to search + browse more anime
+  </Link>
+);
 
 // Matches the filter bar + card grid below it, so there's no dramatic
 // collapse-then-expand once the real catalog loads.

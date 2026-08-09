@@ -167,6 +167,7 @@ export const ListToolbar = ({
           pageCount={pageCount}
           onPrevPage={onPrevPage}
           onNextPage={onNextPage}
+          label="Top pagination"
         />
       </div>
     </div>

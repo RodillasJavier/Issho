@@ -21,6 +21,15 @@ interface PaginationProps {
   onNextPage: () => void;
   /** Additive spacing only — never a respec of layout classes. */
   className?: string;
+  /**
+   * Accessible name for the `<nav>` landmark. Every list that renders this
+   * component twice (once above the content, once below) MUST give the two
+   * instances distinct labels — two `<nav aria-label="Pagination">`
+   * landmarks on one page are indistinguishable to a screen reader's
+   * landmark list otherwise. Defaults to the plain "Pagination" for
+   * single-instance callers.
+   */
+  label?: string;
 }
 
 export function Pagination({
@@ -29,12 +38,13 @@ export function Pagination({
   onPrevPage,
   onNextPage,
   className,
+  label = "Pagination",
 }: PaginationProps) {
   if (pageCount <= 1) return null;
 
   return (
     <nav
-      aria-label="Pagination"
+      aria-label={label}
       className={cn("flex items-center justify-center gap-3", className)}
     >
       <Button

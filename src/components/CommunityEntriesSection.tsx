@@ -113,6 +113,7 @@ export const CommunityEntriesSection = ({
             pageCount={pageCount}
             onPrevPage={handlePrevPage}
             onNextPage={handleNextPage}
+            label="Top pagination"
           />
 
           <div className="flex flex-col gap-2">

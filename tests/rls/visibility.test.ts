@@ -506,9 +506,9 @@ describe("get_entries_with_counts", () => {
 });
 
 describe("world-readable by design", () => {
-  // Username search, add-by-username and friend counts all depend on these
-  // staying open. Locking them down would break those features, so the
-  // openness is asserted rather than left to chance.
+  // Username search and add-by-username depend on this staying open even to
+  // anon. Locking it down would break those features, so the openness is
+  // asserted rather than left to chance.
   it("keeps profiles readable", async () => {
     const rows = await db.as(
       { id: alice },
@@ -517,9 +517,19 @@ describe("world-readable by design", () => {
     );
     expect(rows).toHaveLength(1);
   });
+});
 
-  it("keeps friendships readable", async () => {
+describe("authenticated-only by design", () => {
+  // Friend counts and read-only friends pages depend on this staying open to
+  // any signed-in user (not just mutual friends) — but not to anon, which
+  // could otherwise crawl the whole social graph while unauthenticated.
+  it("keeps friendships readable to any signed-in user", async () => {
     const rows = await db.as({ id: stranger }, `select id from friendships`);
     expect(rows.length).toBeGreaterThan(0);
+  });
+
+  it("returns nothing at all to an anonymous reader", async () => {
+    const rows = await db.as("anon", `select id from friendships`);
+    expect(rows).toHaveLength(0);
   });
 });

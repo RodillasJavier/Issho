@@ -50,7 +50,7 @@ const ITEMS_PER_PAGE = 12;
 
 export const UserProfilePage = () => {
   const { username } = useParams<{ username: string }>();
-  const { user } = useAuth();
+  const { user, initializing } = useAuth();
   const [activeFilter, setActiveFilter] = useState<FilterTab>("all");
   const [query, setQuery] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>(DEFAULT_SORT_KEY);
@@ -154,7 +154,7 @@ export const UserProfilePage = () => {
   const { data: friends } = useQuery({
     queryKey: ["friends", profile?.id],
     queryFn: () => getFriends(profile!.id),
-    enabled: !!profile?.id,
+    enabled: !!user && !!profile?.id,
   });
 
   const handleFilterChange = (filter: FilterTab) => {
@@ -206,6 +206,7 @@ export const UserProfilePage = () => {
         friendCount={friends?.length ?? 0}
         isOwnProfile={isOwnProfile}
         canAddFriend={!!user}
+        canViewFriends={!initializing && !!user}
       />
 
       {/* Stats Cards (series-level) */}

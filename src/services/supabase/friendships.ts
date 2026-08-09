@@ -206,6 +206,11 @@ export const getFriendshipStatus = async (
  * @returns Array of friendships with profile data
  */
 export const getFriends = async (userId: string): Promise<Friendship[]> => {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return [];
+
   const { data, error } = await supabase
     .from("friendships")
     .select(

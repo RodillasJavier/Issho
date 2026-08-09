@@ -17,6 +17,8 @@ interface ProfileHeaderProps {
   isOwnProfile: boolean;
   /** Whether a signed-in viewer is present, for the friend action. */
   canAddFriend: boolean;
+  /** Whether a signed-in viewer is present, for the friends link/count. */
+  canViewFriends: boolean;
 }
 // #endregion Types
 
@@ -26,6 +28,7 @@ export const ProfileHeader = ({
   friendCount,
   isOwnProfile,
   canAddFriend,
+  canViewFriends,
 }: ProfileHeaderProps) => (
   <header className="rounded-xl border border-zinc-800 bg-[#0c0c0f] p-5 sm:p-6">
     <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start">
@@ -62,13 +65,15 @@ export const ProfileHeader = ({
         </div>
 
         <div className="mt-4 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
-          <Link
-            to={`/profile/${profile.username}/friends`}
-            className="inline-flex h-8 items-center gap-1.5 rounded-md border border-zinc-800 bg-neutral-950/60 px-3 text-xs font-medium text-zinc-400 transition-colors hover:border-zinc-700 hover:text-zinc-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-400"
-          >
-            <Users aria-hidden className="size-3.5" />
-            {isOwnProfile ? "Manage friends" : "View friends"} ({friendCount})
-          </Link>
+          {canViewFriends && (
+            <Link
+              to={`/profile/${profile.username}/friends`}
+              className="inline-flex h-8 items-center gap-1.5 rounded-md border border-zinc-800 bg-neutral-950/60 px-3 text-xs font-medium text-zinc-400 transition-colors hover:border-zinc-700 hover:text-zinc-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-400"
+            >
+              <Users aria-hidden className="size-3.5" />
+              {isOwnProfile ? "Manage friends" : "View friends"} ({friendCount})
+            </Link>
+          )}
 
           {!isOwnProfile && canAddFriend && (
             <FriendButton targetUserId={profile.id} />

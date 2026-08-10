@@ -7,6 +7,11 @@
  * `entries` array shrinks independent of `resetKey` (a background refetch
  * returning fewer rows). Both are easy to regress silently since neither
  * throws — the symptom is a stuck/empty page.
+ *
+ * The section renders a Pagination instance at both the top and the bottom
+ * of the list, sharing one `pageNumber` state — queries use getAllByRole and
+ * assertions check every match, so a future change that lets the two drift
+ * out of sync would fail here.
  */
 import { describe, expect, it, vi } from "vitest";
 import { screen } from "@testing-library/react";
@@ -38,9 +43,18 @@ const makeEntry = (overrides: Partial<Entry> = {}): Entry => ({
 const makeEntries = (count: number): Entry[] =>
   Array.from({ length: count }, () => makeEntry());
 
-const prevPageButton = () =>
-  screen.getByRole("button", { name: "Previous page" });
-const nextPageButton = () => screen.getByRole("button", { name: "Next page" });
+const prevPageButtons = () =>
+  screen.getAllByRole("button", { name: "Previous page" });
+const nextPageButtons = () =>
+  screen.getAllByRole("button", { name: "Next page" });
+
+const expectAll = (buttons: HTMLElement[], state: "enabled" | "disabled") => {
+  expect(buttons).toHaveLength(2); // top + bottom instance
+  for (const button of buttons) {
+    if (state === "enabled") expect(button).toBeEnabled();
+    else expect(button).toBeDisabled();
+  }
+};
 
 describe("CommunityEntriesSection pagination", () => {
   it("resets to page 1 when resetKey changes", async () => {
@@ -53,8 +67,8 @@ describe("CommunityEntriesSection pagination", () => {
       />
     );
 
-    await user.click(nextPageButton());
-    expect(prevPageButton()).toBeEnabled();
+    await user.click(nextPageButtons()[0]);
+    expectAll(prevPageButtons(), "enabled");
 
     rerender(
       <CommunityEntriesSection
@@ -64,7 +78,7 @@ describe("CommunityEntriesSection pagination", () => {
       />
     );
 
-    expect(prevPageButton()).toBeDisabled();
+    expectAll(prevPageButtons(), "disabled");
   });
 
   it("does not reset the page when entries change but resetKey stays the same", async () => {
@@ -78,8 +92,8 @@ describe("CommunityEntriesSection pagination", () => {
       />
     );
 
-    await user.click(nextPageButton());
-    expect(prevPageButton()).toBeEnabled();
+    await user.click(nextPageButtons()[0]);
+    expectAll(prevPageButtons(), "enabled");
 
     // Same resetKey, new array reference (e.g. a vote mutation patched the
     // cache) — the page should not snap back to 1.
@@ -91,7 +105,7 @@ describe("CommunityEntriesSection pagination", () => {
       />
     );
 
-    expect(prevPageButton()).toBeEnabled();
+    expectAll(prevPageButtons(), "enabled");
   });
 
   it("clamps the current page down when entries shrinks below it, independent of resetKey", async () => {
@@ -104,13 +118,40 @@ describe("CommunityEntriesSection pagination", () => {
       />
     );
 
-    await user.click(nextPageButton());
-    await user.click(nextPageButton());
-    expect(prevPageButton()).toBeEnabled();
-    expect(nextPageButton()).toBeDisabled();
+    await user.click(nextPageButtons()[0]);
+    await user.click(nextPageButtons()[0]);
+    expectAll(prevPageButtons(), "enabled");
+    expectAll(nextPageButtons(), "disabled");
 
     // Same resetKey, but the feed query refetched and now returns fewer
-    // entries than would fill the page the viewer was sitting on.
+    // entries than would fill the page the viewer was sitting on. Shrinks to
+    // 15 (still 2 pages at 10/page) rather than down to a single page, so
+    // Pagination doesn't self-hide and the clamp itself stays observable.
+    rerender(
+      <CommunityEntriesSection
+        entries={makeEntries(15)}
+        emptyMessage="empty"
+        resetKey="season-a"
+      />
+    );
+
+    expectAll(prevPageButtons(), "enabled");
+    expectAll(nextPageButtons(), "disabled");
+  });
+
+  it("hides pagination entirely once the entries fit on a single page", () => {
+    const { rerender } = renderWithProviders(
+      <CommunityEntriesSection
+        entries={makeEntries(25)}
+        emptyMessage="empty"
+        resetKey="season-a"
+      />
+    );
+
+    expect(prevPageButtons()).toHaveLength(2);
+
+    // Shrinks to a single page's worth of entries — Pagination self-hides
+    // rather than showing a useless "Page 1 / 1" with both buttons disabled.
     rerender(
       <CommunityEntriesSection
         entries={makeEntries(5)}
@@ -119,7 +160,11 @@ describe("CommunityEntriesSection pagination", () => {
       />
     );
 
-    expect(prevPageButton()).toBeDisabled();
-    expect(nextPageButton()).toBeDisabled();
+    expect(
+      screen.queryAllByRole("button", { name: "Previous page" })
+    ).toHaveLength(0);
+    expect(screen.queryAllByRole("button", { name: "Next page" })).toHaveLength(
+      0
+    );
   });
 });

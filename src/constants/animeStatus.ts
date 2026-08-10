@@ -7,6 +7,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import type { AnimeStatus } from "../types/database.types";
+import { isOneOf } from "../utils/enumGuard";
 
 export const STATUS_LABELS: Record<AnimeStatus, string> = {
   not_started: "To Watch",
@@ -51,6 +52,16 @@ export const STATUS_OPTIONS: {
     icon: CircleX,
   },
 ];
+
+// A profile list's status filter always adds an "all" option on top of the
+// four real statuses. Shared by AnimeListStats (renders the tiles) and
+// UserProfilePage (owns the filter state) so the two can't drift.
+export type AnimeListFilter = "all" | AnimeStatus;
+
+export const isAnimeListFilter = isOneOf<AnimeListFilter>([
+  "all",
+  ...STATUS_OPTIONS.map((option) => option.value),
+]);
 
 // Interactive weight of the same bordered/translucent language as
 // STATUS_BADGE_STYLES below — a shade stronger since these sit on clickable

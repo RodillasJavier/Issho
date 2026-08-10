@@ -15,10 +15,10 @@
  * pass in the same RLS-scoped feed fetch the homepage uses, filtered by
  * anime/franchise.
  */
-import { useState } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
 import { FeaturedEntry } from "./FeaturedEntry";
 import { EntryCompactRow } from "./EntryCompactRow";
+import { Pagination } from "./ui/Pagination";
+import { useClampedPage } from "../hooks/useClampedPage";
 import type { Entry } from "../types/database.types";
 
 const ENTRIES_PER_PAGE = 10;
@@ -35,72 +35,23 @@ interface CommunityEntriesSectionProps {
   resetKey: string | number;
 }
 
-const PaginationControls = ({
-  pageNumber,
-  hasMore,
-  onPrevPage,
-  onNextPage,
-}: {
-  pageNumber: number;
-  hasMore: boolean;
-  onPrevPage: () => void;
-  onNextPage: () => void;
-}) => (
-  <div className="flex items-center justify-center gap-2 py-4">
-    <button
-      type="button"
-      onClick={onPrevPage}
-      disabled={pageNumber === 0}
-      aria-label="Previous page"
-      className="flex size-9 cursor-pointer items-center justify-center rounded-md border border-zinc-800 bg-zinc-900 text-white transition hover:border-rose-500 disabled:cursor-not-allowed disabled:opacity-40"
-    >
-      <ChevronLeft className="size-4" />
-    </button>
-
-    <span className="flex size-9 items-center justify-center rounded-md bg-rose-500 font-mono text-xs font-semibold text-white">
-      {pageNumber + 1}
-    </span>
-
-    <button
-      type="button"
-      onClick={onNextPage}
-      disabled={!hasMore}
-      aria-label="Next page"
-      className="flex size-9 cursor-pointer items-center justify-center rounded-md border border-zinc-800 bg-zinc-900 text-white transition hover:border-rose-500 disabled:cursor-not-allowed disabled:opacity-40"
-    >
-      <ChevronRight className="size-4" />
-    </button>
-  </div>
-);
-
 export const CommunityEntriesSection = ({
   entries,
   emptyMessage,
   resetKey,
 }: CommunityEntriesSectionProps) => {
-  const [pageNumber, setPageNumber] = useState(0);
   const allEntries = entries ?? [];
-  const maxPageNumber = Math.max(
-    0,
-    Math.ceil(allEntries.length / ENTRIES_PER_PAGE) - 1
-  );
 
-  // Reset to page 1 whenever resetKey changes (see prop doc above).
-  // Adjusting state during render, rather than in an effect, avoids an
-  // extra cascading render on every navigation — same pattern EntryList
-  // uses to reset its own pageNumber when its `filter` prop changes.
-  const [prevResetKey, setPrevResetKey] = useState(resetKey);
-  if (resetKey !== prevResetKey) {
-    setPrevResetKey(resetKey);
-    setPageNumber(0);
-  } else if (pageNumber > maxPageNumber) {
-    // The underlying entries array can shrink independent of resetKey
-    // changing — a background refetch of the shared feed query (window
-    // refocus, a friend's visibility changing) can legitimately return
-    // fewer rows. Without this, a viewer sitting on a later page would see
-    // an empty page with "Next" disabled and no way out except "Prev".
-    setPageNumber(maxPageNumber);
-  }
+  // Reset to page 1 whenever resetKey changes (see prop doc above);
+  // otherwise clamp down when allEntries shrinks (a background refetch of
+  // the shared feed query — window refocus, a friend's visibility changing —
+  // can legitimately return fewer rows). Same hook EntryList uses for its
+  // own filter-keyed clamp.
+  const { pageNumber, pageCount, setPageNumber } = useClampedPage(
+    allEntries.length,
+    ENTRIES_PER_PAGE,
+    resetKey
+  );
 
   const featuredEntries = allEntries.slice(0, 5);
   // Keying on the actual entry ids (rather than array identity, which
@@ -145,15 +96,23 @@ export const CommunityEntriesSection = ({
         <div className="flex flex-col gap-4">
           <FeaturedEntry key={featuredKey} entries={featuredEntries} />
 
+          <Pagination
+            pageNumber={pageNumber}
+            pageCount={pageCount}
+            onPrevPage={handlePrevPage}
+            onNextPage={handleNextPage}
+            label="Top pagination"
+          />
+
           <div className="flex flex-col gap-2">
             {pageEntries.map((entry) => (
               <EntryCompactRow key={entry.id} entry={entry} />
             ))}
           </div>
 
-          <PaginationControls
+          <Pagination
             pageNumber={pageNumber}
-            hasMore={hasMore}
+            pageCount={pageCount}
             onPrevPage={handlePrevPage}
             onNextPage={handleNextPage}
           />

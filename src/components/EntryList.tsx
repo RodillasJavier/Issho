@@ -14,20 +14,21 @@
  * splits that set into tabs and is not itself the privacy boundary. Logged-out
  * visitors get PublicFeed instead.
  */
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router";
-import { ChevronLeft, ChevronRight } from "lucide-react";
 import { EntryItem } from "./EntryItem";
 import { FeaturedEntry } from "./FeaturedEntry";
 import { FollowingPanel } from "./FollowingPanel";
 import { CreateEntryCta } from "./CreateEntryCta";
 import { FeedSkeleton } from "./FeedSkeleton";
+import { Pagination } from "./ui/Pagination";
 import {
   ACTIVITY_FILTERS,
   type ActivityFilter,
 } from "../constants/activityFilters";
 import { useAuth } from "../hooks/useAuth";
+import { useClampedPage } from "../hooks/useClampedPage";
 import { getFriendIds } from "../services/supabase/friendships";
 import { getProfileById, profileQueryKey } from "../services/supabase/profiles";
 import {
@@ -74,91 +75,9 @@ export const EmptyFeedState = ({
   </div>
 );
 
-// Compact prev/next control folded into the section header, so paging
-// doesn't require a trip down to the full control below the grid.
-const CompactPager = ({
-  pageNumber,
-  hasMore,
-  onPrevPage,
-  onNextPage,
-}: {
-  pageNumber: number;
-  hasMore: boolean;
-  onPrevPage: () => void;
-  onNextPage: () => void;
-}) => (
-  <div className="flex items-center gap-1 font-mono text-xs text-neutral-600">
-    <button
-      onClick={onPrevPage}
-      disabled={pageNumber === 0}
-      aria-label="Previous page"
-      className="flex items-center justify-center size-6 rounded text-neutral-500 transition-colors hover:text-white disabled:cursor-not-allowed disabled:opacity-30 cursor-pointer"
-    >
-      <ChevronLeft className="size-3.5" />
-    </button>
-
-    <span className="w-4 text-center text-neutral-400">{pageNumber + 1}</span>
-
-    <button
-      onClick={onNextPage}
-      disabled={!hasMore}
-      aria-label="Next page"
-      className="flex items-center justify-center size-6 rounded text-neutral-500 transition-colors hover:text-white disabled:cursor-not-allowed disabled:opacity-30 cursor-pointer"
-    >
-      <ChevronRight className="size-3.5" />
-    </button>
-  </div>
-);
-
-const PaginationControls = ({
-  pageNumber,
-  hasMore,
-  onPrevPage,
-  onNextPage,
-}: {
-  pageNumber: number;
-  hasMore: boolean;
-  onPrevPage: () => void;
-  onNextPage: () => void;
-}) => (
-  <div className="flex justify-center items-center gap-2 py-4">
-    <button
-      onClick={onPrevPage}
-      disabled={pageNumber === 0}
-      aria-label="Previous page"
-      className="flex items-center justify-center size-9 cursor-pointer bg-zinc-900 border border-zinc-800 rounded-md text-white hover:border-rose-500 disabled:opacity-40 disabled:cursor-not-allowed transition"
-    >
-      <ChevronLeft className="size-4" />
-    </button>
-
-    <span className="flex items-center justify-center size-9 rounded-md bg-rose-500 font-mono text-xs font-semibold text-white">
-      {pageNumber + 1}
-    </span>
-
-    <button
-      onClick={onNextPage}
-      disabled={!hasMore}
-      aria-label="Next page"
-      className="flex items-center justify-center size-9 cursor-pointer bg-zinc-900 border border-zinc-800 rounded-md text-white hover:border-rose-500 disabled:opacity-40 disabled:cursor-not-allowed transition"
-    >
-      <ChevronRight className="size-4" />
-    </button>
-  </div>
-);
-
 // #region Component Logic
 export const EntryList = ({ filter }: EntryListProps) => {
-  const [pageNumber, setPageNumber] = useState(0);
   const { user } = useAuth();
-
-  // Reset to page 1 whenever the filter (owned by Home) changes. Adjusting
-  // state during render (rather than in an effect) avoids an extra
-  // cascading render on every filter switch.
-  const [prevFilter, setPrevFilter] = useState(filter);
-  if (filter !== prevFilter) {
-    setPrevFilter(filter);
-    setPageNumber(0);
-  }
 
   const { data: profile } = useQuery({
     queryKey: profileQueryKey(user?.id),
@@ -196,6 +115,17 @@ export const EntryList = ({ filter }: EntryListProps) => {
     // "all" needs no further client-side filtering.
     return allEntries;
   }, [allEntries, filter, user, friendIds]);
+
+  // Resets to page 1 whenever `filter` (owned by Home) changes; otherwise
+  // clamps down when filteredEntries shrinks (a background refetch of the
+  // shared feed query, e.g. window refocus or a friend's visibility
+  // changing, can legitimately return fewer rows). Same hook
+  // CommunityEntriesSection uses for its own resetKey clamp.
+  const { pageNumber, pageCount, setPageNumber } = useClampedPage(
+    filteredEntries.length,
+    ENTRIES_PER_PAGE,
+    filter
+  );
 
   const entries = filteredEntries.slice(
     pageNumber * ENTRIES_PER_PAGE,
@@ -310,7 +240,7 @@ export const EntryList = ({ filter }: EntryListProps) => {
               <FeaturedEntry key={featuredKey} entries={featuredEntries} />
             ))}
 
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-y-2">
             <h3 className="text-sm font-semibold uppercase tracking-wider text-neutral-300">
               {ACTIVITY_FILTERS.find((f) => f.value === filter)?.label ??
                 "Activity"}
@@ -319,11 +249,12 @@ export const EntryList = ({ filter }: EntryListProps) => {
               <p className="font-mono text-xs text-neutral-600">
                 {entries.length} {entries.length === 1 ? "entry" : "entries"}
               </p>
-              <CompactPager
+              <Pagination
                 pageNumber={pageNumber}
-                hasMore={hasMore}
+                pageCount={pageCount}
                 onPrevPage={handlePrevPage}
                 onNextPage={handleNextPage}
+                label="Top pagination"
               />
             </div>
           </div>
@@ -334,9 +265,9 @@ export const EntryList = ({ filter }: EntryListProps) => {
             ))}
           </div>
 
-          <PaginationControls
+          <Pagination
             pageNumber={pageNumber}
-            hasMore={hasMore}
+            pageCount={pageCount}
             onPrevPage={handlePrevPage}
             onNextPage={handleNextPage}
           />

@@ -39,6 +39,8 @@ export const radius = {
   pill: "rounded-full",
 } as const;
 
+// #region TEXT
+
 export const text = {
   /** The app's signature mono eyebrow, above page and section titles. */
   eyebrow:
@@ -51,6 +53,8 @@ export const text = {
   label: "text-xs font-semibold uppercase tracking-[0.08em] text-content-muted",
   error: "text-sm text-danger",
 } as const;
+
+// #endregion TEXT
 
 export const surface = {
   card: cn("border border-line bg-surface", radius.card),

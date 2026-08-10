@@ -6,11 +6,9 @@
  * with an active state rather than plain figures. Avg Rating is a readout,
  * not a filter, and is styled apart to say so.
  */
-import type { AnimeStatus } from "../types/database.types";
+import type { AnimeListFilter } from "../constants/animeStatus";
 
 // #region Types
-type FilterTab = "all" | AnimeStatus;
-
 interface AnimeListStatsProps {
   stats: {
     total: number;
@@ -20,8 +18,8 @@ interface AnimeListStatsProps {
     dropped: number;
     avgRating: string;
   };
-  activeFilter: FilterTab;
-  onFilterChange: (filter: FilterTab) => void;
+  activeFilter: AnimeListFilter;
+  onFilterChange: (filter: AnimeListFilter) => void;
 }
 // #endregion Types
 
@@ -32,7 +30,7 @@ export const AnimeListStats = ({
   onFilterChange,
 }: AnimeListStatsProps) => {
   const tiles: {
-    filter: FilterTab;
+    filter: AnimeListFilter;
     label: string;
     value: number;
     valueClass: string;

@@ -4,6 +4,7 @@
  * Sort orders offered for a profile's list, and the comparator behind them.
  */
 import type { ProfileListCardModel } from "../utils/listEntries";
+import { isOneOf } from "../utils/enumGuard";
 
 export type SortKey =
   | "recent"
@@ -24,8 +25,9 @@ export const SORT_OPTIONS: { key: SortKey; label: string }[] = [
 
 export const DEFAULT_SORT_KEY: SortKey = "recent";
 
-export const isSortKey = (value: string | null): value is SortKey =>
-  SORT_OPTIONS.some((option) => option.key === value);
+export const isSortKey = isOneOf<SortKey>(
+  SORT_OPTIONS.map((option) => option.key)
+);
 
 // Unrated cards sink to the bottom in both directions — "worst first" should
 // mean the worst thing you rated, not everything you haven't rated yet.

@@ -14,7 +14,7 @@
  * splits that set into tabs and is not itself the privacy boundary. Logged-out
  * visitors get PublicFeed instead.
  */
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router";
 import { EntryItem } from "./EntryItem";
@@ -28,6 +28,7 @@ import {
   type ActivityFilter,
 } from "../constants/activityFilters";
 import { useAuth } from "../hooks/useAuth";
+import { useClampedPage } from "../hooks/useClampedPage";
 import { getFriendIds } from "../services/supabase/friendships";
 import { getProfileById, profileQueryKey } from "../services/supabase/profiles";
 import {
@@ -76,13 +77,7 @@ export const EmptyFeedState = ({
 
 // #region Component Logic
 export const EntryList = ({ filter }: EntryListProps) => {
-  const [pageNumber, setPageNumber] = useState(0);
   const { user } = useAuth();
-
-  // Tracks the filter this render's page-reset/clamp logic below has already
-  // accounted for (see that block for why the actual comparison lives there,
-  // not here).
-  const [prevFilter, setPrevFilter] = useState(filter);
 
   const { data: profile } = useQuery({
     queryKey: profileQueryKey(user?.id),
@@ -121,31 +116,16 @@ export const EntryList = ({ filter }: EntryListProps) => {
     return allEntries;
   }, [allEntries, filter, user, friendIds]);
 
-  const pageCount = Math.max(
-    1,
-    Math.ceil(filteredEntries.length / ENTRIES_PER_PAGE)
+  // Resets to page 1 whenever `filter` (owned by Home) changes; otherwise
+  // clamps down when filteredEntries shrinks (a background refetch of the
+  // shared feed query, e.g. window refocus or a friend's visibility
+  // changing, can legitimately return fewer rows). Same hook
+  // CommunityEntriesSection uses for its own resetKey clamp.
+  const { pageNumber, pageCount, setPageNumber } = useClampedPage(
+    filteredEntries.length,
+    ENTRIES_PER_PAGE,
+    filter
   );
-
-  // Reset to page 1 whenever the filter (owned by Home) changes, or —
-  // independent of the filter changing — clamp down when filteredEntries
-  // shrinks (a background refetch of the shared feed query, e.g. window
-  // refocus or a friend's visibility changing, can legitimately return
-  // fewer rows). Without the clamp, a viewer sitting on a later page would
-  // see an empty page with "Next" disabled and no way out except "Prev".
-  // Same pattern as CommunityEntriesSection's resetKey clamp.
-  //
-  // `else if`, not two independent `if`s: both read the same pre-render
-  // `pageNumber`, so if a filter switch also lands pageNumber out of range
-  // for the new filteredEntries, two literal `setPageNumber` calls in one
-  // render would race — the later call wins outright rather than composing
-  // with the first, silently overriding the reset-to-0 with whatever the
-  // clamp computed. `else if` guarantees only one fires.
-  if (filter !== prevFilter) {
-    setPrevFilter(filter);
-    setPageNumber(0);
-  } else if (pageNumber > pageCount - 1) {
-    setPageNumber(pageCount - 1);
-  }
 
   const entries = filteredEntries.slice(
     pageNumber * ENTRIES_PER_PAGE,

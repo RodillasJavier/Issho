@@ -15,10 +15,10 @@
  * pass in the same RLS-scoped feed fetch the homepage uses, filtered by
  * anime/franchise.
  */
-import { useState } from "react";
 import { FeaturedEntry } from "./FeaturedEntry";
 import { EntryCompactRow } from "./EntryCompactRow";
 import { Pagination } from "./ui/Pagination";
+import { useClampedPage } from "../hooks/useClampedPage";
 import type { Entry } from "../types/database.types";
 
 const ENTRIES_PER_PAGE = 10;
@@ -40,30 +40,18 @@ export const CommunityEntriesSection = ({
   emptyMessage,
   resetKey,
 }: CommunityEntriesSectionProps) => {
-  const [pageNumber, setPageNumber] = useState(0);
   const allEntries = entries ?? [];
-  const maxPageNumber = Math.max(
-    0,
-    Math.ceil(allEntries.length / ENTRIES_PER_PAGE) - 1
-  );
-  const pageCount = maxPageNumber + 1;
 
-  // Reset to page 1 whenever resetKey changes (see prop doc above).
-  // Adjusting state during render, rather than in an effect, avoids an
-  // extra cascading render on every navigation — same pattern EntryList
-  // uses to reset its own pageNumber when its `filter` prop changes.
-  const [prevResetKey, setPrevResetKey] = useState(resetKey);
-  if (resetKey !== prevResetKey) {
-    setPrevResetKey(resetKey);
-    setPageNumber(0);
-  } else if (pageNumber > maxPageNumber) {
-    // The underlying entries array can shrink independent of resetKey
-    // changing — a background refetch of the shared feed query (window
-    // refocus, a friend's visibility changing) can legitimately return
-    // fewer rows. Without this, a viewer sitting on a later page would see
-    // an empty page with "Next" disabled and no way out except "Prev".
-    setPageNumber(maxPageNumber);
-  }
+  // Reset to page 1 whenever resetKey changes (see prop doc above);
+  // otherwise clamp down when allEntries shrinks (a background refetch of
+  // the shared feed query — window refocus, a friend's visibility changing —
+  // can legitimately return fewer rows). Same hook EntryList uses for its
+  // own filter-keyed clamp.
+  const { pageNumber, pageCount, setPageNumber } = useClampedPage(
+    allEntries.length,
+    ENTRIES_PER_PAGE,
+    resetKey
+  );
 
   const featuredEntries = allEntries.slice(0, 5);
   // Keying on the actual entry ids (rather than array identity, which

@@ -89,16 +89,26 @@ export const UserProfilePage = () => {
   // write-back below runs. `useState`, not `useRef`: this comparison runs
   // during render, where refs can't be read.
   const [lastSyncedQuery, setLastSyncedQuery] = useState(urlQuery);
+  const isExternalQueryReset = urlQuery !== lastSyncedQuery;
 
   // Adjusted during render rather than in an effect, same pattern
   // EntryList/CommunityEntriesSection use to reset their own page state on
   // a prop change — avoids an extra cascading render, and is safe under
   // StrictMode's double-rendering since the condition is false the second
   // time through once the first render's setState lands.
-  if (urlQuery !== lastSyncedQuery) {
+  if (isExternalQueryReset) {
     setLastSyncedQuery(urlQuery);
     setQuery(urlQuery);
   }
+
+  // `debouncedQuery` lags `query` by design (that's the whole point of
+  // useDebouncedValue) — but on the render where an external reset just
+  // fired above, `debouncedQuery` hasn't had its 200ms to catch up yet, so
+  // using it directly here would filter/paginate the list against the query
+  // that was just cleared from the search box. `urlQuery` is already the
+  // settled value in that case (it came from the URL, not a keystroke), so
+  // use it instead for that one render.
+  const effectiveQuery = isExternalQueryReset ? urlQuery : debouncedQuery;
 
   // Writes the debounced query to the URL once it settles on something the
   // URL doesn't already reflect. Deliberately compares against `urlQuery`
@@ -200,7 +210,7 @@ export const UserProfilePage = () => {
 
   // Filter, then search, then sort — all in memory over the single fetch.
   const visibleCards = useMemo(() => {
-    const search = debouncedQuery.trim().toLowerCase();
+    const search = effectiveQuery.trim().toLowerCase();
     const matched = seriesCards.filter((card) => {
       if (activeFilter !== "all" && card.status !== activeFilter) return false;
       if (!search) return true;
@@ -214,7 +224,7 @@ export const UserProfilePage = () => {
       );
     });
     return sortProfileCards(matched, sortKey);
-  }, [seriesCards, activeFilter, debouncedQuery, sortKey]);
+  }, [seriesCards, activeFilter, effectiveQuery, sortKey]);
 
   const pageCount = Math.max(
     1,
@@ -225,6 +235,32 @@ export const UserProfilePage = () => {
     safePage * ITEMS_PER_PAGE,
     (safePage + 1) * ITEMS_PER_PAGE
   );
+
+  // `pageNumber` (read straight from the URL) can be out of range for the
+  // current `visibleCards` — a stale `?page=` left over from before a
+  // filter/search narrowed the list, or a bookmarked/shared link past the
+  // end. Rendering already self-corrects via `safePage`, but without this
+  // the address bar would keep the invalid value indefinitely, undermining
+  // the "URL is the source of truth for view state" design (see file-top
+  // comment) — a copied link would reproduce the same out-of-range page
+  // instead of the page the viewer actually saw.
+  useEffect(() => {
+    if (safePage === pageNumber) return;
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        const target1Indexed = safePage + 1;
+        if (target1Indexed === 1) next.delete("page");
+        else next.set("page", String(target1Indexed));
+        return next;
+      },
+      { replace: true }
+    );
+    // setSearchParams excluded deliberately — see comment on the query
+    // write-back effect above for why react-router's reference instability
+    // doesn't matter for a functional updater.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [safePage, pageNumber]);
 
   const { data: friends } = useQuery({
     queryKey: ["friends", profile?.id],
@@ -251,15 +287,19 @@ export const UserProfilePage = () => {
     // Reset to page 1 immediately rather than waiting for the debounced
     // write-back effect below to catch up with the new `q` ~200ms later —
     // otherwise a later page briefly re-renders against the new (filtered)
-    // results before snapping back to page 1.
-    setSearchParams(
-      (prev) => {
-        const next = new URLSearchParams(prev);
-        next.delete("page");
-        return next;
-      },
-      { replace: true }
-    );
+    // results before snapping back to page 1. Skipped when there's no
+    // `page` param to clear: every keystroke calls this, and most of them
+    // don't need a navigation at all.
+    if (searchParams.has("page")) {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          next.delete("page");
+          return next;
+        },
+        { replace: true }
+      );
+    }
   };
 
   const handleSortChange = (key: SortKey) => {

@@ -31,13 +31,14 @@ import {
 } from "../components/FriendsViewToggle";
 import { FriendChannel } from "../components/FriendChannel";
 import { FriendDirectoryCard } from "../components/FriendDirectoryCard";
+import { EmptyFeedState } from "../components/EntryList";
 import { Skeleton } from "../components/ui/Skeleton";
 import type { Entry, Friendship, Profile } from "../types/database.types";
 
 // #region Component Logic
 export const FriendsPage = () => {
   const { username } = useParams<{ username: string }>();
-  const { user } = useAuth();
+  const { user, initializing } = useAuth();
   const queryClient = useQueryClient();
   const [viewMode, setViewMode] = useState<FriendsViewMode>("channels");
 
@@ -48,11 +49,12 @@ export const FriendsPage = () => {
   });
 
   const isOwnProfile = !!user && user.id === profile?.id;
+  const canViewFriends = !initializing && !!user;
 
   const { data: friendships, isLoading: friendsLoading } = useQuery({
     queryKey: ["friends", profile?.id],
     queryFn: () => getFriends(profile!.id),
-    enabled: !!profile?.id,
+    enabled: !!user && !!profile?.id,
   });
 
   const { data: allEntries, isLoading: entriesLoading } = useQuery({
@@ -149,12 +151,15 @@ export const FriendsPage = () => {
           </div>
         </div>
 
-        <div className="mt-5 flex flex-wrap items-center gap-3 sm:mt-0">
-          <span className="rounded-md border border-neutral-800 bg-neutral-950 px-3 py-2 font-mono text-xs text-neutral-400">
-            {friendRows.length} {friendRows.length === 1 ? "friend" : "friends"}
-          </span>
-          <FriendsViewToggle mode={viewMode} onChange={setViewMode} />
-        </div>
+        {canViewFriends && (
+          <div className="mt-5 flex flex-wrap items-center gap-3 sm:mt-0">
+            <span className="rounded-md border border-neutral-800 bg-neutral-950 px-3 py-2 font-mono text-xs text-neutral-400">
+              {friendRows.length}{" "}
+              {friendRows.length === 1 ? "friend" : "friends"}
+            </span>
+            <FriendsViewToggle mode={viewMode} onChange={setViewMode} />
+          </div>
+        )}
       </section>
 
       {isOwnProfile && (
@@ -164,7 +169,16 @@ export const FriendsPage = () => {
         </div>
       )}
 
-      {friendsLoading ? (
+      {initializing ? (
+        <FriendChannelsSkeleton />
+      ) : !canViewFriends ? (
+        <EmptyFeedState
+          title="Sign in to view friends"
+          subtitle="Friend lists are visible to signed-in users only."
+          ctaHref="/signin"
+          ctaLabel="Sign in"
+        />
+      ) : friendsLoading ? (
         <FriendChannelsSkeleton />
       ) : friendRows.length > 0 ? (
         <section>

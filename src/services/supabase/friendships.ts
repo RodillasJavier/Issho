@@ -202,6 +202,12 @@ export const getFriendshipStatus = async (
 /**
  * Get list of friends for a user
  *
+ * Every call site gates its query on `enabled: !!user` (or only mounts in an
+ * already-signed-in context), and the `friendships` SELECT policy is
+ * `to authenticated` — so an unauthenticated request already comes back
+ * empty via RLS. No client-side auth check here on top of that; it would
+ * only add a redundant `auth.getUser()` round-trip to every call.
+ *
  * @param userId - The ID of the user to get friends for
  * @returns Array of friendships with profile data
  */

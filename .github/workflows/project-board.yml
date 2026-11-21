@@ -30,10 +30,9 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.PROJECT_TOKEN }}
           PR_URL: ${{ github.event.pull_request.html_url }}
+          PR_NODE_ID: ${{ github.event.pull_request.node_id }}
           # IDs from `gh project field-list 1 --owner RodillasJavier`. They
           # survive renames, but recreating the field or option changes them.
-          PROJECT_OWNER: RodillasJavier
-          PROJECT_NUMBER: 1
           PROJECT_ID: PVT_kwHOBigY984Be8S1
           STATUS_FIELD_ID: PVTSSF_lAHOBigY984Be8S1zhZS07s
           IN_REVIEW_OPTION_ID: 1e9ffd0a
@@ -44,9 +43,14 @@ jobs:
           fi
 
           # Idempotent: returns the existing item if "Auto-add to project"
-          # already put the PR on the board.
-          item_id=$(gh project item-add "$PROJECT_NUMBER" --owner "$PROJECT_OWNER" \
-            --url "$PR_URL" --format json --jq '.id')
+          # already put the PR on the board. Adds by node ID rather than
+          # `gh project item-add --owner`, whose user-vs-org owner lookup fails
+          # with "unknown owner type" under the PAT.
+          item_id=$(gh api graphql \
+            -f query='mutation($project: ID!, $content: ID!) {
+              addProjectV2ItemById(input: { projectId: $project, contentId: $content }) { item { id } } }' \
+            -f project="$PROJECT_ID" -f content="$PR_NODE_ID" \
+            --jq '.data.addProjectV2ItemById.item.id')
 
           # The built-in "Item added to project" workflow sets new items to
           # Todo, and it can fire after this step. Restrict it to issues in the

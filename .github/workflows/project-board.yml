@@ -18,7 +18,11 @@ jobs:
   in-review:
     name: Move PR to In Review
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     # Secrets aren't exposed to fork PRs, so the job could only fail there.
+    # Dependabot PRs pass this check but get no Actions secrets either; they
+    # hit the empty-token warning below unless PROJECT_TOKEN is also added as
+    # a Dependabot secret.
     if: github.event.pull_request.head.repo.full_name == github.repository
 
     steps:
@@ -47,11 +51,35 @@ jobs:
           # The built-in "Item added to project" workflow sets new items to
           # Todo, and it can fire after this step. Restrict it to issues in the
           # board's Workflows settings; the wait is a safety margin in case
-          # it still runs on PRs.
+          # it still runs on PRs. The read-back below catches it if it lands
+          # later anyway.
           sleep 30
 
-          gh project item-edit --project-id "$PROJECT_ID" --id "$item_id" \
-            --field-id "$STATUS_FIELD_ID" \
-            --single-select-option-id "$IN_REVIEW_OPTION_ID"
+          set_status() {
+            gh project item-edit --project-id "$PROJECT_ID" --id "$item_id" \
+              --field-id "$STATUS_FIELD_ID" \
+              --single-select-option-id "$IN_REVIEW_OPTION_ID" > /dev/null
+          }
 
-          echo "Moved $PR_URL to In Review."
+          # Matches on the field ID rather than its name, so renames are safe.
+          current_status() {
+            gh api graphql \
+              -f query='query($id: ID!) { node(id: $id) { ... on ProjectV2Item {
+                fieldValues(first: 50) { nodes { ... on ProjectV2ItemFieldSingleSelectValue {
+                  optionId field { ... on ProjectV2SingleSelectField { id } } } } } } } }' \
+              -f id="$item_id" \
+              --jq ".data.node.fieldValues.nodes[] | select(.field.id == \"$STATUS_FIELD_ID\") | .optionId"
+          }
+
+          for attempt in 1 2; do
+            set_status
+            sleep 15
+            if [ "$(current_status)" = "$IN_REVIEW_OPTION_ID" ]; then
+              echo "Moved $PR_URL to In Review."
+              exit 0
+            fi
+            echo "::warning::Status was overwritten after attempt $attempt."
+          done
+
+          echo "::error::Status keeps being overwritten; check that the board's \"Item added to project\" workflow is limited to issues."
+          exit 1

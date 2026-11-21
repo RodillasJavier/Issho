@@ -1,0 +1,57 @@
+name: Project board
+
+# Every PR lives in either "In Review" or "Done" on the Issho project board.
+# "Done" is handled by the board's own built-in workflows ("Pull request
+# merged", "Item closed"); GitHub has no built-in trigger for a PR being
+# *opened*, so this fills that gap.
+#
+# Drafts are included on purpose: an open PR is up for review, draft or not.
+on:
+  pull_request:
+    types: [opened, reopened]
+
+# The job talks to the board with PROJECT_TOKEN, not GITHUB_TOKEN — the default
+# token can't reach a user-owned Project. It needs nothing from this repo.
+permissions: {}
+
+jobs:
+  in-review:
+    name: Move PR to In Review
+    runs-on: ubuntu-latest
+    # Secrets aren't exposed to fork PRs, so the job could only fail there.
+    if: github.event.pull_request.head.repo.full_name == github.repository
+
+    steps:
+      - name: Set board status
+        env:
+          GH_TOKEN: ${{ secrets.PROJECT_TOKEN }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          # IDs from `gh project field-list 1 --owner RodillasJavier`. They
+          # survive renames, but recreating the field or option changes them.
+          PROJECT_OWNER: RodillasJavier
+          PROJECT_NUMBER: 1
+          PROJECT_ID: PVT_kwHOBigY984Be8S1
+          STATUS_FIELD_ID: PVTSSF_lAHOBigY984Be8S1zhZS07s
+          IN_REVIEW_OPTION_ID: 1e9ffd0a
+        run: |
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::warning::PROJECT_TOKEN secret is not set; skipping project board update."
+            exit 0
+          fi
+
+          # Idempotent: returns the existing item if "Auto-add to project"
+          # already put the PR on the board.
+          item_id=$(gh project item-add "$PROJECT_NUMBER" --owner "$PROJECT_OWNER" \
+            --url "$PR_URL" --format json --jq '.id')
+
+          # The built-in "Item added to project" workflow sets new items to
+          # Todo, and it can fire after this step. Restrict it to issues in the
+          # board's Workflows settings; the wait is a safety margin in case
+          # it still runs on PRs.
+          sleep 30
+
+          gh project item-edit --project-id "$PROJECT_ID" --id "$item_id" \
+            --field-id "$STATUS_FIELD_ID" \
+            --single-select-option-id "$IN_REVIEW_OPTION_ID"
+
+          echo "Moved $PR_URL to In Review."

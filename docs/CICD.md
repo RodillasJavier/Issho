@@ -24,6 +24,41 @@ output has `undefined` baked in — it exists to catch bad import paths and Vite
 or Tailwind config errors that `tsc` can't see. Vercel builds separately with
 its own environment.
 
+## Project board
+
+Every PR from a branch in this repo should sit in either **In Review** or
+**Done** on the
+[Issho project board](https://github.com/users/RodillasJavier/projects/1).
+PRs from forks are skipped (no secrets), and so are Dependabot PRs unless
+`PROJECT_TOKEN` is also added as a Dependabot secret.
+
+- **In Review** — `.github/workflows/project-board.yml` runs when a PR is
+  opened or reopened (drafts included), adds it to the board if it isn't there
+  yet, and sets Status to In Review, then reads it back and retries once if
+  something overwrote it. GitHub's built-in board workflows have no "PR opened"
+  trigger, which is why this one is an Action.
+- **Done** — the board's built-in "Pull request merged" and "Item closed"
+  workflows. No Action involved.
+
+Setup it depends on:
+
+- A `PROJECT_TOKEN` repository secret: a **classic** personal access token
+  with the `project`, `read:org` and `read:discussion` scopes. (The workflow
+  uses raw GraphQL calls because `gh project item-add`/`item-edit` fail
+  without the last two.) If the repo goes private, add `repo` so the token
+  can resolve the PR. Fine-grained tokens can't reach user-owned Projects, and
+  `GITHUB_TOKEN` can't either.
+  Without the secret the job logs a warning and passes, rather than failing
+  every PR.
+- The built-in "Item added to project" workflow limited to **issues** (board →
+  ⋯ → Workflows). Otherwise it sets every new PR to Todo and races the Action;
+  the Action fails if it loses twice.
+
+The workflow hardcodes the project, Status-field and option IDs. Renaming a
+column is fine; deleting and recreating one changes its ID, so re-read them with
+`gh project field-list 1 --owner RodillasJavier --format json` and update the
+workflow.
+
 ## Deployment
 
 Vercel's git integration deploys on push; there is no deploy step in the

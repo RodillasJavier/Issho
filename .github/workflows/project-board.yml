@@ -59,10 +59,16 @@ jobs:
           # later anyway.
           sleep 30
 
+          # Raw mutation selecting only the item ID: `gh project item-edit`
+          # also fetches the item's content, which needs read:org and
+          # read:discussion on top of the project scope.
           set_status() {
-            gh project item-edit --project-id "$PROJECT_ID" --id "$item_id" \
-              --field-id "$STATUS_FIELD_ID" \
-              --single-select-option-id "$IN_REVIEW_OPTION_ID" > /dev/null
+            gh api graphql \
+              -f query='mutation($project: ID!, $item: ID!, $field: ID!, $option: String!) {
+                updateProjectV2ItemFieldValue(input: { projectId: $project, itemId: $item,
+                  fieldId: $field, value: { singleSelectOptionId: $option } }) { projectV2Item { id } } }' \
+              -f project="$PROJECT_ID" -f item="$item_id" \
+              -f field="$STATUS_FIELD_ID" -f option="$IN_REVIEW_OPTION_ID" > /dev/null
           }
 
           # Matches on the field ID rather than its name, so renames are safe.

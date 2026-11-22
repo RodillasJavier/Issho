@@ -43,9 +43,11 @@ PRs from forks are skipped (no secrets), and so are Dependabot PRs unless
 Setup it depends on:
 
 - A `PROJECT_TOKEN` repository secret: a **classic** personal access token
-  with the `project` scope. That's enough while the repo is public; if it goes
-  private, add `repo` so the token can resolve the PR. Fine-grained tokens
-  can't reach user-owned Projects, and `GITHUB_TOKEN` can't either.
+  with the `project`, `read:org` and `read:discussion` scopes. (The workflow
+  uses raw GraphQL calls because `gh project item-add`/`item-edit` fail
+  without the last two.) If the repo goes private, add `repo` so the token
+  can resolve the PR. Fine-grained tokens can't reach user-owned Projects, and
+  `GITHUB_TOKEN` can't either.
   Without the secret the job logs a warning and passes, rather than failing
   every PR.
 - The built-in "Item added to project" workflow limited to **issues** (board →
